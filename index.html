@@ -9,23 +9,40 @@
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Arial, sans-serif; background: #f3f4f6; color: #1f2937; }
-    header { background: #111827; color: white; padding: 24px; }
-    header h1 { margin: 0; font-size: 28px; }
-    header p { color: #9ca3af; }
-    main { max-width: 1000px; margin: auto; padding: 20px; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
-    .card, .section { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px #0000000d; }
-    .card h3 { color: #6b7280; font-size: 14px; margin-top: 0; }
-    .number { font-size: 28px; font-weight: bold; }
-    button { background: #16a34a; color: white; border: 0; padding: 12px 18px; border-radius: 8px; cursor: pointer; }
+    header { background: #111827; color: white; padding: 14px 16px; }
+    header h1 { margin: 0; font-size: 22px; }
+    header p { margin: 2px 0 0; font-size: 13px; color: #9ca3af; }
+    main { max-width: 1000px; margin: auto; padding: 12px; }
+    main > h2 { margin: 4px 0 2px; font-size: 20px; }
+    main > p { margin: 0 0 10px; font-size: 14px; color: #6b7280; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 8px; }
+    .card, .section { background: white; padding: 12px 14px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 1px 4px #0000000d; }
+    .card { margin-bottom: 0; }
+    .card h3 { color: #6b7280; font-size: 12px; margin: 0 0 2px; font-weight: normal; }
+    .number { font-size: 24px; font-weight: bold; }
+    .section h2 { margin: 0 0 8px; font-size: 17px; }
+    label { display: block; font-size: 13px; color: #4b5563; }
+    button { background: #16a34a; color: white; border: 0; padding: 11px 16px; border-radius: 8px; cursor: pointer; font-size: 15px; }
     button:hover { background: #15803d; }
     button:disabled { background: #9ca3af; cursor: not-allowed; }
-    input, select { width: 100%; padding: 12px; margin: 7px 0 14px; border: 1px solid #d1d5db; border-radius: 8px; }
-    .movement, .stock-item { padding: 12px 0; border-bottom: 1px solid #eee; }
+    form button, #exportBtn { width: 100%; }
+    #exportBtn { margin-bottom: 6px; }
+    input, select { width: 100%; padding: 9px 10px; margin: 3px 0 9px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; background: white; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .movement, .stock-item { padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; line-height: 1.35; }
+    .movement:last-child, .stock-item:last-child { border-bottom: 0; }
     .positive { color: #16a34a; }
     .negative { color: #dc2626; }
-    .hint { color: #6b7280; font-size: 14px; }
-    footer { text-align: center; padding: 25px; color: #6b7280; }
+    .hint { color: #6b7280; font-size: 13px; }
+    footer { text-align: center; padding: 14px; font-size: 12px; color: #6b7280; }
+
+    @media (min-width: 700px) {
+      header { padding: 22px 24px; }
+      header h1 { font-size: 28px; }
+      main { padding: 20px; }
+      .card, .section { padding: 18px 20px; }
+      form button, #exportBtn { width: auto; }
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -66,25 +83,30 @@
       <label>Nome do produto</label>
       <input id="productName" placeholder="Ex.: Arroz" required>
 
-      <label>Categoria</label>
-      <select id="category" required>
-        <option value="Alimentos">Alimentos</option>
-        <option value="Bebidas">Bebidas</option>
-        <option value="Limpeza">Limpeza</option>
-        <option value="Descartáveis">Descartáveis</option>
-        <option value="Outros">Outros</option>
-      </select>
-
-      <label>Unidade de medida</label>
-      <select id="unit" required>
-        <option value="unidades">Unidades</option>
-        <option value="kg">Quilogramas (kg)</option>
-        <option value="g">Gramas (g)</option>
-        <option value="litros">Litros</option>
-        <option value="ml">Mililitros (ml)</option>
-        <option value="caixas">Caixas</option>
-        <option value="pacotes">Pacotes</option>
-      </select>
+      <div class="row">
+        <div>
+          <label>Categoria</label>
+          <select id="category" required>
+            <option value="Alimentos">Alimentos</option>
+            <option value="Bebidas">Bebidas</option>
+            <option value="Limpeza">Limpeza</option>
+            <option value="Descartáveis">Descartáveis</option>
+            <option value="Outros">Outros</option>
+          </select>
+        </div>
+        <div>
+          <label>Unidade</label>
+          <select id="unit" required>
+            <option value="unidades">Unidades</option>
+            <option value="kg">Quilogramas (kg)</option>
+            <option value="g">Gramas (g)</option>
+            <option value="litros">Litros</option>
+            <option value="ml">Mililitros (ml)</option>
+            <option value="caixas">Caixas</option>
+            <option value="pacotes">Pacotes</option>
+          </select>
+        </div>
+      </div>
 
       <label>Estoque mínimo</label>
       <input id="minimum" type="number" min="0" step="any" required>
@@ -99,15 +121,20 @@
       <label>Produto</label>
       <select id="product" required></select>
 
-      <label>Movimentação</label>
-      <select id="type">
-        <option value="entrada">Entrada</option>
-        <option value="saida">Saída</option>
-        <option value="perda">Perda</option>
-      </select>
-
-      <label>Quantidade <span class="hint" id="unitHint"></span></label>
-      <input id="quantity" type="number" min="0" step="any" required>
+      <div class="row">
+        <div>
+          <label>Movimentação</label>
+          <select id="type">
+            <option value="entrada">Entrada</option>
+            <option value="saida">Saída</option>
+            <option value="perda">Perda</option>
+          </select>
+        </div>
+        <div>
+          <label>Quantidade <span class="hint" id="unitHint"></span></label>
+          <input id="quantity" type="number" min="0" step="any" required>
+        </div>
+      </div>
 
       <label>Responsável</label>
       <input id="employee" placeholder="Nome do funcionário" required>
