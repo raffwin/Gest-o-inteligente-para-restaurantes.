@@ -318,52 +318,14 @@
   }
 
   // ---------- Exportação para Excel ----------
-  function buildSheets() {
-    // Aba 1: Resumo — nome do produto e quanto saiu
-    const resumo = [["Produto", "Categoria", "Unidade", "Entradas", "Saídas", "Perdas", "Total que saiu", "Saldo atual", "Estoque mínimo", "Situação"]];
-    // Aba 2: Pedido — o que precisa ser comprado
-    const pedido = [["Produto", "Categoria", "Unidade", "Saldo atual", "Estoque mínimo", "Quantidade a pedir"]];
-
-    catalog.forEach(p => {
-      const key = p.name.toLowerCase();
-      let entradas = 0, saidas = 0, perdas = 0;
-      movements.forEach(m => {
-        if (m.product.toLowerCase() !== key) return;
-        if (m.type === "entrada") entradas += m.quantity;
-        else if (m.type === "saida") saidas += m.quantity;
-        else perdas += m.quantity;
-      });
-      entradas = round(entradas); saidas = round(saidas); perdas = round(perdas);
+  // Planilha simples: Produto | Quantidade | Pedido (fórmula)
+  function buildRows() {
+    return catalog.map(p => {
       const saldo = getBalance(p.name);
-      const baixo = saldo <= p.minimum;
-
-      resumo.push([
-        p.name, p.category, p.unit, entradas, saidas, perdas,
-        round(saidas + perdas), saldo, p.minimum,
-        baixo ? "ESTOQUE BAIXO" : "Normal"
-      ]);
-
-      if (baixo) {
-        // Sugestão: repor até o dobro do estoque mínimo
-        const sugerido = Math.max(round(p.minimum * 2 - saldo), 0);
-        pedido.push([p.name, p.category, p.unit, saldo, p.minimum, sugerido]);
-      }
+      // Meta de estoque = dobro do mínimo. Pedido = quanto falta para chegar na meta.
+      const alvo = round(p.minimum * 2);
+      return { name: p.name, saldo: saldo, alvo: alvo, pedido: Math.max(round(alvo - saldo), 0) };
     });
-
-    if (pedido.length === 1) {
-      pedido.push(["Nenhum produto precisa ser pedido no momento.", "", "", "", "", ""]);
-    }
-
-    const tipos = { entrada: "Entrada", saida: "Saída", perda: "Perda" };
-    const historico = [["Data", "Produto", "Tipo", "Quantidade", "Unidade", "Responsável"]];
-    movements.forEach(m => {
-      historico.push([
-        new Date(m.date).toLocaleString("pt-BR"),
-        m.product, tipos[m.type] || m.type, m.quantity, m.unit || "", m.employee
-      ]);
-    });
-
-    return { resumo, pedido, historico };
   }
 
   function downloadBlob(blob, filename) {
@@ -389,39 +351,39 @@
   }
 
   function exportExcel() {
-    if (catalog.length === 0 && movements.length === 0) {
-      alert("Não há dados para exportar.");
+    if (catalog.length === 0) {
+      alert("Cadastre produtos antes de exportar.");
       return;
     }
 
-    const { resumo, pedido, historico } = buildSheets();
+    const rows = buildRows();
     const stamp = new Date().toISOString().slice(0, 10);
 
     if (typeof XLSX !== "undefined") {
+      const data = [["Produto", "Quantidade", "Pedido"]];
+      rows.forEach(r => data.push([r.name, r.saldo, r.pedido]));
+
+      const ws = XLSX.utils.aoa_to_sheet(data);
+
+      // Coluna Pedido com fórmula: =MAX(0; meta - quantidade)
+      rows.forEach((r, i) => {
+        const linha = i + 2;
+        ws["C" + linha] = { t: "n", f: "MAX(0," + r.alvo + "-B" + linha + ")", v: r.pedido };
+      });
+
+      ws["!cols"] = [{ wch: 28 }, { wch: 12 }, { wch: 12 }];
+
       const wb = XLSX.utils.book_new();
-
-      const ws1 = XLSX.utils.aoa_to_sheet(resumo);
-      ws1["!cols"] = [{ wch: 24 }, { wch: 16 }, { wch: 12 }, { wch: 11 }, { wch: 10 }, { wch: 10 }, { wch: 16 }, { wch: 13 }, { wch: 16 }, { wch: 16 }];
-      XLSX.utils.book_append_sheet(wb, ws1, "Resumo");
-
-      const ws2 = XLSX.utils.aoa_to_sheet(pedido);
-      ws2["!cols"] = [{ wch: 24 }, { wch: 16 }, { wch: 12 }, { wch: 13 }, { wch: 16 }, { wch: 20 }];
-      XLSX.utils.book_append_sheet(wb, ws2, "Pedido");
-
-      const ws3 = XLSX.utils.aoa_to_sheet(historico);
-      ws3["!cols"] = [{ wch: 20 }, { wch: 24 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 22 }];
-      XLSX.utils.book_append_sheet(wb, ws3, "Histórico");
-
-      XLSX.writeFile(wb, "operatto_estoque_" + stamp + ".xlsx");
+      XLSX.utils.book_append_sheet(wb, ws, "Pedido");
+      XLSX.writeFile(wb, "operatto_pedido_" + stamp + ".xlsx");
       return;
     }
 
-    // Sem internet (biblioteca não carregou): baixa CSV, que o Excel também abre
-    const csv = (rows) => new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8" });
-    downloadBlob(csv(resumo), "operatto_resumo_" + stamp + ".csv");
-    downloadBlob(csv(pedido), "operatto_pedido_" + stamp + ".csv");
-    downloadBlob(csv(historico), "operatto_historico_" + stamp + ".csv");
-    alert("Biblioteca do Excel indisponível (sem internet). Baixei 3 arquivos CSV (Resumo, Pedido e Histórico), que abrem no Excel.");
+    // Sem internet (biblioteca não carregou): baixa CSV (sem fórmula), que o Excel também abre
+    const data = [["Produto", "Quantidade", "Pedido"]];
+    rows.forEach(r => data.push([r.name, r.saldo, r.pedido]));
+    downloadBlob(new Blob([toCsv(data)], { type: "text/csv;charset=utf-8" }), "operatto_pedido_" + stamp + ".csv");
+    alert("Biblioteca do Excel indisponível (sem internet). Baixei um CSV, que abre no Excel, mas sem a fórmula.");
   }
 
   document.getElementById("exportBtn").addEventListener("click", exportExcel);
