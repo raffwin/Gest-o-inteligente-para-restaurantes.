@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111827">
+  <title>Operatto | Gestão inteligente</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      color: #1f2937;
+    }
+    header {
+      background: #111827;
+      color: white;
+      padding: 24px;
+    }
+    header h1 { margin: 0; font-size: 28px; }
+    header p { color: #9ca3af; }
+    main { max-width: 1000px; margin: auto; padding: 20px; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+    }
+    .card, .section {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px #0000000d;
+    }
+    .card h3 { color: #6b7280; font-size: 14px; }
+    .number { font-size: 28px; font-weight: bold; }
+    button {
+      background: #16a34a;
+      color: white;
+      border: 0;
+      padding: 12px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin: 7px 0 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+    }
+    .movement {
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+    footer {
+      text-align: center;
+      padding: 25px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🍽️ Operatto</h1>
+    <p>Sua operação sob controle.</p>
+  </header>
+
+  <main>
+    <h2>Painel de gestão</h2>
+    <p>Bem-vindo ao seu restaurante!</p>
+
+    <div class="cards">
+      <div class="card">
+        <h3>Produtos cadastrados</h3>
+        <div class="number" id="products">0</div>
+      </div>
+      <div class="card">
+        <h3>Entradas</h3>
+        <div class="number" id="entries">0</div>
+      </div>
+      <div class="card">
+        <h3>Saídas e perdas</h3>
+        <div class="number" id="exits">0</div>
+      </div>
+    </div>
+
+    <section class="section">
+      <h2>📦 Controle de estoque</h2>
+      <form id="stockForm">
+        <label>Nome do produto</label>
+        <input id="product" placeholder="Ex.: Arroz" required>
+
+        <label>Movimentação</label>
+        <select id="type">
+          <option value="entrada">Entrada</option>
+          <option value="saida">Saída</option>
+          <option value="perda">Perda</option>
+        </select>
+
+        <label>Quantidade</label>
+        <input id="quantity" type="number" min="1" required>
+
+        <label>Responsável</label>
+        <input id="employee" placeholder="Nome do funcionário" required>
+
+        <button type="submit">Registrar movimentação</button>
+      </form>
+    </section>
+
+    <section class="section">
+      <h2>📋 Histórico</h2>
+      <div id="history">Nenhuma movimentação registrada.</div>
+    </section>
+  </main>
+
+  <footer>Operatto © 2026 — Gestão inteligente para restaurantes.</footer>
+
+  <script>
+    let entries = 0;
+    let exits = 0;
+    const products = new Set();
+
+    document.getElementById("stockForm").addEventListener("submit", function(event) {
+      event.preventDefault();
+
+      const product = document.getElementById("product").value.trim();
+      const type = document.getElementById("type").value;
+      const quantity = Number(document.getElementById("quantity").value);
+      const employee = document.getElementById("employee").value.trim();
+
+      products.add(product);
+
+      if (type === "entrada") entries++;
+      else exits++;
+
+      document.getElementById("products").textContent = products.size;
+      document.getElementById("entries").textContent = entries;
+      document.getElementById("exits").textContent = exits;
+
+      const movement = document.createElement("div");
+      movement.className = "movement";
+      movement.textContent =
+        ${product} — ${type} de ${quantity} unidades — Responsável: ${employee} — ${new Date().toLocaleString("pt-BR")};
+
+      const history = document.getElementById("history");
+      if (history.textContent === "Nenhuma movimentação registrada.") {
+        history.textContent = "";
+      }
+      history.prepend(movement);
+
+      this.reset();
+      alert("Movimentação registrada!");
+    });
+  </script>
+</body>
+</html>
