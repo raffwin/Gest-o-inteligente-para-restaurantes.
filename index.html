@@ -226,10 +226,92 @@ try {
 
     return stock;
   }
+document.getElementById("productForm").addEventListener("submit", function(event) {
+  event.preventDefault();
 
+  const name = document.getElementById("productName").value.trim();
+  const category = document.getElementById("category").value;
+  const unit = document.getElementById("unit").value;
+  const minimum = Number(document.getElementById("minimum").value);
+
+  if (!name || !Number.isFinite(minimum) || minimum < 0) {
+    alert("Preencha os dados corretamente.");
+    return;
+  }
+
+  const exists = catalog.some(
+    p => p.name.toLowerCase() === name.toLowerCase()
+  );
+
+  if (exists) {
+    alert("Esse produto já está cadastrado!");
+    return;
+  }
+
+  const newProduct = { name, category, unit, minimum };
+
+  catalog.push(newProduct);
+
+  try {
+    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(catalog));
+  } catch (error) {
+    catalog.pop();
+    alert("Não foi possível salvar o produto.");
+    return;
+  }
+
+  renderCatalog();
+  this.reset();
+
+  alert("Produto cadastrado com sucesso!");
+});
+
+function renderCatalog() {
+  const list = document.getElementById("catalogList");
+  list.replaceChildren();
+
+  if (catalog.length === 0) {
+    list.textContent = "Nenhum produto cadastrado.";
+    return;
+  }
+
+  const stock = getStock();
+
+  catalog.forEach(product => {
+    const current = stock.get(product.name.toLowerCase());
+    const quantity = current ? current.quantity : 0;
+
+    const item = document.createElement("div");
+    item.className = "stock-item";
+
+    const name = document.createElement("strong");
+    name.textContent = product.name;
+
+    const details = document.createElement("div");
+    details.textContent =
+      product.category + " | Mínimo: " +
+      product.minimum + " " + product.unit;
+
+    const balance = document.createElement("div");
+    balance.textContent =
+      "Saldo atual: " + quantity + " " + product.unit;
+
+    if (quantity <= product.minimum) {
+      balance.className = "negative";
+      balance.textContent += " ⚠️ ESTOQUE BAIXO";
+    } else {
+      balance.className = "positive";
+      balance.textContent += " ✓ Estoque normal";
+    }
+
+    item.append(name, details, balance);
+    list.appendChild(item);
+  });
+}          
   function render() {
     const stock = getStock();
-
+renderCatalog();
+    
     const entries = movements
       .filter(m => m.type === "entrada")
       .reduce((sum, m) => sum + m.quantity, 0);
@@ -340,7 +422,7 @@ try {
     alert("Movimentação registrada com sucesso!");
   });
 
-  render();
+  render(); 
 </script>
 
 </body>
