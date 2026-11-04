@@ -183,7 +183,16 @@
   const STORAGE_KEY = "operatto_movements";
 
   let movements = [];
+const PRODUCTS_KEY = "operatto_products";
 
+let catalog = [];
+
+try {
+  catalog = JSON.parse(localStorage.getItem(PRODUCTS_KEY)) || [];
+  if (!Array.isArray(catalog)) catalog = [];
+} catch (error) {
+  catalog = [];
+}
   try {
     movements = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     if (!Array.isArray(movements)) movements = [];
