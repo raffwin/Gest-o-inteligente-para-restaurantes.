@@ -292,14 +292,40 @@
 
   // ---------- Exportação para Excel ----------
   function buildSheets() {
-    const saldo = [["Produto", "Categoria", "Unidade", "Estoque mínimo", "Saldo atual", "Situação"]];
+    // Aba 1: Resumo — nome do produto e quanto saiu
+    const resumo = [["Produto", "Categoria", "Unidade", "Entradas", "Saídas", "Perdas", "Total que saiu", "Saldo atual", "Estoque mínimo", "Situação"]];
+    // Aba 2: Pedido — o que precisa ser comprado
+    const pedido = [["Produto", "Categoria", "Unidade", "Saldo atual", "Estoque mínimo", "Quantidade a pedir"]];
+
     catalog.forEach(p => {
-      const qty = getBalance(p.name);
-      saldo.push([
-        p.name, p.category, p.unit, p.minimum, qty,
-        qty <= p.minimum ? "ESTOQUE BAIXO" : "Normal"
+      const key = p.name.toLowerCase();
+      let entradas = 0, saidas = 0, perdas = 0;
+      movements.forEach(m => {
+        if (m.product.toLowerCase() !== key) return;
+        if (m.type === "entrada") entradas += m.quantity;
+        else if (m.type === "saida") saidas += m.quantity;
+        else perdas += m.quantity;
+      });
+      entradas = round(entradas); saidas = round(saidas); perdas = round(perdas);
+      const saldo = getBalance(p.name);
+      const baixo = saldo <= p.minimum;
+
+      resumo.push([
+        p.name, p.category, p.unit, entradas, saidas, perdas,
+        round(saidas + perdas), saldo, p.minimum,
+        baixo ? "ESTOQUE BAIXO" : "Normal"
       ]);
+
+      if (baixo) {
+        // Sugestão: repor até o dobro do estoque mínimo
+        const sugerido = Math.max(round(p.minimum * 2 - saldo), 0);
+        pedido.push([p.name, p.category, p.unit, saldo, p.minimum, sugerido]);
+      }
     });
+
+    if (pedido.length === 1) {
+      pedido.push(["Nenhum produto precisa ser pedido no momento.", "", "", "", "", ""]);
+    }
 
     const tipos = { entrada: "Entrada", saida: "Saída", perda: "Perda" };
     const historico = [["Data", "Produto", "Tipo", "Quantidade", "Unidade", "Responsável"]];
@@ -310,7 +336,7 @@
       ]);
     });
 
-    return { saldo, historico };
+    return { resumo, pedido, historico };
   }
 
   function downloadBlob(blob, filename) {
@@ -341,28 +367,34 @@
       return;
     }
 
-    const { saldo, historico } = buildSheets();
+    const { resumo, pedido, historico } = buildSheets();
     const stamp = new Date().toISOString().slice(0, 10);
 
     if (typeof XLSX !== "undefined") {
       const wb = XLSX.utils.book_new();
 
-      const ws1 = XLSX.utils.aoa_to_sheet(saldo);
-      ws1["!cols"] = [{ wch: 24 }, { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 16 }];
-      XLSX.utils.book_append_sheet(wb, ws1, "Saldo");
+      const ws1 = XLSX.utils.aoa_to_sheet(resumo);
+      ws1["!cols"] = [{ wch: 24 }, { wch: 16 }, { wch: 12 }, { wch: 11 }, { wch: 10 }, { wch: 10 }, { wch: 16 }, { wch: 13 }, { wch: 16 }, { wch: 16 }];
+      XLSX.utils.book_append_sheet(wb, ws1, "Resumo");
 
-      const ws2 = XLSX.utils.aoa_to_sheet(historico);
-      ws2["!cols"] = [{ wch: 20 }, { wch: 24 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 22 }];
-      XLSX.utils.book_append_sheet(wb, ws2, "Histórico");
+      const ws2 = XLSX.utils.aoa_to_sheet(pedido);
+      ws2["!cols"] = [{ wch: 24 }, { wch: 16 }, { wch: 12 }, { wch: 13 }, { wch: 16 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, ws2, "Pedido");
+
+      const ws3 = XLSX.utils.aoa_to_sheet(historico);
+      ws3["!cols"] = [{ wch: 20 }, { wch: 24 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 22 }];
+      XLSX.utils.book_append_sheet(wb, ws3, "Histórico");
 
       XLSX.writeFile(wb, "operatto_estoque_" + stamp + ".xlsx");
       return;
     }
 
     // Sem internet (biblioteca não carregou): baixa CSV, que o Excel também abre
-    downloadBlob(new Blob([toCsv(saldo)], { type: "text/csv;charset=utf-8" }), "operatto_saldo_" + stamp + ".csv");
-    downloadBlob(new Blob([toCsv(historico)], { type: "text/csv;charset=utf-8" }), "operatto_historico_" + stamp + ".csv");
-    alert("Biblioteca do Excel indisponível (sem internet). Baixei dois arquivos CSV, que abrem no Excel.");
+    const csv = (rows) => new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8" });
+    downloadBlob(csv(resumo), "operatto_resumo_" + stamp + ".csv");
+    downloadBlob(csv(pedido), "operatto_pedido_" + stamp + ".csv");
+    downloadBlob(csv(historico), "operatto_historico_" + stamp + ".csv");
+    alert("Biblioteca do Excel indisponível (sem internet). Baixei 3 arquivos CSV (Resumo, Pedido e Histórico), que abrem no Excel.");
   }
 
   document.getElementById("exportBtn").addEventListener("click", exportExcel);
