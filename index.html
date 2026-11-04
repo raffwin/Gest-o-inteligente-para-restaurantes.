@@ -5,27 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#111827">
   <title>Operatto | Gestão inteligente</title>
+
   <style>
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       background: #f3f4f6;
       color: #1f2937;
     }
+
     header {
       background: #111827;
       color: white;
       padding: 24px;
     }
+
     header h1 { margin: 0; font-size: 28px; }
     header p { color: #9ca3af; }
+
     main { max-width: 1000px; margin: auto; padding: 20px; }
+
     .cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 15px;
     }
+
     .card, .section {
       background: white;
       padding: 20px;
@@ -33,8 +40,10 @@
       margin-bottom: 15px;
       box-shadow: 0 2px 8px #0000000d;
     }
+
     .card h3 { color: #6b7280; font-size: 14px; }
     .number { font-size: 28px; font-weight: bold; }
+
     button {
       background: #16a34a;
       color: white;
@@ -43,6 +52,9 @@
       border-radius: 8px;
       cursor: pointer;
     }
+
+    button:hover { background: #15803d; }
+
     input, select {
       width: 100%;
       padding: 12px;
@@ -50,10 +62,15 @@
       border: 1px solid #d1d5db;
       border-radius: 8px;
     }
-    .movement {
+
+    .movement, .stock-item {
       padding: 12px 0;
       border-bottom: 1px solid #eee;
     }
+
+    .positive { color: #16a34a; }
+    .negative { color: #dc2626; }
+
     footer {
       text-align: center;
       padding: 25px;
@@ -61,98 +78,229 @@
     }
   </style>
 </head>
+
 <body>
-  <header>
-    <h1>🍽️ Operatto</h1>
-    <p>Sua operação sob controle.</p>
-  </header>
 
-  <main>
-    <h2>Painel de gestão</h2>
-    <p>Bem-vindo ao seu restaurante!</p>
+<header>
+  <h1>🍽️ Operatto</h1>
+  <p>Sua operação sob controle.</p>
+</header>
 
-    <div class="cards">
-      <div class="card">
-        <h3>Produtos cadastrados</h3>
-        <div class="number" id="products">0</div>
-      </div>
-      <div class="card">
-        <h3>Entradas</h3>
-        <div class="number" id="entries">0</div>
-      </div>
-      <div class="card">
-        <h3>Saídas e perdas</h3>
-        <div class="number" id="exits">0</div>
-      </div>
+<main>
+  <h2>Painel de gestão</h2>
+  <p>Bem-vindo ao seu restaurante!</p>
+
+  <div class="cards">
+    <div class="card">
+      <h3>Produtos cadastrados</h3>
+      <div class="number" id="products">0</div>
     </div>
 
-    <section class="section">
-      <h2>📦 Controle de estoque</h2>
-      <form id="stockForm">
-        <label>Nome do produto</label>
-        <input id="product" placeholder="Ex.: Arroz" required>
+    <div class="card">
+      <h3>Entradas (unidades)</h3>
+      <div class="number" id="entries">0</div>
+    </div>
 
-        <label>Movimentação</label>
-        <select id="type">
-          <option value="entrada">Entrada</option>
-          <option value="saida">Saída</option>
-          <option value="perda">Perda</option>
-        </select>
+    <div class="card">
+      <h3>Saídas e perdas (unidades)</h3>
+      <div class="number" id="exits">0</div>
+    </div>
+  </div>
 
-        <label>Quantidade</label>
-        <input id="quantity" type="number" min="1" required>
+  <section class="section">
+    <h2>📦 Controle de estoque</h2>
 
-        <label>Responsável</label>
-        <input id="employee" placeholder="Nome do funcionário" required>
+    <form id="stockForm">
+      <label>Nome do produto</label>
+      <input id="product" placeholder="Ex.: Arroz" required>
 
-        <button type="submit">Registrar movimentação</button>
-      </form>
-    </section>
+      <label>Movimentação</label>
+      <select id="type">
+        <option value="entrada">Entrada</option>
+        <option value="saida">Saída</option>
+        <option value="perda">Perda</option>
+      </select>
 
-    <section class="section">
-      <h2>📋 Histórico</h2>
-      <div id="history">Nenhuma movimentação registrada.</div>
-    </section>
-  </main>
+      <label>Quantidade</label>
+      <input id="quantity" type="number" min="1" step="1" required>
 
-  <footer>Operatto © 2026 — Gestão inteligente para restaurantes.</footer>
+      <label>Responsável</label>
+      <input id="employee" placeholder="Nome do funcionário" required>
 
-  <script>
-    let entries = 0;
-    let exits = 0;
-    const products = new Set();
+      <button type="submit">Registrar movimentação</button>
+    </form>
+  </section>
 
-    document.getElementById("stockForm").addEventListener("submit", function(event) {
-      event.preventDefault();
+  <section class="section">
+    <h2>📊 Saldo do estoque</h2>
+    <div id="stockList">Nenhum produto cadastrado.</div>
+  </section>
 
-      const product = document.getElementById("product").value.trim();
-      const type = document.getElementById("type").value;
-      const quantity = Number(document.getElementById("quantity").value);
-      const employee = document.getElementById("employee").value.trim();
+  <section class="section">
+    <h2>📋 Histórico</h2>
+    <div id="history">Nenhuma movimentação registrada.</div>
+  </section>
 
-      products.add(product);
+</main>
 
-      if (type === "entrada") entries++;
-      else exits++;
+<footer>
+  Operatto © 2026 — Gestão inteligente para restaurantes.
+</footer>
 
-      document.getElementById("products").textContent = products.size;
-      document.getElementById("entries").textContent = entries;
-      document.getElementById("exits").textContent = exits;
+<script>
+  const STORAGE_KEY = "operatto_movements";
 
-      const movement = document.createElement("div");
-      movement.className = "movement";
-      movement.textContent =
-        ${product} — ${type} de ${quantity} unidades — Responsável: ${employee} — ${new Date().toLocaleString("pt-BR")};
+  let movements = [];
 
-      const history = document.getElementById("history");
-      if (history.textContent === "Nenhuma movimentação registrada.") {
-        history.textContent = "";
+  try {
+    movements = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    if (!Array.isArray(movements)) movements = [];
+  } catch (error) {
+    movements = [];
+  }
+
+  const form = document.getElementById("stockForm");
+
+  function getStock() {
+    const stock = new Map();
+
+    movements.forEach(m => {
+      const key = m.product.toLowerCase();
+
+      if (!stock.has(key)) {
+        stock.set(key, {
+          name: m.product,
+          quantity: 0
+        });
       }
-      history.prepend(movement);
 
-      this.reset();
-      alert("Movimentação registrada!");
+      const item = stock.get(key);
+
+      if (m.type === "entrada") {
+        item.quantity += m.quantity;
+      } else {
+        item.quantity -= m.quantity;
+      }
     });
-  </script>
+
+    return stock;
+  }
+
+  function render() {
+    const stock = getStock();
+
+    const entries = movements
+      .filter(m => m.type === "entrada")
+      .reduce((sum, m) => sum + m.quantity, 0);
+
+    const exits = movements
+      .filter(m => m.type !== "entrada")
+      .reduce((sum, m) => sum + m.quantity, 0);
+
+    document.getElementById("products").textContent = stock.size;
+    document.getElementById("entries").textContent = entries;
+    document.getElementById("exits").textContent = exits;
+
+    const stockList = document.getElementById("stockList");
+    stockList.replaceChildren();
+
+    if (stock.size === 0) {
+      stockList.textContent = "Nenhum produto cadastrado.";
+    } else {
+      stock.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "stock-item";
+
+        const name = document.createElement("strong");
+        name.textContent = item.name;
+
+        const quantity = document.createElement("span");
+        quantity.textContent = " — " + item.quantity + " unidades";
+        quantity.className = item.quantity < 0 ? "negative" : "positive";
+
+        div.append(name, quantity);
+        stockList.appendChild(div);
+      });
+    }
+
+    const history = document.getElementById("history");
+    history.replaceChildren();
+
+    if (movements.length === 0) {
+      history.textContent = "Nenhuma movimentação registrada.";
+      return;
+    }
+
+    [...movements].reverse().forEach(m => {
+      const div = document.createElement("div");
+      div.className = "movement";
+
+      const title = document.createElement("strong");
+      title.textContent =
+        m.product + " — " + m.type.toUpperCase();
+
+      const details = document.createElement("div");
+      details.textContent =
+        "Quantidade: " + m.quantity +
+        " | Responsável: " + m.employee;
+
+      const date = document.createElement("small");
+      date.textContent =
+        new Date(m.date).toLocaleString("pt-BR");
+
+      div.append(title, details, date);
+      history.appendChild(div);
+    });
+  }
+
+  form.addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const product = document.getElementById("product").value.trim();
+    const type = document.getElementById("type").value;
+    const quantity = Number(document.getElementById("quantity").value);
+    const employee = document.getElementById("employee").value.trim();
+
+    if (!product || !employee || !Number.isSafeInteger(quantity) || quantity <= 0) {
+      alert("Preencha todos os campos corretamente.");
+      return;
+    }
+
+    const stock = getStock();
+    const current = stock.get(product.toLowerCase());
+
+    if (type !== "entrada" &&
+        (!current || current.quantity < quantity)) {
+      alert("Estoque insuficiente para essa movimentação!");
+      return;
+    }
+
+    const movement = {
+      product: product,
+      type: type,
+      quantity: quantity,
+      employee: employee,
+      date: new Date().toISOString()
+    };
+
+    movements.push(movement);
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(movements));
+    } catch (error) {
+      movements.pop();
+      alert("Não foi possível salvar os dados neste navegador.");
+      return;
+    }
+
+    render();
+    form.reset();
+
+    alert("Movimentação registrada com sucesso!");
+  });
+
+  render();
+</script>
+
 </body>
 </html>
