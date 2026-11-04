@@ -8,74 +8,24 @@
 
   <style>
     * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f3f4f6;
-      color: #1f2937;
-    }
-
-    header {
-      background: #111827;
-      color: white;
-      padding: 24px;
-    }
-
+    body { margin: 0; font-family: Arial, sans-serif; background: #f3f4f6; color: #1f2937; }
+    header { background: #111827; color: white; padding: 24px; }
     header h1 { margin: 0; font-size: 28px; }
     header p { color: #9ca3af; }
-
     main { max-width: 1000px; margin: auto; padding: 20px; }
-
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 15px;
-    }
-
-    .card, .section {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 15px;
-      box-shadow: 0 2px 8px #0000000d;
-    }
-
-    .card h3 { color: #6b7280; font-size: 14px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
+    .card, .section { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px #0000000d; }
+    .card h3 { color: #6b7280; font-size: 14px; margin-top: 0; }
     .number { font-size: 28px; font-weight: bold; }
-
-    button {
-      background: #16a34a;
-      color: white;
-      border: 0;
-      padding: 12px 18px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
+    button { background: #16a34a; color: white; border: 0; padding: 12px 18px; border-radius: 8px; cursor: pointer; }
     button:hover { background: #15803d; }
-
-    input, select {
-      width: 100%;
-      padding: 12px;
-      margin: 7px 0 14px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-    }
-
-    .movement, .stock-item {
-      padding: 12px 0;
-      border-bottom: 1px solid #eee;
-    }
-
+    button:disabled { background: #9ca3af; cursor: not-allowed; }
+    input, select { width: 100%; padding: 12px; margin: 7px 0 14px; border: 1px solid #d1d5db; border-radius: 8px; }
+    .movement, .stock-item { padding: 12px 0; border-bottom: 1px solid #eee; }
     .positive { color: #16a34a; }
     .negative { color: #dc2626; }
-
-    footer {
-      text-align: center;
-      padding: 25px;
-      color: #6b7280;
-    }
+    .hint { color: #6b7280; font-size: 14px; }
+    footer { text-align: center; padding: 25px; color: #6b7280; }
   </style>
 </head>
 
@@ -95,24 +45,58 @@
       <h3>Produtos cadastrados</h3>
       <div class="number" id="products">0</div>
     </div>
-
     <div class="card">
-      <h3>Entradas (unidades)</h3>
+      <h3>Entradas registradas</h3>
       <div class="number" id="entries">0</div>
     </div>
-
     <div class="card">
-      <h3>Saídas e perdas (unidades)</h3>
+      <h3>Saídas e perdas registradas</h3>
       <div class="number" id="exits">0</div>
+    </div>
+    <div class="card">
+      <h3>Produtos com estoque baixo</h3>
+      <div class="number negative" id="lowCount">0</div>
     </div>
   </div>
 
   <section class="section">
-    <h2>📦 Controle de estoque</h2>
-
-    <form id="stockForm">
+    <h2>📝 Cadastro de produtos</h2>
+    <form id="productForm">
       <label>Nome do produto</label>
-      <input id="product" placeholder="Ex.: Arroz" required>
+      <input id="productName" placeholder="Ex.: Arroz" required>
+
+      <label>Categoria</label>
+      <select id="category" required>
+        <option value="Alimentos">Alimentos</option>
+        <option value="Bebidas">Bebidas</option>
+        <option value="Limpeza">Limpeza</option>
+        <option value="Descartáveis">Descartáveis</option>
+        <option value="Outros">Outros</option>
+      </select>
+
+      <label>Unidade de medida</label>
+      <select id="unit" required>
+        <option value="unidades">Unidades</option>
+        <option value="kg">Quilogramas (kg)</option>
+        <option value="g">Gramas (g)</option>
+        <option value="litros">Litros</option>
+        <option value="ml">Mililitros (ml)</option>
+        <option value="caixas">Caixas</option>
+        <option value="pacotes">Pacotes</option>
+      </select>
+
+      <label>Estoque mínimo</label>
+      <input id="minimum" type="number" min="0" step="any" required>
+
+      <button type="submit">Cadastrar produto</button>
+    </form>
+  </section>
+
+  <section class="section">
+    <h2>📦 Registrar movimentação</h2>
+    <form id="stockForm">
+      <label>Produto</label>
+      <select id="product" required></select>
 
       <label>Movimentação</label>
       <select id="type">
@@ -121,48 +105,16 @@
         <option value="perda">Perda</option>
       </select>
 
-      <label>Quantidade</label>
-      <input id="quantity" type="number" min="1" step="1" required>
+      <label>Quantidade <span class="hint" id="unitHint"></span></label>
+      <input id="quantity" type="number" min="0" step="any" required>
 
       <label>Responsável</label>
       <input id="employee" placeholder="Nome do funcionário" required>
 
-      <button type="submit">Registrar movimentação</button>
+      <button type="submit" id="moveBtn">Registrar movimentação</button>
     </form>
   </section>
-<section class="section">
-  <h2>📝 Cadastro de produtos</h2>
 
-  <form id="productForm">
-    <label>Nome do produto</label>
-    <input id="productName" placeholder="Ex.: Arroz" required>
-
-    <label>Categoria</label>
-    <select id="category" required>
-      <option value="Alimentos">Alimentos</option>
-      <option value="Bebidas">Bebidas</option>
-      <option value="Limpeza">Limpeza</option>
-      <option value="Descartáveis">Descartáveis</option>
-      <option value="Outros">Outros</option>
-    </select>
-
-    <label>Unidade de medida</label>
-    <select id="unit" required>
-      <option value="unidades">Unidades</option>
-      <option value="kg">Quilogramas (kg)</option>
-      <option value="g">Gramas (g)</option>
-      <option value="litros">Litros</option>
-      <option value="ml">Mililitros (ml)</option>
-      <option value="caixas">Caixas</option>
-      <option value="pacotes">Pacotes</option>
-    </select>
-
-    <label>Estoque mínimo</label>
-    <input id="minimum" type="number" min="0" step="any" required>
-
-    <button type="submit">Cadastrar produto</button>
-  </form>
-</section>
   <section class="section">
     <h2>📊 Saldo do estoque</h2>
     <div id="stockList">Nenhum produto cadastrado.</div>
@@ -172,7 +124,6 @@
     <h2>📋 Histórico</h2>
     <div id="history">Nenhuma movimentação registrada.</div>
   </section>
-
 </main>
 
 <footer>
@@ -181,171 +132,121 @@
 
 <script>
   const STORAGE_KEY = "operatto_movements";
+  const PRODUCTS_KEY = "operatto_products";
 
-  let movements = [];
-const PRODUCTS_KEY = "operatto_products";
-
-let catalog = [];
-
-try {
-  catalog = JSON.parse(localStorage.getItem(PRODUCTS_KEY)) || [];
-  if (!Array.isArray(catalog)) catalog = [];
-} catch (error) {
-  catalog = [];
-}
-  try {
-    movements = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    if (!Array.isArray(movements)) movements = [];
-  } catch (error) {
-    movements = [];
+  function load(key) {
+    try {
+      const data = JSON.parse(localStorage.getItem(key));
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      return [];
+    }
   }
 
-  const form = document.getElementById("stockForm");
+  let movements = load(STORAGE_KEY);
+  let catalog = load(PRODUCTS_KEY);
 
-  function getStock() {
-    const stock = new Map();
+  const stockForm = document.getElementById("stockForm");
+  const productForm = document.getElementById("productForm");
+  const productSelect = document.getElementById("product");
 
+  // Evita erros de ponto flutuante (ex.: 0.1 + 0.2)
+  function round(n) {
+    return Math.round(n * 1000) / 1000;
+  }
+
+  function findProduct(name) {
+    return catalog.find(p => p.name.toLowerCase() === String(name).toLowerCase());
+  }
+
+  // Saldo por produto cadastrado
+  function getBalance(name) {
+    const key = name.toLowerCase();
+    let total = 0;
     movements.forEach(m => {
-      const key = m.product.toLowerCase();
+      if (m.product.toLowerCase() !== key) return;
+      total += m.type === "entrada" ? m.quantity : -m.quantity;
+    });
+    return round(total);
+  }
 
-      if (!stock.has(key)) {
-        stock.set(key, {
-          name: m.product,
-          quantity: 0
-        });
-      }
+  function renderProductSelect() {
+    const selected = productSelect.value;
+    productSelect.replaceChildren();
 
-      const item = stock.get(key);
+    if (catalog.length === 0) {
+      const opt = document.createElement("option");
+      opt.textContent = "Cadastre um produto primeiro";
+      opt.value = "";
+      productSelect.appendChild(opt);
+      document.getElementById("moveBtn").disabled = true;
+      updateUnitHint();
+      return;
+    }
 
-      if (m.type === "entrada") {
-        item.quantity += m.quantity;
-      } else {
-        item.quantity -= m.quantity;
-      }
+    document.getElementById("moveBtn").disabled = false;
+
+    catalog.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.name;
+      opt.textContent = p.name;
+      productSelect.appendChild(opt);
     });
 
-    return stock;
-  }
-document.getElementById("productForm").addEventListener("submit", function(event) {
-  event.preventDefault();
-
-  const name = document.getElementById("productName").value.trim();
-  const category = document.getElementById("category").value;
-  const unit = document.getElementById("unit").value;
-  const minimum = Number(document.getElementById("minimum").value);
-
-  if (!name || !Number.isFinite(minimum) || minimum < 0) {
-    alert("Preencha os dados corretamente.");
-    return;
+    if (selected && findProduct(selected)) productSelect.value = selected;
+    updateUnitHint();
   }
 
-  const exists = catalog.some(
-    p => p.name.toLowerCase() === name.toLowerCase()
-  );
-
-  if (exists) {
-    alert("Esse produto já está cadastrado!");
-    return;
+  function updateUnitHint() {
+    const p = findProduct(productSelect.value);
+    document.getElementById("unitHint").textContent = p ? "(" + p.unit + ")" : "";
   }
 
-  const newProduct = { name, category, unit, minimum };
+  function renderStockList() {
+    const list = document.getElementById("stockList");
+    list.replaceChildren();
 
-  catalog.push(newProduct);
-
-  try {
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(catalog));
-  } catch (error) {
-    catalog.pop();
-    alert("Não foi possível salvar o produto.");
-    return;
-  }
-
-  renderCatalog();
-  this.reset();
-
-  alert("Produto cadastrado com sucesso!");
-});
-
-function renderCatalog() {
-  const list = document.getElementById("catalogList");
-  list.replaceChildren();
-
-  if (catalog.length === 0) {
-    list.textContent = "Nenhum produto cadastrado.";
-    return;
-  }
-
-  const stock = getStock();
-
-  catalog.forEach(product => {
-    const current = stock.get(product.name.toLowerCase());
-    const quantity = current ? current.quantity : 0;
-
-    const item = document.createElement("div");
-    item.className = "stock-item";
-
-    const name = document.createElement("strong");
-    name.textContent = product.name;
-
-    const details = document.createElement("div");
-    details.textContent =
-      product.category + " | Mínimo: " +
-      product.minimum + " " + product.unit;
-
-    const balance = document.createElement("div");
-    balance.textContent =
-      "Saldo atual: " + quantity + " " + product.unit;
-
-    if (quantity <= product.minimum) {
-      balance.className = "negative";
-      balance.textContent += " ⚠️ ESTOQUE BAIXO";
-    } else {
-      balance.className = "positive";
-      balance.textContent += " ✓ Estoque normal";
+    if (catalog.length === 0) {
+      list.textContent = "Nenhum produto cadastrado.";
+      return 0;
     }
 
-    item.append(name, details, balance);
-    list.appendChild(item);
-  });
-}          
-  function render() {
-    const stock = getStock();
-renderCatalog();
-    
-    const entries = movements
-      .filter(m => m.type === "entrada")
-      .reduce((sum, m) => sum + m.quantity, 0);
+    let low = 0;
 
-    const exits = movements
-      .filter(m => m.type !== "entrada")
-      .reduce((sum, m) => sum + m.quantity, 0);
+    catalog.forEach(product => {
+      const quantity = getBalance(product.name);
 
-    document.getElementById("products").textContent = stock.size;
-    document.getElementById("entries").textContent = entries;
-    document.getElementById("exits").textContent = exits;
+      const item = document.createElement("div");
+      item.className = "stock-item";
 
-    const stockList = document.getElementById("stockList");
-    stockList.replaceChildren();
+      const name = document.createElement("strong");
+      name.textContent = product.name;
 
-    if (stock.size === 0) {
-      stockList.textContent = "Nenhum produto cadastrado.";
-    } else {
-      stock.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "stock-item";
+      const details = document.createElement("div");
+      details.className = "hint";
+      details.textContent =
+        product.category + " | Mínimo: " + product.minimum + " " + product.unit;
 
-        const name = document.createElement("strong");
-        name.textContent = item.name;
+      const balance = document.createElement("div");
+      balance.textContent = "Saldo atual: " + quantity + " " + product.unit;
 
-        const quantity = document.createElement("span");
-        quantity.textContent = " — " + item.quantity + " unidades";
-        quantity.className = item.quantity < 0 ? "negative" : "positive";
+      if (quantity <= product.minimum) {
+        low++;
+        balance.className = "negative";
+        balance.textContent += " ⚠️ ESTOQUE BAIXO";
+      } else {
+        balance.className = "positive";
+        balance.textContent += " ✓ Estoque normal";
+      }
 
-        div.append(name, quantity);
-        stockList.appendChild(div);
-      });
-    }
+      item.append(name, details, balance);
+      list.appendChild(item);
+    });
 
+    return low;
+  }
+
+  function renderHistory() {
     const history = document.getElementById("history");
     history.replaceChildren();
 
@@ -359,54 +260,102 @@ renderCatalog();
       div.className = "movement";
 
       const title = document.createElement("strong");
-      title.textContent =
-        m.product + " — " + m.type.toUpperCase();
+      title.textContent = m.product + " — " + m.type.toUpperCase();
 
       const details = document.createElement("div");
       details.textContent =
-        "Quantidade: " + m.quantity +
+        "Quantidade: " + m.quantity + (m.unit ? " " + m.unit : "") +
         " | Responsável: " + m.employee;
 
       const date = document.createElement("small");
-      date.textContent =
-        new Date(m.date).toLocaleString("pt-BR");
+      date.textContent = new Date(m.date).toLocaleString("pt-BR");
 
       div.append(title, details, date);
       history.appendChild(div);
     });
   }
 
-  form.addEventListener("submit", function(event) {
+  function render() {
+    renderProductSelect();
+    const low = renderStockList();
+    renderHistory();
+
+    document.getElementById("products").textContent = catalog.length;
+    document.getElementById("entries").textContent =
+      movements.filter(m => m.type === "entrada").length;
+    document.getElementById("exits").textContent =
+      movements.filter(m => m.type !== "entrada").length;
+    document.getElementById("lowCount").textContent = low;
+  }
+
+  productSelect.addEventListener("change", updateUnitHint);
+
+  productForm.addEventListener("submit", function (event) {
     event.preventDefault();
 
-    const product = document.getElementById("product").value.trim();
+    const name = document.getElementById("productName").value.trim();
+    const category = document.getElementById("category").value;
+    const unit = document.getElementById("unit").value;
+    const minimum = Number(document.getElementById("minimum").value);
+
+    if (!name || !Number.isFinite(minimum) || minimum < 0) {
+      alert("Preencha os dados corretamente.");
+      return;
+    }
+
+    if (findProduct(name)) {
+      alert("Esse produto já está cadastrado!");
+      return;
+    }
+
+    catalog.push({ name, category, unit, minimum });
+
+    try {
+      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(catalog));
+    } catch (error) {
+      catalog.pop();
+      alert("Não foi possível salvar o produto.");
+      return;
+    }
+
+    render();
+    this.reset();
+    alert("Produto cadastrado com sucesso!");
+  });
+
+  stockForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    const product = findProduct(productSelect.value);
     const type = document.getElementById("type").value;
-    const quantity = Number(document.getElementById("quantity").value);
+    const quantity = round(Number(document.getElementById("quantity").value));
     const employee = document.getElementById("employee").value.trim();
 
-    if (!product || !employee || !Number.isSafeInteger(quantity) || quantity <= 0) {
+    if (!product || !employee || !Number.isFinite(quantity) || quantity <= 0) {
       alert("Preencha todos os campos corretamente.");
       return;
     }
 
-    const stock = getStock();
-    const current = stock.get(product.toLowerCase());
+    if (product.unit === "unidades" || product.unit === "caixas" || product.unit === "pacotes") {
+      if (!Number.isInteger(quantity)) {
+        alert("Para " + product.unit + ", use apenas números inteiros.");
+        return;
+      }
+    }
 
-    if (type !== "entrada" &&
-        (!current || current.quantity < quantity)) {
+    if (type !== "entrada" && getBalance(product.name) < quantity) {
       alert("Estoque insuficiente para essa movimentação!");
       return;
     }
 
-    const movement = {
-      product: product,
+    movements.push({
+      product: product.name,
+      unit: product.unit,
       type: type,
       quantity: quantity,
       employee: employee,
       date: new Date().toISOString()
-    };
-
-    movements.push(movement);
+    });
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(movements));
@@ -417,12 +366,13 @@ renderCatalog();
     }
 
     render();
-    form.reset();
-
+    this.reset();
+    productSelect.value = product.name;
+    updateUnitHint();
     alert("Movimentação registrada com sucesso!");
   });
 
-  render(); 
+  render();
 </script>
 
 </body>
