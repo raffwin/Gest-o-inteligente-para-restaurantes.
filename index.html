@@ -25,12 +25,19 @@
     button { background: #16a34a; color: white; border: 0; padding: 11px 16px; border-radius: 8px; cursor: pointer; font-size: 15px; }
     button:hover { background: #15803d; }
     button:disabled { background: #9ca3af; cursor: not-allowed; }
-    form button, #exportBtn { width: 100%; }
-    #exportBtn { margin-bottom: 6px; }
+    form button { width: 100%; }
+    .actions { display: grid; gap: 8px; margin-bottom: 10px; }
+    .actions button { width: 100%; }
+    #pdfBtn { background: #dc2626; }
+    #pdfBtn:hover { background: #b91c1c; }
     input, select { width: 100%; padding: 9px 10px; margin: 3px 0 9px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; background: white; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .movement, .stock-item { padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; line-height: 1.35; }
     .movement:last-child, .stock-item:last-child { border-bottom: 0; }
+    .stock-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .stock-info { min-width: 0; overflow-wrap: anywhere; }
+    .btn-remove { background: white; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 10px; font-size: 13px; flex-shrink: 0; }
+    .btn-remove:hover { background: #fee2e2; }
     .positive { color: #16a34a; }
     .negative { color: #dc2626; }
     .hint { color: #6b7280; font-size: 13px; }
@@ -41,10 +48,14 @@
       header h1 { font-size: 28px; }
       main { padding: 20px; }
       .card, .section { padding: 18px 20px; }
-      form button, #exportBtn { width: auto; }
+      form button { width: auto; }
+      .actions { grid-template-columns: repeat(2, max-content); }
+      .actions button { width: auto; }
     }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 
 <body>
@@ -145,7 +156,10 @@
 
   <section class="section">
     <h2>📊 Saldo do estoque</h2>
-    <button type="button" id="exportBtn">📥 Exportar para Excel</button>
+    <div class="actions">
+      <button type="button" id="exportBtn">📥 Exportar para Excel</button>
+      <button type="button" id="pdfBtn">📄 Exportar para PDF</button>
+    </div>
     <div id="stockList">Nenhum produto cadastrado.</div>
   </section>
 
@@ -268,11 +282,61 @@
         balance.textContent += " ✓ Estoque normal";
       }
 
-      item.append(name, details, balance);
+      const info = document.createElement("div");
+      info.className = "stock-info";
+      info.append(name, details, balance);
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "btn-remove";
+      removeBtn.textContent = "🗑️ Remover";
+      removeBtn.setAttribute("aria-label", "Remover produto " + product.name);
+      removeBtn.addEventListener("click", () => removeProduct(product.name));
+
+      item.append(info, removeBtn);
       list.appendChild(item);
     });
 
     return low;
+  }
+
+  // Remove um produto cadastrado e as movimentações dele
+  function removeProduct(name) {
+    const product = findProduct(name);
+    if (!product) return;
+
+    const key = product.name.toLowerCase();
+    const related = movements.filter(m => m.product.toLowerCase() === key).length;
+
+    let message = 'Remover o produto "' + product.name + '"?';
+    if (related > 0) {
+      message += "\n\nAs " + related + " movimentação(ões) dele também serão apagadas do histórico.";
+    }
+    message += "\n\nEssa ação não pode ser desfeita.";
+
+    if (!confirm(message)) return;
+
+    const previousCatalog = catalog;
+    const previousMovements = movements;
+
+    catalog = catalog.filter(p => p.name.toLowerCase() !== key);
+    movements = movements.filter(m => m.product.toLowerCase() !== key);
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(movements));
+      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(catalog));
+    } catch (error) {
+      catalog = previousCatalog;
+      movements = previousMovements;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(movements));
+        localStorage.setItem(PRODUCTS_KEY, JSON.stringify(catalog));
+      } catch (restoreError) {}
+      alert("Não foi possível remover o produto.");
+      return;
+    }
+
+    render();
   }
 
   function renderHistory() {
@@ -317,15 +381,31 @@
     document.getElementById("lowCount").textContent = low;
   }
 
-  // ---------- Exportação para Excel ----------
-  // Planilha simples: Produto | Quantidade | Pedido (fórmula)
+  // ---------- Exportação (Excel e PDF) ----------
+  // Dados compartilhados pelas duas exportações
   function buildRows() {
     return catalog.map(p => {
       const saldo = getBalance(p.name);
       // Meta de estoque = dobro do mínimo. Pedido = quanto falta para chegar na meta.
       const alvo = round(p.minimum * 2);
-      return { name: p.name, saldo: saldo, alvo: alvo, pedido: Math.max(round(alvo - saldo), 0) };
+      return {
+        name: p.name,
+        category: p.category,
+        unit: p.unit,
+        minimum: p.minimum,
+        saldo: saldo,
+        alvo: alvo,
+        pedido: Math.max(round(alvo - saldo), 0),
+        baixo: saldo <= p.minimum
+      };
     });
+  }
+
+  // Data local (AAAA-MM-DD), sem deslocar o dia por causa do fuso horário
+  function localStamp() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
   }
 
   function downloadBlob(blob, filename) {
@@ -357,7 +437,7 @@
     }
 
     const rows = buildRows();
-    const stamp = new Date().toISOString().slice(0, 10);
+    const stamp = localStamp();
 
     if (typeof XLSX !== "undefined") {
       const data = [["Produto", "Quantidade", "Pedido"]];
@@ -386,7 +466,100 @@
     alert("Biblioteca do Excel indisponível (sem internet). Baixei um CSV, que abre no Excel, mas sem a fórmula.");
   }
 
+  // Número no padrão brasileiro (vírgula decimal)
+  function fmt(n) {
+    return Number(n).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+  }
+
+  function exportPdf() {
+    if (catalog.length === 0) {
+      alert("Cadastre produtos antes de exportar.");
+      return;
+    }
+
+    const JsPDF = window.jspdf && window.jspdf.jsPDF;
+    if (!JsPDF) {
+      alert("Biblioteca de PDF indisponível (sem internet). Conecte-se e tente novamente.");
+      return;
+    }
+
+    try {
+      const doc = new JsPDF({ unit: "pt", format: "a4" });
+
+      if (typeof doc.autoTable !== "function") {
+        alert("Biblioteca de tabelas do PDF indisponível (sem internet). Conecte-se e tente novamente.");
+        return;
+      }
+
+      const rows = buildRows();
+      const lowCount = rows.filter(r => r.baixo).length;
+      const toOrder = rows.filter(r => r.pedido > 0).length;
+      const margin = 40;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.setTextColor(17, 24, 39);
+      doc.text("Operatto - Saldo do estoque", margin, 48);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(107, 114, 128);
+      doc.text("Gerado em " + new Date().toLocaleString("pt-BR"), margin, 66);
+      doc.text(
+        rows.length + " produtos  |  " + lowCount + " com estoque baixo  |  " + toOrder + " para pedir",
+        margin, 80
+      );
+
+      doc.autoTable({
+        startY: 96,
+        margin: { left: margin, right: margin, bottom: 40 },
+        head: [["Produto", "Categoria", "Unidade", "Mínimo", "Saldo", "Situação", "Pedido"]],
+        body: rows.map(r => [
+          r.name,
+          r.category,
+          r.unit,
+          fmt(r.minimum),
+          fmt(r.saldo),
+          r.baixo ? "BAIXO" : "Normal",
+          r.pedido > 0 ? fmt(r.pedido) : "-"
+        ]),
+        styles: { font: "helvetica", fontSize: 9, cellPadding: 5 },
+        headStyles: { fillColor: [17, 24, 39], textColor: 255 },
+        alternateRowStyles: { fillColor: [249, 250, 251] },
+        columnStyles: {
+          3: { halign: "right" },
+          4: { halign: "right" },
+          5: { halign: "center" },
+          6: { halign: "right" }
+        },
+        didParseCell: function (data) {
+          if (data.section === "body" && rows[data.row.index].baixo) {
+            data.cell.styles.textColor = [220, 38, 38];
+            if (data.column.index === 5) data.cell.styles.fontStyle = "bold";
+          }
+        }
+      });
+
+      // Numeração de páginas
+      const pages = doc.internal.getNumberOfPages();
+      const w = doc.internal.pageSize.getWidth();
+      const h = doc.internal.pageSize.getHeight();
+      doc.setFontSize(9);
+      doc.setTextColor(107, 114, 128);
+      for (let i = 1; i <= pages; i++) {
+        doc.setPage(i);
+        doc.text("Operatto", margin, h - 20);
+        doc.text("Página " + i + " de " + pages, w - margin, h - 20, { align: "right" });
+      }
+
+      doc.save("operatto_estoque_" + localStamp() + ".pdf");
+    } catch (error) {
+      alert("Não foi possível gerar o PDF.");
+    }
+  }
+
   document.getElementById("exportBtn").addEventListener("click", exportExcel);
+  document.getElementById("pdfBtn").addEventListener("click", exportPdf);
 
   productSelect.addEventListener("change", updateUnitHint);
 
