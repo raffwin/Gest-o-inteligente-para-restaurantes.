@@ -329,17 +329,10 @@
 </footer>
 
 <script>
-  // =====================================================
-  // CONFIGURAÇÃO DO ENVIO DE E-MAIL (EmailJS — emailjs.com)
-  // Preencha os 3 campos para ativar a recuperação por e-mail.
-  // No modelo (template) do EmailJS, use "To Email" = {{to_email}} e as
-  // variáveis {{user_name}}, {{code}} e {{expires_min}} no texto.
-  // =====================================================
-   const EMAILJS_CONFIG = {
+  const EMAILJS_CONFIG = {
     serviceId: "service_phby65e",
     templateId: "template_68ckv3u",
     publicKey: "OEscjf9aLiR0z8yR8"
-  };
   };
 
   const STORAGE_KEY = "operatto_movements";
@@ -379,14 +372,11 @@
   let movements = load(STORAGE_KEY);
   let catalog = load(PRODUCTS_KEY);
   let settings = loadSettings();
-  let currentUser = null; // só em memória: ao recarregar a página, o login é pedido de novo
+  let currentUser = null;
 
   const productForm = document.getElementById("productForm");
   const factorInput = document.getElementById("targetFactor");
 
-  // =====================================================
-  // LOGIN (usuário + senha numérica de 6 dígitos) E RECUPERAÇÃO
-  // =====================================================
   const loginOverlay = document.getElementById("loginOverlay");
   const loginForm = document.getElementById("loginForm");
   const recoverForm = document.getElementById("recoverForm");
@@ -467,7 +457,6 @@
     return bytesToHex(arr);
   }
 
-  // Código de 6 números para a recuperação
   function randomCode() {
     let n;
     if (window.crypto && crypto.getRandomValues) {
@@ -480,7 +469,6 @@
     return String(n).padStart(6, "0");
   }
 
-  // Hash alternativo, usado só se o navegador não oferecer crypto.subtle
   function simpleHash(str) {
     let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
     for (let r = 0; r < 2000; r++) {
@@ -611,7 +599,6 @@
     window.scrollTo(0, 0);
   }
 
-  // Só números nos campos de senha e código
   [loginPin, loginPin2, resetCode, resetPin, resetPin2].forEach(input => {
     input.addEventListener("input", () => {
       input.value = input.value.replace(/\D/g, "").slice(0, 6);
@@ -635,7 +622,6 @@
       return;
     }
 
-    // ----- Primeiro acesso: cria o usuário -----
     if (setupMode) {
       const email = normEmail(loginEmail.value);
 
@@ -676,7 +662,6 @@
       return;
     }
 
-    // ----- Login -----
     const auth = loadAuth();
     if (!auth) {
       showLogin();
@@ -722,7 +707,6 @@
 
   document.getElementById("logoutBtn").addEventListener("click", () => showLogin());
 
-  // ----- Recuperação de senha por e-mail -----
   forgotBtn.addEventListener("click", function () {
     showView("recover");
     recoverEmail.value = "";
@@ -733,7 +717,6 @@
   document.getElementById("recoverBackBtn").addEventListener("click", () => showLogin());
   document.getElementById("resetBackBtn").addEventListener("click", () => showLogin());
 
-  // Gera o código, guarda só o hash dele (validade de 10 min) e envia por e-mail
   async function requestCode(auth, messageEl) {
     if (!emailConfigured()) {
       setMsg(messageEl, "O envio de e-mail ainda não foi configurado neste app (veja EMAILJS_CONFIG no código).");
@@ -899,7 +882,6 @@
         return;
       }
 
-      // Código correto: troca só a senha. Produtos, histórico e configurações continuam como estão.
       const salt = randomSalt();
       const result = await hashPin(newPin, salt);
       saveAuth(Object.assign({}, auth, { salt: salt, algo: result.algo, hash: result.hash }));
@@ -913,7 +895,6 @@
     }
   });
 
-  // Último recurso: apagar todos os dados e criar um novo acesso
   document.getElementById("wipeBtn").addEventListener("click", function () {
     const answer = prompt(
       "Esta opção APAGA TODOS os dados do Operatto (produtos, histórico e configurações) para criar um novo acesso.\n\n" +
@@ -940,7 +921,6 @@
     showLogin();
   });
 
-  // ----- Conta: e-mail de recuperação (dentro do app) -----
   function renderAccount() {
     const auth = loadAuth();
     const status = document.getElementById("accountStatus");
@@ -980,7 +960,7 @@
 
     try {
       saveAuth(Object.assign({}, auth, { email: email }));
-      clearRecovery(); // código antigo não vale para o novo e-mail
+      clearRecovery();
     } catch (error) {
       alert("Não foi possível salvar o e-mail neste navegador.");
       return;
@@ -990,11 +970,6 @@
     alert("E-mail de recuperação salvo!");
   });
 
-  // =====================================================
-  // FUNÇÕES DO APP
-  // =====================================================
-
-  // Evita erros de ponto flutuante (ex.: 0.1 + 0.2)
   function round(n) {
     return Math.round(n * 1000) / 1000;
   }
@@ -1003,20 +978,17 @@
     return Math.round(n * 100) / 100;
   }
 
-  // Valor em reais no padrão brasileiro (R$ 6,50)
   function fmtMoney(n) {
     return Number(n)
       .toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
       .replace(/\u00a0/g, " ");
   }
 
-  // "2026-12-20" -> "20/12/2026" (sem passar por Date, para não mudar o dia por fuso)
   function fmtDate(iso) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
     return m ? m[3] + "/" + m[2] + "/" + m[1] : "";
   }
 
-  // Dias entre hoje e a validade (negativo = já venceu). null se não houver validade.
   function daysUntil(iso) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
     if (!m) return null;
@@ -1030,7 +1002,6 @@
     return n === 1 ? "1 dia" : n + " dias";
   }
 
-  // Só alerta validade quando ainda existe saldo em estoque
   function expiryStatus(product, saldo) {
     const days = daysUntil(product.expiry);
     if (days === null || saldo <= 0) return null;
@@ -1043,8 +1014,6 @@
     return catalog.find(p => p.name.toLowerCase() === String(name).toLowerCase());
   }
 
-  // Saldo por produto cadastrado
-  // entrada = soma | saída/perda = subtrai | ajuste = soma o delta (positivo ou negativo)
   function getBalance(name) {
     const key = name.toLowerCase();
     let total = 0;
@@ -1057,9 +1026,6 @@
     return round(total);
   }
 
-  // ---------- Cálculo de pedido (dinâmico) ----------
-  // Meta: o "estoque ideal" do produto, se existir e for maior que o mínimo;
-  // senão, mínimo × fator padrão (configurável na tela).
   function targetOf(product) {
     let target;
     if (typeof product.target === "number" && product.target > product.minimum) {
@@ -1071,8 +1037,6 @@
     return round(target);
   }
 
-  // Pedido: só quando o saldo chegou ao mínimo (ponto de reposição).
-  // Quantidade = meta - saldo (arredondada pra cima em unidades/caixas/pacotes).
   function orderQty(product, saldo) {
     if (saldo > product.minimum) return 0;
     let qty = targetOf(product) - saldo;
@@ -1080,7 +1044,6 @@
     return Math.max(round(qty), 0);
   }
 
-  // Mostra a unidade escolhida ao lado de "Estoque atual", "Estoque mínimo" e "Estoque ideal"
   function updateFormUnitHints() {
     const text = "(" + document.getElementById("unit").value + ")";
     document.getElementById("currentUnitHint").textContent = text;
@@ -1088,7 +1051,6 @@
     document.getElementById("targetUnitHint").textContent = text;
   }
 
-  // Salva a contagem digitada como um "ajuste" no histórico
   function saveCount(product, rawValue) {
     if (!currentUser) return;
 
@@ -1158,7 +1120,6 @@
         product.category + " | Mínimo: " + product.minimum + " " + product.unit +
         " | Meta: " + targetOf(product) + " " + product.unit;
 
-      // Custo, fornecedor e validade (produtos antigos podem não ter esses dados)
       const extra = [];
       if (typeof product.cost === "number") extra.push("Custo: " + fmtMoney(product.cost));
       if (product.supplier) extra.push("Fornecedor: " + product.supplier);
@@ -1183,7 +1144,6 @@
         balance.textContent += " ✓ Estoque normal";
       }
 
-      // ----- Edição da contagem + pedido possível (simulação ao digitar) -----
       const editRow = document.createElement("div");
       editRow.className = "edit-row";
 
@@ -1276,7 +1236,6 @@
     return { low: low, expiring: expiring };
   }
 
-  // Resumo do pedido sugerido (itens e valor total)
   function renderOrderSummary() {
     const el = document.getElementById("orderSummary");
     const rows = buildRows().filter(r => r.pedido > 0);
@@ -1293,7 +1252,6 @@
       " | Total estimado: " + fmtMoney(total);
   }
 
-  // Remove um produto cadastrado e as movimentações dele
   function removeProduct(name) {
     if (!currentUser) return;
 
@@ -1382,8 +1340,6 @@
     document.getElementById("expiringCount").textContent = counts.expiring;
   }
 
-  // ---------- Exportação (Excel e PDF) ----------
-  // Dados compartilhados pelas duas exportações
   function buildRows() {
     return catalog.map(p => {
       const saldo = getBalance(p.name);
@@ -1406,7 +1362,6 @@
     });
   }
 
-  // Data local (AAAA-MM-DD), sem deslocar o dia por causa do fuso horário
   function localStamp() {
     const d = new Date();
     const pad = n => String(n).padStart(2, "0");
@@ -1425,10 +1380,8 @@
   }
 
   function toCsv(rows) {
-    // Ponto e vírgula + BOM: abre direto no Excel em português
     return "\uFEFF" + rows.map(r =>
       r.map(c => {
-        // números com vírgula decimal, como o Excel em português espera
         const text = typeof c === "number" ? String(c).replace(".", ",") : String(c);
         return '"' + text.replace(/"/g, '""') + '"';
       }).join(";")
@@ -1468,9 +1421,6 @@
 
       rows.forEach((r, i) => {
         const linha = i + 2;
-
-        // Pedido dinâmico: se a quantidade (B) ficar no mínimo (C) ou abaixo, pede até a meta (D).
-        // Mudando Quantidade, Mínimo ou Meta no Excel, o pedido recalcula sozinho.
         const falta = "D" + linha + "-B" + linha;
         const calc = r.discrete ? "ROUNDUP(" + falta + ",0)" : "(" + falta + ")";
         ws["E" + linha] = {
@@ -1481,7 +1431,6 @@
 
         if (r.cost !== null) {
           ws["G" + linha] = { t: "n", v: r.cost, z: moneyFormat };
-          // Custo do pedido = pedido x custo unitário
           ws["H" + linha] = {
             t: "n",
             f: "E" + linha + "*G" + linha,
@@ -1491,7 +1440,6 @@
         }
       });
 
-      // Linha de total com soma
       const ultima = rows.length + 1;
       const linhaTotal = rows.length + 2;
       ws["H" + linhaTotal] = {
@@ -1501,10 +1449,9 @@
         z: moneyFormat
       };
 
-      // ----- Bordas e estilo em todas as células da tabela -----
       const side = { style: "thin", color: { rgb: "9CA3AF" } };
       const allBorders = { top: side, bottom: side, left: side, right: side };
-      const totalRowIndex = rows.length + 1; // índice (base 0) da linha TOTAL
+      const totalRowIndex = rows.length + 1;
 
       for (let r = 0; r <= totalRowIndex; r++) {
         for (let c = 0; c < header.length; c++) {
@@ -1534,12 +1481,10 @@
       return;
     }
 
-    // Sem internet (biblioteca não carregou): baixa CSV (sem fórmula), que o Excel também abre
     downloadBlob(new Blob([toCsv(data)], { type: "text/csv;charset=utf-8" }), "operatto_pedido_" + stamp + ".csv");
     alert("Biblioteca do Excel indisponível (sem internet). Baixei um CSV, que abre no Excel, mas sem a fórmula.");
   }
 
-  // Número no padrão brasileiro (vírgula decimal)
   function fmt(n) {
     return Number(n).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
   }
@@ -1559,7 +1504,6 @@
     }
 
     try {
-      // Paisagem: as tabelas têm várias colunas
       const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
 
       if (typeof doc.autoTable !== "function") {
@@ -1575,8 +1519,6 @@
       const stockValue = rows.reduce((sum, r) => sum + (r.cost === null ? 0 : r.saldo * r.cost), 0);
       const orderTotal = orderRows.reduce((sum, r) => sum + (r.cost === null ? 0 : r.pedido * r.cost), 0);
       const margin = 40;
-
-      // Bordas finas e cinzas em todas as células
       const gridLine = { lineWidth: 0.5, lineColor: [156, 163, 175] };
 
       doc.setFont("helvetica", "bold");
@@ -1594,7 +1536,6 @@
         margin, 80
       );
 
-      // ----- Tabela 1: saldo do estoque -----
       doc.autoTable({
         startY: 96,
         theme: "grid",
@@ -1635,7 +1576,6 @@
             if (data.column.index === 6) data.cell.styles.fontStyle = "bold";
           }
 
-          // Validade: vermelho se vencido, laranja se vence em até 7 dias
           if (data.column.index === 10 && row.expiryStatus) {
             data.cell.styles.fontStyle = "bold";
             data.cell.styles.textColor = row.expiryStatus.type === "vencido"
@@ -1645,7 +1585,6 @@
         }
       });
 
-      // ----- Tabela 2: pedido de compra -----
       const h0 = doc.internal.pageSize.getHeight();
       let y = doc.lastAutoTable.finalY + 30;
       if (y > h0 - 120) {
@@ -1703,7 +1642,6 @@
         });
       }
 
-      // Numeração de páginas
       const pages = doc.internal.getNumberOfPages();
       const w = doc.internal.pageSize.getWidth();
       const h = doc.internal.pageSize.getHeight();
@@ -1727,7 +1665,6 @@
 
   document.getElementById("unit").addEventListener("change", updateFormUnitHints);
 
-  // Fator da meta padrão: salva e recalcula tudo na hora
   factorInput.value = settings.targetFactor;
   factorInput.addEventListener("change", function () {
     if (!currentUser) return;
@@ -1804,7 +1741,6 @@
 
     catalog = [...catalog, product];
 
-    // O estoque atual vira uma entrada no histórico, para o saldo continuar batendo
     if (initialStock > 0) {
       movements = [...movements, {
         product: name,
@@ -1836,7 +1772,6 @@
     alert("Produto cadastrado com sucesso!");
   });
 
-  // Início: sempre começa pela tela de login
   updateFormUnitHints();
   showLogin();
 </script>
