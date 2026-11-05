@@ -44,6 +44,10 @@
     .negative { color: #dc2626; }
     .warning { color: #d97706; }
     .hint { color: #6b7280; font-size: 13px; }
+    .settings { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+    .settings .row { align-items: end; }
+    .settings input { margin-bottom: 0; }
+    .order-summary { font-size: 14px; font-weight: bold; margin-bottom: 10px; }
     footer { text-align: center; padding: 14px; font-size: 12px; color: #6b7280; }
     .credit { margin-top: 4px; font-weight: bold; }
 
@@ -151,6 +155,9 @@
         </div>
       </div>
 
+      <label>Estoque ideal (meta de reposição) <span class="hint" id="targetUnitHint"></span> <span class="hint">(opcional — vazio = mínimo × fator padrão)</span></label>
+      <input id="target" type="number" min="0" step="any" placeholder="Quanto você quer ter após o pedido">
+
       <div class="row">
         <div>
           <label>Custo unitário (R$)</label>
@@ -199,6 +206,19 @@
 
   <section class="section">
     <h2>📊 Saldo do estoque</h2>
+
+    <div class="settings">
+      <div class="row">
+        <div>
+          <label for="targetFactor">Fator da meta padrão (meta = mínimo × fator)</label>
+          <input id="targetFactor" type="number" min="1" step="0.1" value="2">
+        </div>
+        <div class="hint">O pedido é sugerido quando o saldo chega ao mínimo, e completa até a meta. Produtos com "estoque ideal" próprio usam o valor definido no cadastro.</div>
+      </div>
+    </div>
+
+    <div class="order-summary" id="orderSummary"></div>
+
     <div class="actions">
       <button type="button" id="exportBtn">📥 Exportar para Excel</button>
       <button type="button" id="pdfBtn">📄 Exportar para PDF</button>
@@ -220,8 +240,10 @@
 <script>
   const STORAGE_KEY = "operatto_movements";
   const PRODUCTS_KEY = "operatto_products";
+  const SETTINGS_KEY = "operatto_settings";
   const DISCRETE_UNITS = ["unidades", "caixas", "pacotes"];
   const EXPIRY_ALERT_DAYS = 7;
+  const DEFAULT_TARGET_FACTOR = 2;
 
   function load(key) {
     try {
@@ -232,12 +254,24 @@
     }
   }
 
+  function loadSettings() {
+    try {
+      const data = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+      const factor = data && Number(data.targetFactor);
+      return { targetFactor: Number.isFinite(factor) && factor >= 1 ? factor : DEFAULT_TARGET_FACTOR };
+    } catch (error) {
+      return { targetFactor: DEFAULT_TARGET_FACTOR };
+    }
+  }
+
   let movements = load(STORAGE_KEY);
   let catalog = load(PRODUCTS_KEY);
+  let settings = loadSettings();
 
   const stockForm = document.getElementById("stockForm");
   const productForm = document.getElementById("productForm");
   const productSelect = document.getElementById("product");
+  const factorInput = document.getElementById("targetFactor");
 
   // Evita erros de ponto flutuante (ex.: 0.1 + 0.2)
   function round(n) {
@@ -299,6 +333,29 @@
     return round(total);
   }
 
+  // ---------- Cálculo de pedido (dinâmico) ----------
+  // Meta: o "estoque ideal" do produto, se existir e for maior que o mínimo;
+  // senão, mínimo × fator padrão (configurável na tela).
+  function targetOf(product) {
+    let target;
+    if (typeof product.target === "number" && product.target > product.minimum) {
+      target = product.target;
+    } else {
+      target = product.minimum * settings.targetFactor;
+    }
+    if (DISCRETE_UNITS.includes(product.unit)) target = Math.ceil(round(target));
+    return round(target);
+  }
+
+  // Pedido: só quando o saldo chegou ao mínimo (ponto de reposição).
+  // Quantidade = meta - saldo (arredondada pra cima em unidades/caixas/pacotes).
+  function orderQty(product, saldo) {
+    if (saldo > product.minimum) return 0;
+    let qty = targetOf(product) - saldo;
+    if (DISCRETE_UNITS.includes(product.unit)) qty = Math.ceil(round(qty));
+    return Math.max(round(qty), 0);
+  }
+
   function renderProductSelect() {
     const selected = productSelect.value;
     productSelect.replaceChildren();
@@ -331,11 +388,12 @@
     document.getElementById("unitHint").textContent = p ? "(" + p.unit + ")" : "";
   }
 
-  // Mostra a unidade escolhida ao lado de "Estoque atual" e "Estoque mínimo"
+  // Mostra a unidade escolhida ao lado de "Estoque atual", "Estoque mínimo" e "Estoque ideal"
   function updateFormUnitHints() {
     const text = "(" + document.getElementById("unit").value + ")";
     document.getElementById("currentUnitHint").textContent = text;
     document.getElementById("minUnitHint").textContent = text;
+    document.getElementById("targetUnitHint").textContent = text;
   }
 
   function renderStockList() {
@@ -362,7 +420,8 @@
       const details = document.createElement("div");
       details.className = "hint";
       details.textContent =
-        product.category + " | Mínimo: " + product.minimum + " " + product.unit;
+        product.category + " | Mínimo: " + product.minimum + " " + product.unit +
+        " | Meta: " + targetOf(product) + " " + product.unit;
 
       // Custo, fornecedor e validade (produtos antigos podem não ter esses dados)
       const extra = [];
@@ -380,10 +439,21 @@
       const balance = document.createElement("div");
       balance.textContent = "Saldo atual: " + quantity + " " + product.unit;
 
+      let orderEl = null;
+
       if (quantity <= product.minimum) {
         low++;
         balance.className = "negative";
         balance.textContent += " ⚠️ ESTOQUE BAIXO";
+
+        const qty = orderQty(product, quantity);
+        if (qty > 0) {
+          orderEl = document.createElement("div");
+          orderEl.className = "warning";
+          let text = "🛒 Pedir: " + qty + " " + product.unit;
+          if (typeof product.cost === "number") text += " (" + fmtMoney(qty * product.cost) + ")";
+          orderEl.textContent = text;
+        }
       } else {
         balance.className = "positive";
         balance.textContent += " ✓ Estoque normal";
@@ -407,7 +477,7 @@
 
       const info = document.createElement("div");
       info.className = "stock-info";
-      info.append(...[name, details, extraEl, balance, expiryEl].filter(Boolean));
+      info.append(...[name, details, extraEl, balance, orderEl, expiryEl].filter(Boolean));
 
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
@@ -421,6 +491,23 @@
     });
 
     return { low: low, expiring: expiring };
+  }
+
+  // Resumo do pedido sugerido (itens e valor total)
+  function renderOrderSummary() {
+    const el = document.getElementById("orderSummary");
+    const rows = buildRows().filter(r => r.pedido > 0);
+
+    if (rows.length === 0) {
+      el.textContent = catalog.length === 0 ? "" : "✓ Nenhum pedido necessário no momento.";
+      el.className = "order-summary positive";
+      return;
+    }
+
+    const total = rows.reduce((sum, r) => sum + (r.cost === null ? 0 : r.pedido * r.cost), 0);
+    el.className = "order-summary warning";
+    el.textContent = "🛒 Pedido sugerido: " + rows.length + (rows.length === 1 ? " item" : " itens") +
+      " | Total estimado: " + fmtMoney(total);
   }
 
   // Remove um produto cadastrado e as movimentações dele
@@ -494,6 +581,7 @@
   function render() {
     renderProductSelect();
     const counts = renderStockList();
+    renderOrderSummary();
     renderHistory();
 
     document.getElementById("products").textContent = catalog.length;
@@ -510,8 +598,7 @@
   function buildRows() {
     return catalog.map(p => {
       const saldo = getBalance(p.name);
-      // Meta de estoque = dobro do mínimo. Pedido = quanto falta para chegar na meta.
-      const alvo = round(p.minimum * 2);
+      const alvo = targetOf(p);
       return {
         name: p.name,
         category: p.category,
@@ -519,8 +606,9 @@
         minimum: p.minimum,
         saldo: saldo,
         alvo: alvo,
-        pedido: Math.max(round(alvo - saldo), 0),
+        pedido: orderQty(p, saldo),
         baixo: saldo <= p.minimum,
+        discrete: DISCRETE_UNITS.includes(p.unit),
         cost: typeof p.cost === "number" ? p.cost : null,
         supplier: p.supplier || "",
         expiry: p.expiry || "",
@@ -566,40 +654,63 @@
 
     const rows = buildRows();
     const stamp = localStamp();
-    const header = ["Produto", "Quantidade", "Pedido", "Fornecedor", "Custo unitário", "Custo do pedido"];
+    const header = ["Produto", "Quantidade", "Mínimo", "Meta", "Pedido", "Fornecedor", "Custo unitário", "Custo do pedido"];
+
+    const data = [header];
+    rows.forEach(r => data.push([
+      r.name,
+      r.saldo,
+      r.minimum,
+      r.alvo,
+      r.pedido,
+      r.supplier,
+      r.cost === null ? "" : r.cost,
+      r.cost === null ? "" : roundMoney(r.pedido * r.cost)
+    ]));
+
+    const totalPedido = rows.reduce((sum, r) => sum + (r.cost === null ? 0 : r.pedido * r.cost), 0);
+    data.push(["", "", "", "", "", "", "TOTAL", roundMoney(totalPedido)]);
 
     if (typeof XLSX !== "undefined") {
-      const data = [header];
-      rows.forEach(r => data.push([
-        r.name,
-        r.saldo,
-        r.pedido,
-        r.supplier,
-        r.cost === null ? "" : r.cost,
-        r.cost === null ? "" : roundMoney(r.pedido * r.cost)
-      ]));
-
       const ws = XLSX.utils.aoa_to_sheet(data);
       const moneyFormat = '"R$" #,##0.00';
 
       rows.forEach((r, i) => {
         const linha = i + 2;
-        // Coluna Pedido com fórmula: =MAX(0; meta - quantidade)
-        ws["C" + linha] = { t: "n", f: "MAX(0," + r.alvo + "-B" + linha + ")", v: r.pedido };
+
+        // Pedido dinâmico: se a quantidade (B) ficar no mínimo (C) ou abaixo, pede até a meta (D).
+        // Mudando Quantidade, Mínimo ou Meta no Excel, o pedido recalcula sozinho.
+        const falta = "D" + linha + "-B" + linha;
+        const calc = r.discrete ? "ROUNDUP(" + falta + ",0)" : "(" + falta + ")";
+        ws["E" + linha] = {
+          t: "n",
+          f: "IF(B" + linha + "<=C" + linha + ",MAX(0," + calc + "),0)",
+          v: r.pedido
+        };
 
         if (r.cost !== null) {
-          ws["E" + linha] = { t: "n", v: r.cost, z: moneyFormat };
+          ws["G" + linha] = { t: "n", v: r.cost, z: moneyFormat };
           // Custo do pedido = pedido x custo unitário
-          ws["F" + linha] = {
+          ws["H" + linha] = {
             t: "n",
-            f: "C" + linha + "*E" + linha,
+            f: "E" + linha + "*G" + linha,
             v: roundMoney(r.pedido * r.cost),
             z: moneyFormat
           };
         }
       });
 
-      ws["!cols"] = [{ wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 24 }, { wch: 15 }, { wch: 17 }];
+      // Linha de total com soma
+      const ultima = rows.length + 1;
+      const linhaTotal = rows.length + 2;
+      ws["H" + linhaTotal] = {
+        t: "n",
+        f: "SUM(H2:H" + ultima + ")",
+        v: roundMoney(totalPedido),
+        z: moneyFormat
+      };
+
+      ws["!cols"] = [{ wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 24 }, { wch: 15 }, { wch: 17 }];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Pedido");
@@ -608,15 +719,6 @@
     }
 
     // Sem internet (biblioteca não carregou): baixa CSV (sem fórmula), que o Excel também abre
-    const data = [header];
-    rows.forEach(r => data.push([
-      r.name,
-      r.saldo,
-      r.pedido,
-      r.supplier,
-      r.cost === null ? "" : r.cost,
-      r.cost === null ? "" : roundMoney(r.pedido * r.cost)
-    ]));
     downloadBlob(new Blob([toCsv(data)], { type: "text/csv;charset=utf-8" }), "operatto_pedido_" + stamp + ".csv");
     alert("Biblioteca do Excel indisponível (sem internet). Baixei um CSV, que abre no Excel, mas sem a fórmula.");
   }
@@ -639,7 +741,7 @@
     }
 
     try {
-      // Paisagem: a tabela tem mais colunas agora
+      // Paisagem: as tabelas têm várias colunas
       const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
 
       if (typeof doc.autoTable !== "function") {
@@ -649,8 +751,11 @@
 
       const rows = buildRows();
       const lowCount = rows.filter(r => r.baixo).length;
-      const toOrder = rows.filter(r => r.pedido > 0).length;
+      const orderRows = rows
+        .filter(r => r.pedido > 0)
+        .sort((a, b) => (a.supplier || "~").localeCompare(b.supplier || "~", "pt-BR") || a.name.localeCompare(b.name, "pt-BR"));
       const stockValue = rows.reduce((sum, r) => sum + (r.cost === null ? 0 : r.saldo * r.cost), 0);
+      const orderTotal = orderRows.reduce((sum, r) => sum + (r.cost === null ? 0 : r.pedido * r.cost), 0);
       const margin = 40;
 
       doc.setFont("helvetica", "bold");
@@ -663,20 +768,22 @@
       doc.setTextColor(107, 114, 128);
       doc.text("Gerado em " + new Date().toLocaleString("pt-BR"), margin, 66);
       doc.text(
-        rows.length + " produtos  |  " + lowCount + " com estoque baixo  |  " + toOrder +
+        rows.length + " produtos  |  " + lowCount + " com estoque baixo  |  " + orderRows.length +
         " para pedir  |  Valor em estoque: " + fmtMoney(stockValue),
         margin, 80
       );
 
+      // ----- Tabela 1: saldo do estoque -----
       doc.autoTable({
         startY: 96,
         margin: { left: margin, right: margin, bottom: 40 },
-        head: [["Produto", "Categoria", "Unidade", "Mínimo", "Saldo", "Situação", "Pedido", "Custo un.", "Fornecedor", "Validade"]],
+        head: [["Produto", "Categoria", "Unidade", "Mínimo", "Meta", "Saldo", "Situação", "Pedido", "Custo un.", "Fornecedor", "Validade"]],
         body: rows.map(r => [
           r.name,
           r.category,
           r.unit,
           fmt(r.minimum),
+          fmt(r.alvo),
           fmt(r.saldo),
           r.baixo ? "BAIXO" : "Normal",
           r.pedido > 0 ? fmt(r.pedido) : "-",
@@ -686,15 +793,16 @@
             ? fmtDate(r.expiry) + (r.expiryStatus && r.expiryStatus.type === "vencido" ? " (VENCIDO)" : "")
             : "-"
         ]),
-        styles: { font: "helvetica", fontSize: 9, cellPadding: 5 },
+        styles: { font: "helvetica", fontSize: 8.5, cellPadding: 4 },
         headStyles: { fillColor: [17, 24, 39], textColor: 255 },
         alternateRowStyles: { fillColor: [249, 250, 251] },
         columnStyles: {
           3: { halign: "right" },
           4: { halign: "right" },
-          5: { halign: "center" },
-          6: { halign: "right" },
-          7: { halign: "right" }
+          5: { halign: "right" },
+          6: { halign: "center" },
+          7: { halign: "right" },
+          8: { halign: "right" }
         },
         didParseCell: function (data) {
           if (data.section !== "body") return;
@@ -702,11 +810,11 @@
 
           if (row.baixo) {
             data.cell.styles.textColor = [220, 38, 38];
-            if (data.column.index === 5) data.cell.styles.fontStyle = "bold";
+            if (data.column.index === 6) data.cell.styles.fontStyle = "bold";
           }
 
           // Validade: vermelho se vencido, laranja se vence em até 7 dias
-          if (data.column.index === 9 && row.expiryStatus) {
+          if (data.column.index === 10 && row.expiryStatus) {
             data.cell.styles.fontStyle = "bold";
             data.cell.styles.textColor = row.expiryStatus.type === "vencido"
               ? [220, 38, 38]
@@ -715,10 +823,68 @@
         }
       });
 
+      // ----- Tabela 2: pedido de compra -----
+      const h0 = doc.internal.pageSize.getHeight();
+      let y = doc.lastAutoTable.finalY + 30;
+      if (y > h0 - 120) {
+        doc.addPage();
+        y = 48;
+      }
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(17, 24, 39);
+      doc.text("Pedido de compra sugerido", margin, y);
+
+      if (orderRows.length === 0) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(107, 114, 128);
+        doc.text("Nenhum produto precisa de pedido no momento.", margin, y + 18);
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(107, 114, 128);
+        doc.text(
+          "Produtos com saldo no mínimo ou abaixo, repostos até a meta. Agrupado por fornecedor.",
+          margin, y + 14
+        );
+
+        doc.autoTable({
+          startY: y + 24,
+          margin: { left: margin, right: margin, bottom: 40 },
+          head: [["Produto", "Fornecedor", "Unidade", "Saldo", "Meta", "Qtd. a pedir", "Custo un.", "Custo do pedido"]],
+          body: orderRows.map(r => [
+            r.name,
+            r.supplier || "-",
+            r.unit,
+            fmt(r.saldo),
+            fmt(r.alvo),
+            fmt(r.pedido),
+            r.cost === null ? "-" : fmtMoney(r.cost),
+            r.cost === null ? "-" : fmtMoney(r.pedido * r.cost)
+          ]),
+          foot: [["", "", "", "", "", "", "TOTAL", fmtMoney(orderTotal)]],
+          showFoot: "lastPage",
+          styles: { font: "helvetica", fontSize: 9, cellPadding: 5 },
+          headStyles: { fillColor: [22, 163, 74], textColor: 255 },
+          footStyles: { fillColor: [243, 244, 246], textColor: [17, 24, 39], fontStyle: "bold" },
+          alternateRowStyles: { fillColor: [249, 250, 251] },
+          columnStyles: {
+            3: { halign: "right" },
+            4: { halign: "right" },
+            5: { halign: "right", fontStyle: "bold" },
+            6: { halign: "right" },
+            7: { halign: "right" }
+          }
+        });
+      }
+
       // Numeração de páginas
       const pages = doc.internal.getNumberOfPages();
       const w = doc.internal.pageSize.getWidth();
       const h = doc.internal.pageSize.getHeight();
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(107, 114, 128);
       for (let i = 1; i <= pages; i++) {
@@ -739,6 +905,24 @@
   productSelect.addEventListener("change", updateUnitHint);
   document.getElementById("unit").addEventListener("change", updateFormUnitHints);
 
+  // Fator da meta padrão: salva e recalcula tudo na hora
+  factorInput.value = settings.targetFactor;
+  factorInput.addEventListener("change", function () {
+    const value = Number(factorInput.value);
+    if (!Number.isFinite(value) || value < 1) {
+      alert("O fator deve ser 1 ou maior.");
+      factorInput.value = settings.targetFactor;
+      return;
+    }
+    settings = { targetFactor: value };
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch (error) {
+      alert("Não foi possível salvar a configuração neste navegador.");
+    }
+    render();
+  });
+
   productForm.addEventListener("submit", function (event) {
     event.preventDefault();
 
@@ -747,6 +931,8 @@
     const unit = document.getElementById("unit").value;
     const initialStock = round(Number(document.getElementById("initialStock").value));
     const minimum = Number(document.getElementById("minimum").value);
+    const targetText = document.getElementById("target").value;
+    const target = targetText === "" ? null : Number(targetText);
     const costText = document.getElementById("cost").value;
     const cost = Number(costText);
     const supplier = document.getElementById("supplier").value.trim();
@@ -759,6 +945,11 @@
       costText === "" || !Number.isFinite(cost) || cost < 0
     ) {
       alert("Preencha os dados corretamente.");
+      return;
+    }
+
+    if (target !== null && (!Number.isFinite(target) || target <= minimum)) {
+      alert("O estoque ideal precisa ser maior que o estoque mínimo (ou deixe em branco).");
       return;
     }
 
@@ -777,6 +968,7 @@
       category: category,
       unit: unit,
       minimum: minimum,
+      target: target,
       cost: roundMoney(cost),
       supplier: supplier,
       expiry: expiry
