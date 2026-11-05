@@ -36,10 +36,15 @@
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .movement, .stock-item { padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; line-height: 1.35; }
     .movement:last-child, .stock-item:last-child { border-bottom: 0; }
-    .stock-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-    .stock-info { min-width: 0; overflow-wrap: anywhere; }
+    .stock-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .stock-info { min-width: 0; flex: 1; overflow-wrap: anywhere; }
     .btn-remove { background: white; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 10px; font-size: 13px; flex-shrink: 0; }
     .btn-remove:hover { background: #fee2e2; }
+    .edit-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0 4px; }
+    .edit-row .hint { white-space: nowrap; }
+    .edit-row input { width: 110px; margin: 0; padding: 7px 8px; font-size: 15px; }
+    .btn-save { padding: 8px 12px; font-size: 13px; }
+    .sim { font-size: 13px; margin-top: 2px; }
     .positive { color: #16a34a; }
     .negative { color: #dc2626; }
     .warning { color: #d97706; }
@@ -61,7 +66,8 @@
       .actions button { width: auto; }
     }
   </style>
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- xlsx-js-style: mesma API do SheetJS, mas aceita bordas e estilos nas células -->
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -217,6 +223,8 @@
       </div>
     </div>
 
+    <div class="hint" style="margin-bottom:8px">💡 Digite a contagem de cada produto para ver o pedido possível na hora. Clique em "Salvar contagem" para registrar.</div>
+
     <div class="order-summary" id="orderSummary"></div>
 
     <div class="actions">
@@ -323,12 +331,15 @@
   }
 
   // Saldo por produto cadastrado
+  // entrada = soma | saída/perda = subtrai | ajuste = soma o delta (positivo ou negativo)
   function getBalance(name) {
     const key = name.toLowerCase();
     let total = 0;
     movements.forEach(m => {
       if (m.product.toLowerCase() !== key) return;
-      total += m.type === "entrada" ? m.quantity : -m.quantity;
+      if (m.type === "entrada") total += m.quantity;
+      else if (m.type === "ajuste") total += Number(m.delta) || 0;
+      else total -= m.quantity;
     });
     return round(total);
   }
@@ -396,6 +407,47 @@
     document.getElementById("targetUnitHint").textContent = text;
   }
 
+  // Salva a contagem digitada como um "ajuste" no histórico
+  function saveCount(product, rawValue) {
+    const value = round(Number(rawValue));
+
+    if (rawValue === "" || !Number.isFinite(value) || value < 0) {
+      alert("Digite uma quantidade válida (0 ou mais).");
+      return;
+    }
+
+    if (DISCRETE_UNITS.includes(product.unit) && !Number.isInteger(value)) {
+      alert("Para " + product.unit + ", use apenas números inteiros.");
+      return;
+    }
+
+    const delta = round(value - getBalance(product.name));
+    if (delta === 0) {
+      alert("O saldo já é " + value + " " + product.unit + ".");
+      return;
+    }
+
+    movements.push({
+      product: product.name,
+      unit: product.unit,
+      type: "ajuste",
+      quantity: Math.abs(delta),
+      delta: delta,
+      employee: "Ajuste de inventário",
+      date: new Date().toISOString()
+    });
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(movements));
+    } catch (error) {
+      movements.pop();
+      alert("Não foi possível salvar a contagem neste navegador.");
+      return;
+    }
+
+    render();
+  }
+
   function renderStockList() {
     const list = document.getElementById("stockList");
     list.replaceChildren();
@@ -439,25 +491,73 @@
       const balance = document.createElement("div");
       balance.textContent = "Saldo atual: " + quantity + " " + product.unit;
 
-      let orderEl = null;
-
       if (quantity <= product.minimum) {
         low++;
         balance.className = "negative";
         balance.textContent += " ⚠️ ESTOQUE BAIXO";
-
-        const qty = orderQty(product, quantity);
-        if (qty > 0) {
-          orderEl = document.createElement("div");
-          orderEl.className = "warning";
-          let text = "🛒 Pedir: " + qty + " " + product.unit;
-          if (typeof product.cost === "number") text += " (" + fmtMoney(qty * product.cost) + ")";
-          orderEl.textContent = text;
-        }
       } else {
         balance.className = "positive";
         balance.textContent += " ✓ Estoque normal";
       }
+
+      // ----- Edição da contagem + pedido possível (simulação ao digitar) -----
+      const editRow = document.createElement("div");
+      editRow.className = "edit-row";
+
+      const editLabel = document.createElement("span");
+      editLabel.className = "hint";
+      editLabel.textContent = "Contagem (" + product.unit + "):";
+
+      const qtyInput = document.createElement("input");
+      qtyInput.type = "number";
+      qtyInput.min = "0";
+      qtyInput.step = "any";
+      qtyInput.value = quantity;
+      qtyInput.setAttribute("aria-label", "Contagem de " + product.name);
+
+      const saveBtn = document.createElement("button");
+      saveBtn.type = "button";
+      saveBtn.className = "btn-save";
+      saveBtn.textContent = "Salvar contagem";
+
+      const simEl = document.createElement("div");
+      simEl.className = "sim";
+
+      function updatePreview() {
+        const typed = qtyInput.value;
+        const value = round(Number(typed));
+
+        if (typed === "" || !Number.isFinite(value) || value < 0) {
+          simEl.className = "sim hint";
+          simEl.textContent = "";
+          return;
+        }
+
+        const qty = orderQty(product, value);
+        const changed = value !== quantity;
+
+        if (qty > 0) {
+          simEl.className = "sim warning";
+          let text = "🛒 Pedido possível: " + qty + " " + product.unit;
+          if (typeof product.cost === "number") text += " (" + fmtMoney(qty * product.cost) + ")";
+          simEl.textContent = text + (changed ? " — simulação, salve para registrar" : "");
+        } else {
+          simEl.className = "sim positive";
+          simEl.textContent = "✓ Sem necessidade de pedido" + (changed ? " — simulação, salve para registrar" : "");
+        }
+      }
+
+      qtyInput.addEventListener("input", updatePreview);
+      qtyInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          saveCount(product, qtyInput.value);
+        }
+      });
+      saveBtn.addEventListener("click", () => saveCount(product, qtyInput.value));
+
+      editRow.append(editLabel, qtyInput, saveBtn);
+      updatePreview();
 
       let expiryEl = null;
       const status = expiryStatus(product, quantity);
@@ -477,7 +577,7 @@
 
       const info = document.createElement("div");
       info.className = "stock-info";
-      info.append(...[name, details, extraEl, balance, orderEl, expiryEl].filter(Boolean));
+      info.append(...[name, details, extraEl, balance, editRow, simEl, expiryEl].filter(Boolean));
 
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
@@ -566,9 +666,16 @@
       title.textContent = m.product + " — " + m.type.toUpperCase();
 
       const details = document.createElement("div");
-      details.textContent =
-        "Quantidade: " + m.quantity + (m.unit ? " " + m.unit : "") +
-        " | Responsável: " + m.employee;
+      if (m.type === "ajuste") {
+        const sign = m.delta > 0 ? "+" : "";
+        details.textContent =
+          "Ajuste: " + sign + m.delta + (m.unit ? " " + m.unit : "") +
+          " | Responsável: " + m.employee;
+      } else {
+        details.textContent =
+          "Quantidade: " + m.quantity + (m.unit ? " " + m.unit : "") +
+          " | Responsável: " + m.employee;
+      }
 
       const date = document.createElement("small");
       date.textContent = new Date(m.date).toLocaleString("pt-BR");
@@ -588,7 +695,7 @@
     document.getElementById("entries").textContent =
       movements.filter(m => m.type === "entrada").length;
     document.getElementById("exits").textContent =
-      movements.filter(m => m.type !== "entrada").length;
+      movements.filter(m => m.type === "saida" || m.type === "perda").length;
     document.getElementById("lowCount").textContent = counts.low;
     document.getElementById("expiringCount").textContent = counts.expiring;
   }
@@ -710,6 +817,31 @@
         z: moneyFormat
       };
 
+      // ----- Bordas e estilo em todas as células da tabela -----
+      const side = { style: "thin", color: { rgb: "9CA3AF" } };
+      const allBorders = { top: side, bottom: side, left: side, right: side };
+      const totalRowIndex = rows.length + 1; // índice (base 0) da linha TOTAL
+
+      for (let r = 0; r <= totalRowIndex; r++) {
+        for (let c = 0; c < header.length; c++) {
+          const addr = XLSX.utils.encode_cell({ r: r, c: c });
+          if (!ws[addr]) ws[addr] = { t: "s", v: "" };
+
+          const style = { border: allBorders };
+
+          if (r === 0) {
+            style.font = { bold: true, color: { rgb: "FFFFFF" } };
+            style.fill = { patternType: "solid", fgColor: { rgb: "111827" } };
+            style.alignment = { horizontal: "center", vertical: "center" };
+          } else if (r === totalRowIndex) {
+            style.font = { bold: true };
+            style.fill = { patternType: "solid", fgColor: { rgb: "F3F4F6" } };
+          }
+
+          ws[addr].s = style;
+        }
+      }
+
       ws["!cols"] = [{ wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 24 }, { wch: 15 }, { wch: 17 }];
 
       const wb = XLSX.utils.book_new();
@@ -758,6 +890,9 @@
       const orderTotal = orderRows.reduce((sum, r) => sum + (r.cost === null ? 0 : r.pedido * r.cost), 0);
       const margin = 40;
 
+      // Bordas finas e cinzas em todas as células
+      const gridLine = { lineWidth: 0.5, lineColor: [156, 163, 175] };
+
       doc.setFont("helvetica", "bold");
       doc.setFontSize(18);
       doc.setTextColor(17, 24, 39);
@@ -776,6 +911,7 @@
       // ----- Tabela 1: saldo do estoque -----
       doc.autoTable({
         startY: 96,
+        theme: "grid",
         margin: { left: margin, right: margin, bottom: 40 },
         head: [["Produto", "Categoria", "Unidade", "Mínimo", "Meta", "Saldo", "Situação", "Pedido", "Custo un.", "Fornecedor", "Validade"]],
         body: rows.map(r => [
@@ -793,7 +929,7 @@
             ? fmtDate(r.expiry) + (r.expiryStatus && r.expiryStatus.type === "vencido" ? " (VENCIDO)" : "")
             : "-"
         ]),
-        styles: { font: "helvetica", fontSize: 8.5, cellPadding: 4 },
+        styles: Object.assign({ font: "helvetica", fontSize: 8.5, cellPadding: 4 }, gridLine),
         headStyles: { fillColor: [17, 24, 39], textColor: 255 },
         alternateRowStyles: { fillColor: [249, 250, 251] },
         columnStyles: {
@@ -852,6 +988,7 @@
 
         doc.autoTable({
           startY: y + 24,
+          theme: "grid",
           margin: { left: margin, right: margin, bottom: 40 },
           head: [["Produto", "Fornecedor", "Unidade", "Saldo", "Meta", "Qtd. a pedir", "Custo un.", "Custo do pedido"]],
           body: orderRows.map(r => [
@@ -866,7 +1003,7 @@
           ]),
           foot: [["", "", "", "", "", "", "TOTAL", fmtMoney(orderTotal)]],
           showFoot: "lastPage",
-          styles: { font: "helvetica", fontSize: 9, cellPadding: 5 },
+          styles: Object.assign({ font: "helvetica", fontSize: 9, cellPadding: 5 }, gridLine),
           headStyles: { fillColor: [22, 163, 74], textColor: 255 },
           footStyles: { fillColor: [243, 244, 246], textColor: [17, 24, 39], fontStyle: "bold" },
           alternateRowStyles: { fillColor: [249, 250, 251] },
@@ -1064,3 +1201,4 @@
 
 </body>
 </html>
+
