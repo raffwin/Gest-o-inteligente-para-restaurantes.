@@ -4,12 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#111827">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%2316a34a'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='white' stroke-width='3'/%3E%3Crect x='15' y='21' width='3' height='5' rx='1' fill='white'/%3E%3Crect x='19' y='17' width='3' height='9' rx='1' fill='white'/%3E%3Crect x='23' y='14' width='3' height='12' rx='1' fill='white'/%3E%3C/svg%3E">
   <title>Operatto | Gestão inteligente</title>
 
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Arial, sans-serif; background: #f3f4f6; color: #1f2937; }
-    header { background: #111827; color: white; padding: 14px 16px; }
+    header { background: #111827; color: white; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+    header svg { width: 42px; height: 42px; flex-shrink: 0; }
     header h1 { margin: 0; font-size: 22px; }
     header p { margin: 2px 0 0; font-size: 13px; color: #9ca3af; }
     main { max-width: 1000px; margin: auto; padding: 12px; }
@@ -40,8 +42,10 @@
     .btn-remove:hover { background: #fee2e2; }
     .positive { color: #16a34a; }
     .negative { color: #dc2626; }
+    .warning { color: #d97706; }
     .hint { color: #6b7280; font-size: 13px; }
     footer { text-align: center; padding: 14px; font-size: 12px; color: #6b7280; }
+    .credit { margin-top: 4px; font-weight: bold; }
 
     @media (min-width: 700px) {
       header { padding: 22px 24px; }
@@ -61,8 +65,17 @@
 <body>
 
 <header>
-  <h1>🍽️ Operatto</h1>
-  <p>Sua operação sob controle.</p>
+  <svg viewBox="0 0 40 40" role="img" aria-label="Logo do Operatto">
+    <rect width="40" height="40" rx="10" fill="#16a34a"/>
+    <circle cx="20" cy="20" r="11" fill="none" stroke="#fff" stroke-width="3"/>
+    <rect x="15" y="21" width="3" height="5" rx="1" fill="#fff"/>
+    <rect x="19" y="17" width="3" height="9" rx="1" fill="#fff"/>
+    <rect x="23" y="14" width="3" height="12" rx="1" fill="#fff"/>
+  </svg>
+  <div>
+    <h1>Operatto</h1>
+    <p>Sua operação sob controle.</p>
+  </div>
 </header>
 
 <main>
@@ -86,6 +99,10 @@
       <h3>Produtos com estoque baixo</h3>
       <div class="number negative" id="lowCount">0</div>
     </div>
+    <div class="card">
+      <h3>Vencidos ou vencendo (7 dias)</h3>
+      <div class="number negative" id="expiringCount">0</div>
+    </div>
   </div>
 
   <section class="section">
@@ -99,6 +116,10 @@
           <label>Categoria</label>
           <select id="category" required>
             <option value="Alimentos">Alimentos</option>
+            <option value="Grãos">Grãos</option>
+            <option value="Carnes">Carnes</option>
+            <option value="Hortifruti">Hortifruti</option>
+            <option value="Laticínios">Laticínios</option>
             <option value="Bebidas">Bebidas</option>
             <option value="Limpeza">Limpeza</option>
             <option value="Descartáveis">Descartáveis</option>
@@ -119,8 +140,30 @@
         </div>
       </div>
 
-      <label>Estoque mínimo</label>
-      <input id="minimum" type="number" min="0" step="any" required>
+      <div class="row">
+        <div>
+          <label>Estoque atual <span class="hint" id="currentUnitHint"></span></label>
+          <input id="initialStock" type="number" min="0" step="any" value="0" required>
+        </div>
+        <div>
+          <label>Estoque mínimo <span class="hint" id="minUnitHint"></span></label>
+          <input id="minimum" type="number" min="0" step="any" required>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Custo unitário (R$)</label>
+          <input id="cost" type="number" min="0" step="0.01" placeholder="Ex.: 6,50" required>
+        </div>
+        <div>
+          <label>Validade <span class="hint">(opcional)</span></label>
+          <input id="expiry" type="date">
+        </div>
+      </div>
+
+      <label>Fornecedor <span class="hint">(opcional)</span></label>
+      <input id="supplier" placeholder="Ex.: Distribuidora X">
 
       <button type="submit">Cadastrar produto</button>
     </form>
@@ -171,11 +214,14 @@
 
 <footer>
   Operatto © 2026 — Gestão inteligente para restaurantes.
+  <div class="credit">Developed by R Romulo</div>
 </footer>
 
 <script>
   const STORAGE_KEY = "operatto_movements";
   const PRODUCTS_KEY = "operatto_products";
+  const DISCRETE_UNITS = ["unidades", "caixas", "pacotes"];
+  const EXPIRY_ALERT_DAYS = 7;
 
   function load(key) {
     try {
@@ -196,6 +242,46 @@
   // Evita erros de ponto flutuante (ex.: 0.1 + 0.2)
   function round(n) {
     return Math.round(n * 1000) / 1000;
+  }
+
+  function roundMoney(n) {
+    return Math.round(n * 100) / 100;
+  }
+
+  // Valor em reais no padrão brasileiro (R$ 6,50)
+  function fmtMoney(n) {
+    return Number(n)
+      .toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+      .replace(/\u00a0/g, " ");
+  }
+
+  // "2026-12-20" -> "20/12/2026" (sem passar por Date, para não mudar o dia por fuso)
+  function fmtDate(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+    return m ? m[3] + "/" + m[2] + "/" + m[1] : "";
+  }
+
+  // Dias entre hoje e a validade (negativo = já venceu). null se não houver validade.
+  function daysUntil(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+    if (!m) return null;
+    const exp = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.round((exp - today) / 86400000);
+  }
+
+  function plural(n) {
+    return n === 1 ? "1 dia" : n + " dias";
+  }
+
+  // Só alerta validade quando ainda existe saldo em estoque
+  function expiryStatus(product, saldo) {
+    const days = daysUntil(product.expiry);
+    if (days === null || saldo <= 0) return null;
+    if (days < 0) return { type: "vencido", days: days };
+    if (days <= EXPIRY_ALERT_DAYS) return { type: "vencendo", days: days };
+    return null;
   }
 
   function findProduct(name) {
@@ -245,16 +331,24 @@
     document.getElementById("unitHint").textContent = p ? "(" + p.unit + ")" : "";
   }
 
+  // Mostra a unidade escolhida ao lado de "Estoque atual" e "Estoque mínimo"
+  function updateFormUnitHints() {
+    const text = "(" + document.getElementById("unit").value + ")";
+    document.getElementById("currentUnitHint").textContent = text;
+    document.getElementById("minUnitHint").textContent = text;
+  }
+
   function renderStockList() {
     const list = document.getElementById("stockList");
     list.replaceChildren();
 
     if (catalog.length === 0) {
       list.textContent = "Nenhum produto cadastrado.";
-      return 0;
+      return { low: 0, expiring: 0 };
     }
 
     let low = 0;
+    let expiring = 0;
 
     catalog.forEach(product => {
       const quantity = getBalance(product.name);
@@ -270,6 +364,19 @@
       details.textContent =
         product.category + " | Mínimo: " + product.minimum + " " + product.unit;
 
+      // Custo, fornecedor e validade (produtos antigos podem não ter esses dados)
+      const extra = [];
+      if (typeof product.cost === "number") extra.push("Custo: " + fmtMoney(product.cost));
+      if (product.supplier) extra.push("Fornecedor: " + product.supplier);
+      if (product.expiry) extra.push("Validade: " + fmtDate(product.expiry));
+
+      let extraEl = null;
+      if (extra.length > 0) {
+        extraEl = document.createElement("div");
+        extraEl.className = "hint";
+        extraEl.textContent = extra.join(" | ");
+      }
+
       const balance = document.createElement("div");
       balance.textContent = "Saldo atual: " + quantity + " " + product.unit;
 
@@ -282,9 +389,25 @@
         balance.textContent += " ✓ Estoque normal";
       }
 
+      let expiryEl = null;
+      const status = expiryStatus(product, quantity);
+      if (status) {
+        expiring++;
+        expiryEl = document.createElement("div");
+        if (status.type === "vencido") {
+          expiryEl.className = "negative";
+          expiryEl.textContent = "❌ VENCIDO há " + plural(Math.abs(status.days));
+        } else {
+          expiryEl.className = "warning";
+          expiryEl.textContent = status.days === 0
+            ? "⏳ Vence hoje"
+            : "⏳ Vence em " + plural(status.days);
+        }
+      }
+
       const info = document.createElement("div");
       info.className = "stock-info";
-      info.append(name, details, balance);
+      info.append(...[name, details, extraEl, balance, expiryEl].filter(Boolean));
 
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
@@ -297,7 +420,7 @@
       list.appendChild(item);
     });
 
-    return low;
+    return { low: low, expiring: expiring };
   }
 
   // Remove um produto cadastrado e as movimentações dele
@@ -370,7 +493,7 @@
 
   function render() {
     renderProductSelect();
-    const low = renderStockList();
+    const counts = renderStockList();
     renderHistory();
 
     document.getElementById("products").textContent = catalog.length;
@@ -378,7 +501,8 @@
       movements.filter(m => m.type === "entrada").length;
     document.getElementById("exits").textContent =
       movements.filter(m => m.type !== "entrada").length;
-    document.getElementById("lowCount").textContent = low;
+    document.getElementById("lowCount").textContent = counts.low;
+    document.getElementById("expiringCount").textContent = counts.expiring;
   }
 
   // ---------- Exportação (Excel e PDF) ----------
@@ -396,7 +520,11 @@
         saldo: saldo,
         alvo: alvo,
         pedido: Math.max(round(alvo - saldo), 0),
-        baixo: saldo <= p.minimum
+        baixo: saldo <= p.minimum,
+        cost: typeof p.cost === "number" ? p.cost : null,
+        supplier: p.supplier || "",
+        expiry: p.expiry || "",
+        expiryStatus: expiryStatus(p, saldo)
       };
     });
   }
@@ -438,20 +566,40 @@
 
     const rows = buildRows();
     const stamp = localStamp();
+    const header = ["Produto", "Quantidade", "Pedido", "Fornecedor", "Custo unitário", "Custo do pedido"];
 
     if (typeof XLSX !== "undefined") {
-      const data = [["Produto", "Quantidade", "Pedido"]];
-      rows.forEach(r => data.push([r.name, r.saldo, r.pedido]));
+      const data = [header];
+      rows.forEach(r => data.push([
+        r.name,
+        r.saldo,
+        r.pedido,
+        r.supplier,
+        r.cost === null ? "" : r.cost,
+        r.cost === null ? "" : roundMoney(r.pedido * r.cost)
+      ]));
 
       const ws = XLSX.utils.aoa_to_sheet(data);
+      const moneyFormat = '"R$" #,##0.00';
 
-      // Coluna Pedido com fórmula: =MAX(0; meta - quantidade)
       rows.forEach((r, i) => {
         const linha = i + 2;
+        // Coluna Pedido com fórmula: =MAX(0; meta - quantidade)
         ws["C" + linha] = { t: "n", f: "MAX(0," + r.alvo + "-B" + linha + ")", v: r.pedido };
+
+        if (r.cost !== null) {
+          ws["E" + linha] = { t: "n", v: r.cost, z: moneyFormat };
+          // Custo do pedido = pedido x custo unitário
+          ws["F" + linha] = {
+            t: "n",
+            f: "C" + linha + "*E" + linha,
+            v: roundMoney(r.pedido * r.cost),
+            z: moneyFormat
+          };
+        }
       });
 
-      ws["!cols"] = [{ wch: 28 }, { wch: 12 }, { wch: 12 }];
+      ws["!cols"] = [{ wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 24 }, { wch: 15 }, { wch: 17 }];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Pedido");
@@ -460,8 +608,15 @@
     }
 
     // Sem internet (biblioteca não carregou): baixa CSV (sem fórmula), que o Excel também abre
-    const data = [["Produto", "Quantidade", "Pedido"]];
-    rows.forEach(r => data.push([r.name, r.saldo, r.pedido]));
+    const data = [header];
+    rows.forEach(r => data.push([
+      r.name,
+      r.saldo,
+      r.pedido,
+      r.supplier,
+      r.cost === null ? "" : r.cost,
+      r.cost === null ? "" : roundMoney(r.pedido * r.cost)
+    ]));
     downloadBlob(new Blob([toCsv(data)], { type: "text/csv;charset=utf-8" }), "operatto_pedido_" + stamp + ".csv");
     alert("Biblioteca do Excel indisponível (sem internet). Baixei um CSV, que abre no Excel, mas sem a fórmula.");
   }
@@ -484,7 +639,8 @@
     }
 
     try {
-      const doc = new JsPDF({ unit: "pt", format: "a4" });
+      // Paisagem: a tabela tem mais colunas agora
+      const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
 
       if (typeof doc.autoTable !== "function") {
         alert("Biblioteca de tabelas do PDF indisponível (sem internet). Conecte-se e tente novamente.");
@@ -494,6 +650,7 @@
       const rows = buildRows();
       const lowCount = rows.filter(r => r.baixo).length;
       const toOrder = rows.filter(r => r.pedido > 0).length;
+      const stockValue = rows.reduce((sum, r) => sum + (r.cost === null ? 0 : r.saldo * r.cost), 0);
       const margin = 40;
 
       doc.setFont("helvetica", "bold");
@@ -506,14 +663,15 @@
       doc.setTextColor(107, 114, 128);
       doc.text("Gerado em " + new Date().toLocaleString("pt-BR"), margin, 66);
       doc.text(
-        rows.length + " produtos  |  " + lowCount + " com estoque baixo  |  " + toOrder + " para pedir",
+        rows.length + " produtos  |  " + lowCount + " com estoque baixo  |  " + toOrder +
+        " para pedir  |  Valor em estoque: " + fmtMoney(stockValue),
         margin, 80
       );
 
       doc.autoTable({
         startY: 96,
         margin: { left: margin, right: margin, bottom: 40 },
-        head: [["Produto", "Categoria", "Unidade", "Mínimo", "Saldo", "Situação", "Pedido"]],
+        head: [["Produto", "Categoria", "Unidade", "Mínimo", "Saldo", "Situação", "Pedido", "Custo un.", "Fornecedor", "Validade"]],
         body: rows.map(r => [
           r.name,
           r.category,
@@ -521,7 +679,12 @@
           fmt(r.minimum),
           fmt(r.saldo),
           r.baixo ? "BAIXO" : "Normal",
-          r.pedido > 0 ? fmt(r.pedido) : "-"
+          r.pedido > 0 ? fmt(r.pedido) : "-",
+          r.cost === null ? "-" : fmtMoney(r.cost),
+          r.supplier || "-",
+          r.expiry
+            ? fmtDate(r.expiry) + (r.expiryStatus && r.expiryStatus.type === "vencido" ? " (VENCIDO)" : "")
+            : "-"
         ]),
         styles: { font: "helvetica", fontSize: 9, cellPadding: 5 },
         headStyles: { fillColor: [17, 24, 39], textColor: 255 },
@@ -530,12 +693,24 @@
           3: { halign: "right" },
           4: { halign: "right" },
           5: { halign: "center" },
-          6: { halign: "right" }
+          6: { halign: "right" },
+          7: { halign: "right" }
         },
         didParseCell: function (data) {
-          if (data.section === "body" && rows[data.row.index].baixo) {
+          if (data.section !== "body") return;
+          const row = rows[data.row.index];
+
+          if (row.baixo) {
             data.cell.styles.textColor = [220, 38, 38];
             if (data.column.index === 5) data.cell.styles.fontStyle = "bold";
+          }
+
+          // Validade: vermelho se vencido, laranja se vence em até 7 dias
+          if (data.column.index === 9 && row.expiryStatus) {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.textColor = row.expiryStatus.type === "vencido"
+              ? [220, 38, 38]
+              : [217, 119, 6];
           }
         }
       });
@@ -562,6 +737,7 @@
   document.getElementById("pdfBtn").addEventListener("click", exportPdf);
 
   productSelect.addEventListener("change", updateUnitHint);
+  document.getElementById("unit").addEventListener("change", updateFormUnitHints);
 
   productForm.addEventListener("submit", function (event) {
     event.preventDefault();
@@ -569,9 +745,19 @@
     const name = document.getElementById("productName").value.trim();
     const category = document.getElementById("category").value;
     const unit = document.getElementById("unit").value;
+    const initialStock = round(Number(document.getElementById("initialStock").value));
     const minimum = Number(document.getElementById("minimum").value);
+    const costText = document.getElementById("cost").value;
+    const cost = Number(costText);
+    const supplier = document.getElementById("supplier").value.trim();
+    const expiry = document.getElementById("expiry").value;
 
-    if (!name || !Number.isFinite(minimum) || minimum < 0) {
+    if (
+      !name ||
+      !Number.isFinite(minimum) || minimum < 0 ||
+      !Number.isFinite(initialStock) || initialStock < 0 ||
+      costText === "" || !Number.isFinite(cost) || cost < 0
+    ) {
       alert("Preencha os dados corretamente.");
       return;
     }
@@ -581,18 +767,55 @@
       return;
     }
 
-    catalog.push({ name, category, unit, minimum });
+    if (DISCRETE_UNITS.includes(unit) && !Number.isInteger(initialStock)) {
+      alert("Para " + unit + ", o estoque atual deve ser um número inteiro.");
+      return;
+    }
+
+    const product = {
+      name: name,
+      category: category,
+      unit: unit,
+      minimum: minimum,
+      cost: roundMoney(cost),
+      supplier: supplier,
+      expiry: expiry
+    };
+
+    const previousCatalog = catalog;
+    const previousMovements = movements;
+
+    catalog = [...catalog, product];
+
+    // O estoque atual vira uma entrada no histórico, para o saldo continuar batendo
+    if (initialStock > 0) {
+      movements = [...movements, {
+        product: name,
+        unit: unit,
+        type: "entrada",
+        quantity: initialStock,
+        employee: "Cadastro inicial",
+        date: new Date().toISOString()
+      }];
+    }
 
     try {
       localStorage.setItem(PRODUCTS_KEY, JSON.stringify(catalog));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(movements));
     } catch (error) {
-      catalog.pop();
+      catalog = previousCatalog;
+      movements = previousMovements;
+      try {
+        localStorage.setItem(PRODUCTS_KEY, JSON.stringify(catalog));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(movements));
+      } catch (restoreError) {}
       alert("Não foi possível salvar o produto.");
       return;
     }
 
     render();
     this.reset();
+    updateFormUnitHints();
     alert("Produto cadastrado com sucesso!");
   });
 
@@ -609,11 +832,9 @@
       return;
     }
 
-    if (product.unit === "unidades" || product.unit === "caixas" || product.unit === "pacotes") {
-      if (!Number.isInteger(quantity)) {
-        alert("Para " + product.unit + ", use apenas números inteiros.");
-        return;
-      }
+    if (DISCRETE_UNITS.includes(product.unit) && !Number.isInteger(quantity)) {
+      alert("Para " + product.unit + ", use apenas números inteiros.");
+      return;
     }
 
     if (type !== "entrada" && getBalance(product.name) < quantity) {
@@ -645,6 +866,7 @@
     alert("Movimentação registrada com sucesso!");
   });
 
+  updateFormUnitHints();
   render();
 </script>
 
