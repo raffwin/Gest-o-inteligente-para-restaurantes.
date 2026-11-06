@@ -43,10 +43,12 @@
     .tab.active { background: #16a34a; color: white; border-color: #16a34a; }
     .tab { transition: background-color .2s ease, color .2s ease, border-color .2s ease; }
     @keyframes tabIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-    .tab-panel.enter { animation: tabIn .28s ease-out; }
+    .enter { animation: tabIn .28s ease-out; }
+    .badge { display: inline-block; margin-left: 6px; background: #dc2626; color: white; border-radius: 999px; padding: 1px 7px; font-size: 12px; }
+    .tab.active .badge { background: white; color: #dc2626; }
     @media (prefers-reduced-motion: reduce) {
       .tab { transition: none; }
-      .tab-panel.enter { animation: none; }
+      .enter { animation: none; }
     }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 8px; }
     .card, .section { background: white; padding: 12px 14px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 1px 4px #0000000d; }
@@ -259,15 +261,11 @@
         <div>
           <label>Categoria</label>
           <select id="category" required>
-            <option value="Alimentos">Alimentos</option>
-            <option value="Grãos">Grãos</option>
-            <option value="Carnes">Carnes</option>
+            <option value="Bar">Bar</option>
+            <option value="Molhos">Molhos</option>
+            <option value="Mercearia">Mercearia</option>
             <option value="Hortifruti">Hortifruti</option>
-            <option value="Laticínios">Laticínios</option>
-            <option value="Bebidas">Bebidas</option>
             <option value="Limpeza">Limpeza</option>
-            <option value="Descartáveis">Descartáveis</option>
-            <option value="Outros">Outros</option>
           </select>
         </div>
         <div>
@@ -339,6 +337,7 @@
       <button type="button" id="pdfBtn">📄 Exportar para PDF</button>
     </div>
     <div class="sim" id="saveStatus" role="status" style="margin-bottom:10px"></div>
+    <div class="tabs" id="stockTabs" role="tablist"></div>
     <div id="stockList">Nenhum produto cadastrado.</div>
   </section>
 
@@ -386,7 +385,7 @@
   <h2>Checklist</h2>
   <p>Rotinas e tarefas do dia a dia do restaurante.</p>
 
-  <div class="tabs" role="tablist">
+  <div class="tabs" id="checklistTabs" role="tablist">
     <button type="button" class="tab active" role="tab" data-tab="temperatura">🌡️ Temperatura</button>
     <button type="button" class="tab" role="tab" data-tab="limpeza">🧽 Limpeza</button>
     <button type="button" class="tab" role="tab" data-tab="gerencial">📋 Gerencial</button>
@@ -421,6 +420,10 @@
   const PRODUCTS_KEY = "operatto_products";
   const MIGRATED_KEY = "operatto_migrated_to";
   const DISCRETE_UNITS = ["unidades", "caixas", "pacotes"];
+  // Abas da contagem de estoque (cada produto vai para a aba da sua categoria)
+  const STOCK_GROUPS = ["Bar", "Molhos", "Mercearia", "Hortifruti", "Limpeza"];
+  const STOCK_OTHER = "Outros"; // produtos antigos com categoria que não é nenhuma das abas acima
+  const STOCK_ICONS = { Bar: "🍹", Molhos: "🥫", Mercearia: "🛒", Hortifruti: "🥬", Limpeza: "🧽", Outros: "📦" };
   const EXPIRY_ALERT_DAYS = 7;
   const DEFAULT_TARGET_FACTOR = 2;
   const RESEND_SECONDS = 60;
@@ -437,6 +440,7 @@
   let lastResendAt = 0;
   let recoverEmailValue = "";
   let countInputs = [];        // campos de contagem exibidos na lista (usados pelo "Salvar tudo")
+  let activeStockTab = STOCK_GROUPS[0];
 
   const productForm = document.getElementById("productForm");
   const factorInput = document.getElementById("targetFactor");
@@ -725,15 +729,15 @@
   });
   // Abas dentro do Checklist: "temperatura", "limpeza" ou "gerencial"
   function showTab(name) {
-    const current = document.querySelector(".tab.active");
+    const current = document.querySelector("#checklistTabs .tab.active");
     if (current && current.dataset.tab === name) return; // já está nessa aba
 
-    document.querySelectorAll(".tab").forEach(t => {
+    document.querySelectorAll("#checklistTabs .tab").forEach(t => {
       const active = t.dataset.tab === name;
       t.classList.toggle("active", active);
       t.setAttribute("aria-selected", active ? "true" : "false");
     });
-    document.querySelectorAll(".tab-panel").forEach(p => {
+    document.querySelectorAll("#checklistView .tab-panel").forEach(p => {
       const show = p.id === "tab-" + name;
       p.hidden = !show;
       p.classList.remove("enter");
@@ -744,7 +748,7 @@
     });
   }
 
-  document.querySelectorAll(".tab").forEach(btn => {
+  document.querySelectorAll("#checklistTabs .tab").forEach(btn => {
     btn.addEventListener("click", () => showTab(btn.dataset.tab));
   });
   document.querySelectorAll("[data-back]").forEach(btn => {
@@ -1268,15 +1272,29 @@
     list.replaceChildren();
     countInputs = [];
 
-    if (catalog.length === 0) {
-      list.textContent = "Nenhum produto cadastrado.";
-      return { low: 0, expiring: 0 };
-    }
+    const groupNames = stockGroupNames();
+    if (!groupNames.includes(activeStockTab)) activeStockTab = groupNames[0];
+
+    const groupEls = {};
+    const lowBy = {};
+    const totalBy = {};
+    groupNames.forEach(g => {
+      const el = document.createElement("div");
+      el.className = "stock-group";
+      el.dataset.group = g;
+      el.hidden = g !== activeStockTab;
+      groupEls[g] = el;
+      lowBy[g] = 0;
+      totalBy[g] = 0;
+      list.appendChild(el);
+    });
 
     let low = 0;
     let expiring = 0;
 
     catalog.forEach(product => {
+      const group = stockGroupOf(product);
+      totalBy[group]++;
       const quantity = getBalance(product.name);
 
       const item = document.createElement("div");
@@ -1308,6 +1326,7 @@
 
       if (quantity <= product.minimum) {
         low++;
+        lowBy[group]++;
         balance.className = "negative";
         balance.textContent += " ⚠️ ESTOQUE BAIXO";
       } else {
@@ -1402,10 +1421,79 @@
       removeBtn.addEventListener("click", () => removeProduct(product.name, removeBtn));
 
       item.append(info, removeBtn);
-      list.appendChild(item);
+      groupEls[group].appendChild(item);
     });
 
+    groupNames.forEach(g => {
+      if (totalBy[g] === 0) {
+        groupEls[g].className = "stock-group hint";
+        groupEls[g].textContent = "Nenhum produto em " + g + ". Cadastre um produto com essa categoria.";
+      }
+    });
+
+    renderStockTabs(groupNames, lowBy);
+
     return { low: low, expiring: expiring };
+  }
+
+  // Em qual aba da contagem o produto aparece (pela categoria dele)
+  function stockGroupOf(product) {
+    const cat = String(product.category || "").trim().toLowerCase();
+    const found = STOCK_GROUPS.find(g => g.toLowerCase() === cat);
+    return found || STOCK_OTHER;
+  }
+
+  // As 5 abas fixas, mais "Outros" só se existir produto antigo de outra categoria
+  function stockGroupNames() {
+    const hasOther = catalog.some(p => stockGroupOf(p) === STOCK_OTHER);
+    return hasOther ? [...STOCK_GROUPS, STOCK_OTHER] : [...STOCK_GROUPS];
+  }
+
+  function renderStockTabs(names, lowBy) {
+    const bar = document.getElementById("stockTabs");
+    bar.replaceChildren();
+
+    names.forEach(g => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "tab" + (g === activeStockTab ? " active" : "");
+      btn.dataset.group = g;
+      btn.setAttribute("role", "tab");
+      btn.setAttribute("aria-selected", g === activeStockTab ? "true" : "false");
+      btn.textContent = STOCK_ICONS[g] + " " + g;
+
+      if (lowBy[g] > 0) {
+        const badge = document.createElement("span");
+        badge.className = "badge";
+        badge.textContent = lowBy[g];
+        badge.title = lowBy[g] + (lowBy[g] === 1 ? " produto com estoque baixo" : " produtos com estoque baixo");
+        btn.appendChild(badge);
+      }
+
+      btn.addEventListener("click", () => showStockTab(g));
+      bar.appendChild(btn);
+    });
+  }
+
+  // Troca de aba sem recarregar: o que foi digitado nas outras abas continua lá
+  function showStockTab(name) {
+    if (name === activeStockTab) return;
+    activeStockTab = name;
+
+    document.querySelectorAll("#stockTabs .tab").forEach(t => {
+      const active = t.dataset.group === name;
+      t.classList.toggle("active", active);
+      t.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    document.querySelectorAll("#stockList .stock-group").forEach(p => {
+      const show = p.dataset.group === name;
+      p.hidden = !show;
+      p.classList.remove("enter");
+      if (show) {
+        void p.offsetWidth; // reinicia a animação
+        p.classList.add("enter");
+      }
+    });
   }
 
   function renderOrderSummary() {
@@ -1966,6 +2054,7 @@
 
       catalog.push(savedProduct);
       if (savedMovement) movements.push(savedMovement);
+      activeStockTab = stockGroupOf(savedProduct); // abre a aba do produto recém-cadastrado
     } catch (error) {
       if (error && error.code === "23505") {
         alert("Esse produto já está cadastrado!");
