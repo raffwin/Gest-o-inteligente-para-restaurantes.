@@ -232,6 +232,25 @@
   <h2>Estoque</h2>
   <p>Painel de gestão do seu restaurante.</p>
 
+  <!-- Abas do estoque: aparecem logo ao abrir -->
+    <div class="tabs" id="stockTabs" role="tablist"></div>
+
+  <section class="section">
+    <h2>📊 Contagem do estoque</h2>
+    <div class="hint" style="margin-bottom:8px">💡 Digite a contagem de cada produto para ver o pedido possível na hora. Use "Salvar contagem" em um produto ou "Salvar tudo" para registrar todas as contagens de uma vez.</div>
+
+    <div class="order-summary" id="orderSummary"></div>
+
+    <div id="stockList">Nenhum produto cadastrado.</div>
+
+    <div class="actions">
+      <button type="button" id="saveAllBtn">💾 Salvar tudo</button>
+      <button type="button" id="exportBtn">📥 Exportar para Excel</button>
+      <button type="button" id="pdfBtn">📄 Exportar para PDF</button>
+    </div>
+    <div class="sim" id="saveStatus" role="status" style="margin-bottom:10px"></div>
+  </section>
+
   <div class="cards">
     <div class="card">
       <h3>Produtos cadastrados</h3>
@@ -315,8 +334,7 @@
   </section>
 
   <section class="section">
-    <h2>📊 Saldo do estoque</h2>
-
+    <h2>⚙️ Meta de reposição</h2>
     <div class="settings">
       <div class="row">
         <div>
@@ -326,19 +344,6 @@
         <div class="hint">O pedido é sugerido quando o saldo chega ao mínimo, e completa até a meta. Produtos com "estoque ideal" próprio usam o valor definido no cadastro.</div>
       </div>
     </div>
-
-    <div class="hint" style="margin-bottom:8px">💡 Digite a contagem de cada produto para ver o pedido possível na hora. Use "Salvar contagem" em um produto ou "Salvar tudo" para registrar todas as contagens de uma vez.</div>
-
-    <div class="order-summary" id="orderSummary"></div>
-
-    <div class="actions">
-      <button type="button" id="saveAllBtn">💾 Salvar tudo</button>
-      <button type="button" id="exportBtn">📥 Exportar para Excel</button>
-      <button type="button" id="pdfBtn">📄 Exportar para PDF</button>
-    </div>
-    <div class="sim" id="saveStatus" role="status" style="margin-bottom:10px"></div>
-    <div class="tabs" id="stockTabs" role="tablist"></div>
-    <div id="stockList">Nenhum produto cadastrado.</div>
   </section>
 
   <section class="section">
