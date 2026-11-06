@@ -41,6 +41,13 @@
     .tab { background: white; color: #374151; border: 1px solid #d1d5db; padding: 9px 14px; font-size: 14px; }
     .tab:hover { background: #f3f4f6; }
     .tab.active { background: #16a34a; color: white; border-color: #16a34a; }
+    .tab { transition: background-color .2s ease, color .2s ease, border-color .2s ease; }
+    @keyframes tabIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .tab-panel.enter { animation: tabIn .28s ease-out; }
+    @media (prefers-reduced-motion: reduce) {
+      .tab { transition: none; }
+      .tab-panel.enter { animation: none; }
+    }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 8px; }
     .card, .section { background: white; padding: 12px 14px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 1px 4px #0000000d; }
     .card { margin-bottom: 0; }
@@ -718,13 +725,22 @@
   });
   // Abas dentro do Checklist: "temperatura", "limpeza" ou "gerencial"
   function showTab(name) {
+    const current = document.querySelector(".tab.active");
+    if (current && current.dataset.tab === name) return; // já está nessa aba
+
     document.querySelectorAll(".tab").forEach(t => {
       const active = t.dataset.tab === name;
       t.classList.toggle("active", active);
       t.setAttribute("aria-selected", active ? "true" : "false");
     });
     document.querySelectorAll(".tab-panel").forEach(p => {
-      p.hidden = p.id !== "tab-" + name;
+      const show = p.id === "tab-" + name;
+      p.hidden = !show;
+      p.classList.remove("enter");
+      if (show) {
+        void p.offsetWidth; // reinicia a animação
+        p.classList.add("enter");
+      }
     });
   }
 
