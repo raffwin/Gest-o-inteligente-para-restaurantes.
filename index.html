@@ -27,8 +27,16 @@
     .btn-logout { background: transparent; color: white; border: 1px solid #4b5563; padding: 6px 12px; font-size: 13px; }
     .btn-logout:hover { background: #374151; }
     main { max-width: 1000px; margin: auto; padding: 12px; }
-    main > h2 { margin: 4px 0 2px; font-size: 20px; }
-    main > p { margin: 0 0 10px; font-size: 14px; color: #6b7280; }
+    .view > h2 { margin: 4px 0 2px; font-size: 20px; }
+    .view > p { margin: 0 0 10px; font-size: 14px; color: #6b7280; }
+    .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .module { background: white; color: #1f2937; text-align: left; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 4px #0000000d; display: flex; flex-direction: column; gap: 4px; }
+    .module:hover { background: #f0fdf4; border-color: #16a34a; }
+    .module strong { font-size: 17px; }
+    .module span { font-size: 13px; color: #6b7280; }
+    .module .module-icon { font-size: 28px; }
+    .back-btn { background: white; color: #374151; border: 1px solid #d1d5db; padding: 8px 12px; font-size: 14px; margin-bottom: 8px; }
+    .back-btn:hover { background: #f3f4f6; }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 8px; }
     .card, .section { background: white; padding: 12px 14px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 1px 4px #0000000d; }
     .card { margin-bottom: 0; }
@@ -200,13 +208,16 @@
 </div>
 
 <main id="appMain" hidden>
-  <h2>Painel de gestão</h2>
-  <p>Bem-vindo ao seu restaurante!</p>
-
   <div class="section banner" id="syncBanner" hidden>
     <span id="syncBannerText">⚠️ Não foi possível carregar os dados da nuvem.</span>
     <button type="button" id="syncRetryBtn">Tentar de novo</button>
   </div>
+
+  <!-- ===== Tela: Estoque ===== -->
+  <div class="view" id="stockView" hidden>
+  <button type="button" class="back-btn" data-back>← Voltar ao menu</button>
+  <h2>Estoque</h2>
+  <p>Painel de gestão do seu restaurante.</p>
 
   <div class="cards">
     <div class="card">
@@ -325,6 +336,27 @@
     <div id="history">Nenhuma movimentação registrada.</div>
   </section>
 
+  </div>
+  <!-- ===== Fim da tela: Estoque ===== -->
+
+  <!-- ===== Tela: Menu inicial ===== -->
+  <div class="view" id="homeView">
+  <h2>O que você quer fazer?</h2>
+  <p>Escolha uma área para abrir.</p>
+
+  <div class="modules">
+    <button type="button" class="module" data-view="stock">
+      <span class="module-icon">📦</span>
+      <strong>Estoque</strong>
+      <span>Produtos, contagem, pedidos e validade</span>
+    </button>
+    <button type="button" class="module" data-view="checklist">
+      <span class="module-icon">✅</span>
+      <strong>Checklist</strong>
+      <span>Rotinas e tarefas do dia a dia</span>
+    </button>
+  </div>
+
   <section class="section" id="accountSection">
     <h2>🔐 Conta</h2>
     <div class="hint" id="accountStatus" style="margin-bottom:8px"></div>
@@ -334,6 +366,21 @@
       <button type="submit" id="accountBtn">Salvar nova senha</button>
     </form>
   </section>
+  </div>
+  <!-- ===== Fim da tela: Menu inicial ===== -->
+
+  <!-- ===== Tela: Checklist ===== -->
+  <div class="view" id="checklistView" hidden>
+  <button type="button" class="back-btn" data-back>← Voltar ao menu</button>
+  <h2>Checklist</h2>
+  <p>Rotinas e tarefas do dia a dia do restaurante.</p>
+
+  <section class="section">
+    <h2>✅ Em configuração</h2>
+    <div class="hint">Esta área já está no menu e ainda está sendo configurada. Em breve você poderá criar e marcar listas de tarefas aqui.</div>
+  </section>
+  </div>
+  <!-- ===== Fim da tela: Checklist ===== -->
 </main>
 
 <footer>
@@ -638,6 +685,21 @@
 
   /* ---------------- Telas de login ---------------- */
 
+  // Troca a tela do app depois do login: "home" (menu), "stock" (estoque) ou "checklist"
+  function showScreen(name) {
+    ["home", "stock", "checklist"].forEach(n => {
+      document.getElementById(n + "View").hidden = n !== name;
+    });
+    window.scrollTo(0, 0);
+  }
+
+  document.querySelectorAll(".module").forEach(btn => {
+    btn.addEventListener("click", () => showScreen(btn.dataset.view));
+  });
+  document.querySelectorAll("[data-back]").forEach(btn => {
+    btn.addEventListener("click", () => showScreen("home"));
+  });
+
   function showView(view) {
     loginForm.hidden = view !== "login";
     recoverForm.hidden = view !== "recover";
@@ -672,6 +734,7 @@
     userBar.hidden = true;
     syncBanner.hidden = true;
     setSaveStatus("");
+    showScreen("home");
     loginOverlay.hidden = false;
     showView("login");
 
@@ -700,7 +763,7 @@
     loginPass2.value = "";
     setMsg(loginError, "");
     renderAccount();
-    window.scrollTo(0, 0);
+    showScreen("home");
 
     await syncFromCloud();
   }
@@ -1890,4 +1953,3 @@
 
 </body>
 </html>
-
