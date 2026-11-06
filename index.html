@@ -391,10 +391,71 @@
     <button type="button" class="tab" role="tab" data-tab="gerencial">📋 Gerencial</button>
   </div>
 
-  <section class="section tab-panel" id="tab-temperatura" role="tabpanel">
-    <h2>🌡️ Checklist de temperatura</h2>
-    <div class="hint">Em configuração. Aqui ficará o controle de temperatura (geladeiras, freezers, câmaras, buffet).</div>
-  </section>
+  <div class="tab-panel" id="tab-temperatura" role="tabpanel">
+
+    <section class="section">
+      <h2>🌡️ Aferição de temperatura</h2>
+      <div class="hint" style="margin-bottom:8px">A aferição deve ser feita <strong>2 vezes por dia</strong> (manhã e tarde). Escolha a aferição, digite a temperatura de cada equipamento e salve. Ao concluir, você pode baixar o PDF.</div>
+
+      <div class="settings">
+        <div class="row">
+          <div>
+            <label for="tempDate">Data</label>
+            <input id="tempDate" type="date">
+          </div>
+          <div>
+            <label for="tempPeriod">Aferição</label>
+            <select id="tempPeriod">
+              <option value="1">1ª aferição (manhã)</option>
+              <option value="2">2ª aferição (tarde)</option>
+            </select>
+          </div>
+        </div>
+        <div class="hint" id="tempProgress" style="margin-top:6px"></div>
+      </div>
+
+      <div id="tempList">Carregando...</div>
+
+      <div class="actions" style="margin-top:10px">
+        <button type="button" id="tempSaveBtn">💾 Salvar aferição</button>
+        <button type="button" id="tempPdfBtn">📄 Baixar PDF do dia</button>
+      </div>
+      <div class="sim" id="tempStatus" role="status"></div>
+    </section>
+
+    <section class="section">
+      <h2>➕ Cadastrar equipamento</h2>
+      <form id="equipForm">
+        <div class="row">
+          <div>
+            <label for="equipType">Tipo</label>
+            <select id="equipType" required>
+              <option value="freezer">Freezer</option>
+              <option value="geladeira">Geladeira</option>
+              <option value="balcao">Balcão resfriado</option>
+            </select>
+          </div>
+          <div>
+            <label for="equipName">Nome / identificação</label>
+            <input id="equipName" maxlength="60" placeholder="Ex.: Freezer 1 - cozinha" required>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="equipMin">Temperatura mínima aceitável (°C)</label>
+            <input id="equipMin" type="number" step="0.1" required>
+          </div>
+          <div>
+            <label for="equipMax">Temperatura máxima aceitável (°C)</label>
+            <input id="equipMax" type="number" step="0.1" required>
+          </div>
+        </div>
+        <div class="hint" style="margin-bottom:8px">A faixa já vem sugerida pelo tipo, mas você pode ajustar conforme a regra do seu estabelecimento. Temperaturas fora da faixa são destacadas em vermelho.</div>
+        <button type="submit" id="equipSubmitBtn">Cadastrar equipamento</button>
+      </form>
+    </section>
+
+  </div>
 
   <section class="section tab-panel" id="tab-limpeza" role="tabpanel" hidden>
     <h2>🧽 Checklist de limpeza</h2>
@@ -424,6 +485,13 @@
   const STOCK_GROUPS = ["Bar", "Molhos", "Mercearia", "Hortifruti", "Limpeza"];
   const STOCK_OTHER = "Outros"; // produtos antigos com categoria que não é nenhuma das abas acima
   const STOCK_ICONS = { Bar: "🍹", Molhos: "🥫", Mercearia: "🛒", Hortifruti: "🥬", Limpeza: "🧽", Outros: "📦" };
+  // Temperatura: tipos de equipamento (faixa sugerida, editável no cadastro) e as 2 aferições do dia
+  const TEMP_TYPES = {
+    freezer:   { label: "Freezer",          icon: "❄️", min: -25, max: -18 },
+    geladeira: { label: "Geladeira",        icon: "🧊", min: 0,   max: 5 },
+    balcao:    { label: "Balcão resfriado", icon: "🥗", min: 0,   max: 5 }
+  };
+  const TEMP_PERIODS = { 1: "1ª aferição (manhã)", 2: "2ª aferição (tarde)" };
   const EXPIRY_ALERT_DAYS = 7;
   const DEFAULT_TARGET_FACTOR = 2;
   const RESEND_SECONDS = 60;
@@ -441,6 +509,11 @@
   let recoverEmailValue = "";
   let countInputs = [];        // campos de contagem exibidos na lista (usados pelo "Salvar tudo")
   let activeStockTab = STOCK_GROUPS[0];
+  let equipments = [];         // freezers, geladeiras e balcões resfriados
+  let readings = [];           // aferições de temperatura
+  let tempReady = false;       // false = tabelas de temperatura ainda não existem no Supabase
+  let tempError = "";
+  let tempInputs = [];         // campos de temperatura exibidos na lista
 
   const productForm = document.getElementById("productForm");
   const factorInput = document.getElementById("targetFactor");
@@ -605,6 +678,7 @@
         .from(table)
         .select("*")
         .order(orderColumn, { ascending: true })
+        .order("id", { ascending: true }) // desempate: evita pular/repetir linhas entre páginas
         .range(from, from + PAGE_SIZE - 1);
       if (error) throw error;
       all.push(...data);
@@ -628,6 +702,24 @@
     const factor = settingsRes.data && Number(settingsRes.data.target_factor);
     settings = { targetFactor: Number.isFinite(factor) && factor >= 1 ? factor : DEFAULT_TARGET_FACTOR };
     factorInput.value = settings.targetFactor;
+
+    // Temperatura: carregado à parte, para o estoque continuar funcionando
+    // mesmo se as tabelas novas ainda não tiverem sido criadas no Supabase.
+    try {
+      const [equipRows, readingRows] = await Promise.all([
+        fetchAll("equipment", "created_at"),
+        fetchAll("temperature_readings", "reading_date")
+      ]);
+      equipments = equipRows.map(dbToEquipment);
+      readings = readingRows.map(dbToReading);
+      tempReady = true;
+      tempError = "";
+    } catch (error) {
+      equipments = [];
+      readings = [];
+      tempReady = false;
+      tempError = friendlyError(error);
+    }
   }
 
   function readLocalArray(key) {
@@ -784,6 +876,9 @@
     dataReady = false;
     movements = [];
     catalog = [];
+    equipments = [];
+    readings = [];
+    tempReady = false;
 
     appMain.hidden = true;
     userBar.hidden = true;
@@ -1597,6 +1692,8 @@
       buildRows().filter(r => r.pedido > 0).length;
     document.getElementById("lowCount").textContent = counts.low;
     document.getElementById("expiringCount").textContent = counts.expiring;
+
+    renderTemp();
   }
 
   function buildRows() {
@@ -2071,6 +2168,494 @@
     updateFormUnitHints();
     alert("Produto cadastrado com sucesso!");
   });
+
+  /* ---------------- Temperatura: equipamentos e aferições ---------------- */
+
+  function dbToEquipment(r) {
+    return { id: r.id, type: r.type, name: r.name, min: Number(r.min_temp), max: Number(r.max_temp) };
+  }
+
+  function dbToReading(r) {
+    return {
+      id: r.id,
+      equipmentId: r.equipment_id,
+      date: r.reading_date,
+      period: Number(r.period),
+      temperature: Number(r.temperature),
+      note: r.note || "",
+      employee: r.employee || "",
+      measuredAt: r.measured_at
+    };
+  }
+
+  function fmtNum1(n) {
+    return Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+  }
+
+  function fmtTemp(n) {
+    return Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " °C";
+  }
+
+  function fmtHour(iso) {
+    const d = new Date(iso);
+    return isNaN(d) ? "" : d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function tempOk(eq, t) {
+    return t >= eq.min && t <= eq.max;
+  }
+
+  function findReading(equipmentId, date, period) {
+    return readings.find(r => r.equipmentId === equipmentId && r.date === date && r.period === period);
+  }
+
+  function setTempStatus(text, cls) {
+    const el = document.getElementById("tempStatus");
+    el.textContent = text || "";
+    el.className = "sim " + (cls || "");
+  }
+
+  function renderTemp() {
+    const list = document.getElementById("tempList");
+    const progress = document.getElementById("tempProgress");
+    const dateEl = document.getElementById("tempDate");
+    const today = localStamp();
+
+    dateEl.max = today;
+    if (!dateEl.value) dateEl.value = today;
+
+    const date = dateEl.value;
+    const period = Number(document.getElementById("tempPeriod").value);
+
+    list.replaceChildren();
+    tempInputs = [];
+
+    if (!tempReady) {
+      progress.textContent = "";
+      list.textContent = currentUser
+        ? "⚠️ Não consegui abrir as tabelas de temperatura (" + (tempError || "ainda não criadas") + "). Rode o arquivo supabase_setup.sql atualizado no SQL Editor do Supabase e recarregue."
+        : "";
+      return;
+    }
+
+    if (equipments.length === 0) {
+      progress.textContent = "";
+      list.textContent = "Nenhum equipamento cadastrado. Cadastre abaixo um freezer, geladeira ou balcão resfriado.";
+      return;
+    }
+
+    progress.textContent = [1, 2].map(p => {
+      const done = equipments.filter(e => findReading(e.id, date, p)).length;
+      return TEMP_PERIODS[p] + ": " + done + "/" + equipments.length + (done === equipments.length ? " ✓" : " pendente");
+    }).join("   |   ");
+
+    equipments.forEach(eq => {
+      const type = TEMP_TYPES[eq.type] || { label: eq.type, icon: "🌡️" };
+      const saved = findReading(eq.id, date, period);
+
+      const item = document.createElement("div");
+      item.className = "stock-item";
+
+      const name = document.createElement("strong");
+      name.textContent = type.icon + " " + eq.name;
+
+      const details = document.createElement("div");
+      details.className = "hint";
+      details.textContent = type.label + " | Faixa aceitável: " + fmtNum1(eq.min) + " a " + fmtNum1(eq.max) + " °C";
+
+      let savedEl = null;
+      if (saved) {
+        savedEl = document.createElement("div");
+        savedEl.className = "hint";
+        savedEl.textContent = "Registrado às " + fmtHour(saved.measuredAt) + (saved.employee ? " por " + saved.employee : "");
+      }
+
+      const editRow = document.createElement("div");
+      editRow.className = "edit-row";
+
+      const label = document.createElement("span");
+      label.className = "hint";
+      label.textContent = "Temperatura (°C):";
+
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "0.1";
+      input.value = saved ? saved.temperature : "";
+      input.placeholder = "Ex.: " + fmtNum1((eq.min + eq.max) / 2);
+      input.setAttribute("aria-label", "Temperatura de " + eq.name);
+
+      editRow.append(label, input);
+
+      const noteInput = document.createElement("input");
+      noteInput.type = "text";
+      noteInput.maxLength = 120;
+      noteInput.placeholder = "Observação / ação corretiva (opcional)";
+      noteInput.value = saved ? saved.note : "";
+      noteInput.style.margin = "4px 0";
+      noteInput.setAttribute("aria-label", "Observação de " + eq.name);
+
+      const simEl = document.createElement("div");
+      simEl.className = "sim";
+
+      function updatePreview() {
+        const typed = input.value.trim();
+        const value = Number(typed);
+        if (typed === "" || !Number.isFinite(value)) {
+          simEl.className = "sim hint";
+          simEl.textContent = "";
+          return;
+        }
+        if (tempOk(eq, value)) {
+          simEl.className = "sim positive";
+          simEl.textContent = "✓ Dentro da faixa";
+        } else {
+          simEl.className = "sim negative";
+          simEl.textContent = "⚠️ FORA DA FAIXA (" + fmtNum1(eq.min) + " a " + fmtNum1(eq.max) + " °C). Anote a ação corretiva.";
+        }
+      }
+
+      input.addEventListener("input", updatePreview);
+      updatePreview();
+
+      const info = document.createElement("div");
+      info.className = "stock-info";
+      info.append(...[name, details, savedEl, editRow, noteInput, simEl].filter(Boolean));
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "btn-remove";
+      removeBtn.textContent = "🗑️ Remover";
+      removeBtn.setAttribute("aria-label", "Remover equipamento " + eq.name);
+      removeBtn.addEventListener("click", () => removeEquipment(eq, removeBtn));
+
+      item.append(info, removeBtn);
+      list.appendChild(item);
+      tempInputs.push({ eq: eq, input: input, noteInput: noteInput });
+    });
+  }
+
+  async function saveTemp() {
+    if (!currentUser) return;
+    if (!dataReady || !tempReady) {
+      alert("As tabelas de temperatura ainda não estão disponíveis. Veja o aviso na tela.");
+      return;
+    }
+
+    const date = document.getElementById("tempDate").value;
+    const period = Number(document.getElementById("tempPeriod").value);
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      alert("Escolha a data da aferição.");
+      return;
+    }
+    if (date > localStamp()) {
+      alert("Não é possível registrar aferição de uma data futura.");
+      return;
+    }
+
+    const rows = [];
+    const outs = [];
+    const measuredAt = new Date().toISOString();
+
+    for (const entry of tempInputs) {
+      const typed = entry.input.value.trim();
+      if (typed === "") continue;
+
+      const value = Math.round(Number(typed) * 10) / 10;
+      if (!Number.isFinite(value) || value < -100 || value > 100) {
+        alert('Temperatura inválida em "' + entry.eq.name + '".');
+        entry.input.focus();
+        return;
+      }
+
+      if (!tempOk(entry.eq, value)) outs.push(entry.eq.name + " (" + fmtTemp(value) + ")");
+
+      rows.push({
+        user_id: currentUserId,
+        equipment_id: entry.eq.id,
+        reading_date: date,
+        period: period,
+        temperature: value,
+        note: entry.noteInput.value.trim(),
+        employee: currentUser,
+        measured_at: measuredAt
+      });
+    }
+
+    if (rows.length === 0) {
+      alert("Digite a temperatura de pelo menos um equipamento.");
+      return;
+    }
+
+    if (outs.length > 0) {
+      const ok = confirm(
+        "Fora da faixa aceitável:\n• " + outs.join("\n• ") +
+        "\n\nRegistre a ação corretiva no campo Observação.\nSalvar mesmo assim?"
+      );
+      if (!ok) return;
+    }
+
+    const btn = document.getElementById("tempSaveBtn");
+    btn.disabled = true;
+    setTempStatus("Salvando...", "hint");
+
+    try {
+      const { data, error } = await supabaseClient
+        .from("temperature_readings")
+        .upsert(rows, { onConflict: "user_id,equipment_id,reading_date,period" })
+        .select();
+      if (error) throw error;
+
+      data.map(dbToReading).forEach(nr => {
+        const i = readings.findIndex(r => r.equipmentId === nr.equipmentId && r.date === nr.date && r.period === nr.period);
+        if (i >= 0) readings[i] = nr;
+        else readings.push(nr);
+      });
+    } catch (error) {
+      setTempStatus("✗ Não foi possível salvar: " + friendlyError(error), "negative");
+      btn.disabled = false;
+      return;
+    }
+
+    btn.disabled = false;
+    renderTemp();
+
+    const done = equipments.filter(e => findReading(e.id, date, period)).length;
+    const complete = done === equipments.length;
+
+    setTempStatus(
+      "✓ " + rows.length + (rows.length === 1 ? " temperatura salva" : " temperaturas salvas") +
+      " na " + TEMP_PERIODS[period] + " às " + nowHHMM() + "." +
+      (complete ? "" : " Faltam " + (equipments.length - done) + " equipamento(s) nesta aferição."),
+      complete ? "positive" : "warning"
+    );
+
+    if (complete && confirm("Aferição concluída e salva! Deseja baixar o PDF agora?")) {
+      exportTempPdf();
+    }
+  }
+
+  async function removeEquipment(eq, btn) {
+    if (!currentUser || !tempReady) return;
+
+    const related = readings.filter(r => r.equipmentId === eq.id).length;
+    let message = 'Remover o equipamento "' + eq.name + '"?';
+    if (related > 0) message += "\n\nAs " + related + " aferição(ões) dele também serão apagadas.";
+    message += "\n\nEssa ação não pode ser desfeita.";
+    if (!confirm(message)) return;
+
+    btn.disabled = true;
+    try {
+      const { error } = await supabaseClient.from("equipment").delete().eq("id", eq.id);
+      if (error) throw error;
+    } catch (error) {
+      alert("Não foi possível remover o equipamento: " + friendlyError(error));
+      btn.disabled = false;
+      return;
+    }
+
+    equipments = equipments.filter(e => e.id !== eq.id);
+    readings = readings.filter(r => r.equipmentId !== eq.id);
+    renderTemp();
+  }
+
+  function applyEquipTypeDefaults() {
+    const t = TEMP_TYPES[document.getElementById("equipType").value];
+    if (!t) return;
+    document.getElementById("equipMin").value = t.min;
+    document.getElementById("equipMax").value = t.max;
+  }
+
+  document.getElementById("equipType").addEventListener("change", applyEquipTypeDefaults);
+  document.getElementById("tempDate").addEventListener("change", () => { setTempStatus(""); renderTemp(); });
+  document.getElementById("tempPeriod").addEventListener("change", () => { setTempStatus(""); renderTemp(); });
+  document.getElementById("tempSaveBtn").addEventListener("click", saveTemp);
+  document.getElementById("tempPdfBtn").addEventListener("click", () => exportTempPdf());
+
+  document.getElementById("equipForm").addEventListener("submit", async function (event) {
+    event.preventDefault();
+    if (!currentUser) return;
+    if (!dataReady || !tempReady) {
+      alert("As tabelas de temperatura ainda não estão disponíveis. Veja o aviso na tela.");
+      return;
+    }
+
+    const type = document.getElementById("equipType").value;
+    const name = document.getElementById("equipName").value.trim();
+    const min = Number(document.getElementById("equipMin").value);
+    const max = Number(document.getElementById("equipMax").value);
+
+    if (!name || !TEMP_TYPES[type] || !Number.isFinite(min) || !Number.isFinite(max)) {
+      alert("Preencha os dados corretamente.");
+      return;
+    }
+    if (min > max) {
+      alert("A temperatura mínima não pode ser maior que a máxima.");
+      return;
+    }
+    if (equipments.some(e => e.name.toLowerCase() === name.toLowerCase())) {
+      alert("Já existe um equipamento com esse nome.");
+      return;
+    }
+
+    const btn = document.getElementById("equipSubmitBtn");
+    btn.disabled = true;
+    try {
+      const { data, error } = await supabaseClient
+        .from("equipment")
+        .insert({ type: type, name: name, min_temp: min, max_temp: max })
+        .select()
+        .single();
+      if (error) throw error;
+      equipments.push(dbToEquipment(data));
+    } catch (error) {
+      alert(error && error.code === "23505"
+        ? "Já existe um equipamento com esse nome."
+        : "Não foi possível cadastrar o equipamento: " + friendlyError(error));
+      btn.disabled = false;
+      return;
+    }
+
+    btn.disabled = false;
+    document.getElementById("equipName").value = "";
+    renderTemp();
+    setTempStatus("✓ Equipamento cadastrado: " + name + ".", "positive");
+  });
+
+  function exportTempPdf() {
+    if (!currentUser) return;
+
+    if (!tempReady || equipments.length === 0) {
+      alert("Cadastre pelo menos um equipamento antes de gerar o PDF.");
+      return;
+    }
+
+    const JsPDF = window.jspdf && window.jspdf.jsPDF;
+    if (!JsPDF) {
+      alert("Biblioteca de PDF indisponível (sem internet). Conecte-se e tente novamente.");
+      return;
+    }
+
+    const date = document.getElementById("tempDate").value || localStamp();
+
+    try {
+      const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+
+      if (typeof doc.autoTable !== "function") {
+        alert("Biblioteca de tabelas do PDF indisponível (sem internet). Conecte-se e tente novamente.");
+        return;
+      }
+
+      const margin = 40;
+      const gridLine = { lineWidth: 0.5, lineColor: [156, 163, 175] };
+
+      const rows = equipments.map(eq => {
+        const r1 = findReading(eq.id, date, 1);
+        const r2 = findReading(eq.id, date, 2);
+        return { eq: eq, r1: r1, r2: r2 };
+      });
+
+      const count1 = rows.filter(r => r.r1).length;
+      const count2 = rows.filter(r => r.r2).length;
+      const outCount = rows.reduce((sum, r) =>
+        sum + (r.r1 && !tempOk(r.eq, r.r1.temperature) ? 1 : 0) + (r.r2 && !tempOk(r.eq, r.r2.temperature) ? 1 : 0), 0);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.setTextColor(17, 24, 39);
+      doc.text("Operatto - Aferição de temperatura", margin, 48);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(107, 114, 128);
+      doc.text("Data da aferição: " + fmtDate(date) + "   |   Gerado em " + new Date().toLocaleString("pt-BR") + " por " + currentUser, margin, 66);
+      doc.text(
+        rows.length + " equipamento(s)   |   1ª aferição: " + count1 + "/" + rows.length +
+        "   |   2ª aferição: " + count2 + "/" + rows.length + "   |   Fora da faixa: " + outCount,
+        margin, 80
+      );
+
+      const cell = (r) => r ? fmtTemp(r.temperature) : "-";
+      const reg = (r) => r ? fmtHour(r.measuredAt) + (r.employee ? " - " + r.employee : "") : "-";
+      const notes = (r) => {
+        const parts = [];
+        if (r.r1 && r.r1.note) parts.push("1ª: " + r.r1.note);
+        if (r.r2 && r.r2.note) parts.push("2ª: " + r.r2.note);
+        return parts.length ? parts.join(" | ") : "-";
+      };
+
+      doc.autoTable({
+        startY: 96,
+        theme: "grid",
+        margin: { left: margin, right: margin, bottom: 60 },
+        head: [["Equipamento", "Tipo", "Faixa aceitável", "1ª aferição (manhã)", "Registro 1ª", "2ª aferição (tarde)", "Registro 2ª", "Observações / ação corretiva"]],
+        body: rows.map(r => [
+          r.eq.name,
+          (TEMP_TYPES[r.eq.type] || { label: r.eq.type }).label,
+          fmtNum1(r.eq.min) + " a " + fmtNum1(r.eq.max) + " °C",
+          cell(r.r1),
+          reg(r.r1),
+          cell(r.r2),
+          reg(r.r2),
+          notes(r)
+        ]),
+        styles: Object.assign({ font: "helvetica", fontSize: 9, cellPadding: 5 }, gridLine),
+        headStyles: { fillColor: [17, 24, 39], textColor: 255 },
+        alternateRowStyles: { fillColor: [249, 250, 251] },
+        columnStyles: {
+          3: { halign: "center" },
+          5: { halign: "center" }
+        },
+        didParseCell: function (data) {
+          if (data.section !== "body") return;
+          const row = rows[data.row.index];
+          const flag = (reading) => reading && !tempOk(row.eq, reading.temperature);
+
+          if (data.column.index === 3 && flag(row.r1)) {
+            data.cell.styles.textColor = [220, 38, 38];
+            data.cell.styles.fontStyle = "bold";
+            data.cell.text = [fmtTemp(row.r1.temperature) + " (!)"];
+          }
+          if (data.column.index === 5 && flag(row.r2)) {
+            data.cell.styles.textColor = [220, 38, 38];
+            data.cell.styles.fontStyle = "bold";
+            data.cell.text = [fmtTemp(row.r2.temperature) + " (!)"];
+          }
+        }
+      });
+
+      const h0 = doc.internal.pageSize.getHeight();
+      let y = doc.lastAutoTable.finalY + 36;
+      if (y > h0 - 70) {
+        doc.addPage();
+        y = 80;
+      }
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(17, 24, 39);
+      doc.text("Responsável: ______________________________", margin, y);
+      doc.text("Visto do gerente: ______________________________", margin + 330, y);
+      doc.setFontSize(8);
+      doc.setTextColor(107, 114, 128);
+      doc.text("(!) = temperatura fora da faixa aceitável do equipamento.", margin, y + 20);
+
+      const pages = doc.internal.getNumberOfPages();
+      const w = doc.internal.pageSize.getWidth();
+      const h = doc.internal.pageSize.getHeight();
+      doc.setFontSize(9);
+      for (let i = 1; i <= pages; i++) {
+        doc.setPage(i);
+        doc.text("Operatto", margin, h - 20);
+        doc.text("Página " + i + " de " + pages, w - margin, h - 20, { align: "right" });
+      }
+
+      doc.save("operatto_afericao_" + date + ".pdf");
+    } catch (error) {
+      alert("Não foi possível gerar o PDF.");
+    }
+  }
+
+  applyEquipTypeDefaults();
 
   /* ---------------- Início ---------------- */
 
