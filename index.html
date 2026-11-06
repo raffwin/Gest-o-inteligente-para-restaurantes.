@@ -1,21 +1,19 @@
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script>
-const SUPABASE_URL = "https://mrjotnfqjlbswnuyjytr.supabase.co";
-
-const SUPABASE_KEY = "sb_publishable_i6qRtfdDg-oz8fr4mqPkXQ_ggEgdHLj";
-
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
-</script>
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#111827">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%2316a34a'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='white' stroke-width='3'/%3E%3Crect x='15' y='21' width='3' height='5' rx='1' fill='white'/%3E%3Crect x='19' y='17' width='3' height='9' rx='1' fill='white'/%3E%3Crect x='23' y='14' width='3' height='12' rx='1' fill='white'/%3E%3C/svg%3E">
   <title>Operatto | Gestão inteligente</title>
+
+  <!-- Supabase: banco de dados e login -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://mrjotnfqjlbswnuyjytr.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_i6qRtfdDg-oz8fr4mqPkXQ_ggEgdHLj";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  </script>
 
   <style>
     * { box-sizing: border-box; }
@@ -70,6 +68,7 @@ const supabaseClient = window.supabase.createClient(
     .banner { border-left: 4px solid #d97706; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
     .banner button { padding: 8px 12px; font-size: 13px; background: #d97706; }
     .banner button:hover { background: #b45309; }
+    .loading { text-align: center; color: #6b7280; padding: 20px; font-size: 14px; }
     footer { text-align: center; padding: 14px; font-size: 12px; color: #6b7280; }
     .credit { margin-top: 4px; font-weight: bold; }
 
@@ -83,7 +82,6 @@ const supabaseClient = window.supabase.createClient(
     .login-error.ok { color: #16a34a; }
     .link-btn { background: none; color: #6b7280; font-size: 13px; padding: 10px 0 0; text-decoration: underline; }
     .link-btn:hover { background: none; color: #111827; }
-    .link-btn.danger:hover { color: #dc2626; }
 
     @media (min-width: 700px) {
       header { padding: 22px 24px; }
@@ -122,8 +120,8 @@ const supabaseClient = window.supabase.createClient(
   </div>
 </header>
 
-<!-- Tela de login / primeiro acesso / recuperação de senha -->
-<div class="login-overlay" id="loginOverlay">
+<!-- Tela de login / criar conta / recuperação de senha -->
+<div class="login-overlay" id="loginOverlay" hidden>
   <div class="login-card">
     <svg class="login-logo" viewBox="0 0 40 40" role="img" aria-label="Logo do Operatto">
       <rect width="40" height="40" rx="10" fill="#16a34a"/>
@@ -133,46 +131,46 @@ const supabaseClient = window.supabase.createClient(
       <rect x="23" y="14" width="3" height="12" rx="1" fill="#fff"/>
     </svg>
 
-    <!-- Login / primeiro acesso -->
+    <!-- Login / criar conta -->
     <form id="loginForm" autocomplete="on">
       <h2 id="loginTitle">Entrar</h2>
       <p class="login-sub" id="loginSubtitle"></p>
 
-      <label for="loginUser">Usuário</label>
-      <input id="loginUser" autocomplete="username" maxlength="30" required>
-
-      <label for="loginPin">Senha (6 números)</label>
-      <input id="loginPin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" placeholder="••••••" required>
-
-      <div id="confirmWrap" hidden>
-        <label for="loginPin2">Confirmar senha</label>
-        <input id="loginPin2" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" placeholder="••••••">
+      <div id="nameWrap" hidden>
+        <label for="loginName">Seu nome</label>
+        <input id="loginName" autocomplete="name" maxlength="40" placeholder="Ex.: Romulo">
       </div>
 
-      <div id="emailWrap" hidden>
-        <label for="loginEmail">E-mail de recuperação</label>
-        <input id="loginEmail" type="email" autocomplete="email" placeholder="voce@exemplo.com">
+      <label for="loginEmail">E-mail</label>
+      <input id="loginEmail" type="email" autocomplete="email" placeholder="voce@exemplo.com" required>
+
+      <label for="loginPass">Senha</label>
+      <input id="loginPass" type="password" autocomplete="current-password" minlength="6" placeholder="Mínimo 6 caracteres" required>
+
+      <div id="confirmWrap" hidden>
+        <label for="loginPass2">Confirmar senha</label>
+        <input id="loginPass2" type="password" autocomplete="new-password" minlength="6" placeholder="Repita a senha">
       </div>
 
       <div class="login-error" id="loginError" role="alert"></div>
 
       <button type="submit" id="loginBtn">Entrar</button>
+      <button type="button" class="link-btn" id="toggleModeBtn">Primeiro acesso? Criar conta</button>
       <button type="button" class="link-btn" id="forgotBtn">Esqueci minha senha</button>
     </form>
 
     <!-- Recuperação: passo 1 (e-mail) -->
     <form id="recoverForm" hidden>
       <h2>Recuperar senha</h2>
-      <p class="login-sub">Digite o e-mail cadastrado. Enviaremos um código de 6 números. Seus dados não serão apagados.</p>
+      <p class="login-sub">Digite o e-mail da sua conta. Enviaremos um código para ele. Seus dados não serão apagados.</p>
 
-      <label for="recoverEmail">E-mail de recuperação</label>
+      <label for="recoverEmail">E-mail da conta</label>
       <input id="recoverEmail" type="email" autocomplete="email" placeholder="voce@exemplo.com" required>
 
       <div class="login-error" id="recoverMsg" role="alert"></div>
 
       <button type="submit" id="sendCodeBtn">Enviar código</button>
       <button type="button" class="link-btn" id="recoverBackBtn">Voltar ao login</button>
-      <button type="button" class="link-btn danger" id="wipeBtn">Não tenho acesso ao e-mail (apagar todos os dados)</button>
     </form>
 
     <!-- Recuperação: passo 2 (código + nova senha) -->
@@ -181,13 +179,13 @@ const supabaseClient = window.supabase.createClient(
       <p class="login-sub" id="resetIntro"></p>
 
       <label for="resetCode">Código recebido por e-mail</label>
-      <input id="resetCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000" required>
+      <input id="resetCode" inputmode="numeric" maxlength="8" autocomplete="one-time-code" placeholder="000000" required>
 
-      <label for="resetPin">Nova senha (6 números)</label>
-      <input id="resetPin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" placeholder="••••••" required>
+      <label for="resetPass">Nova senha</label>
+      <input id="resetPass" type="password" autocomplete="new-password" minlength="6" placeholder="Mínimo 6 caracteres" required>
 
-      <label for="resetPin2">Confirmar nova senha</label>
-      <input id="resetPin2" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" placeholder="••••••" required>
+      <label for="resetPass2">Confirmar nova senha</label>
+      <input id="resetPass2" type="password" autocomplete="new-password" minlength="6" placeholder="Repita a senha" required>
 
       <div class="login-error" id="resetMsg" role="alert"></div>
 
@@ -202,9 +200,9 @@ const supabaseClient = window.supabase.createClient(
   <h2>Painel de gestão</h2>
   <p>Bem-vindo ao seu restaurante!</p>
 
-  <div class="section banner" id="emailBanner" hidden>
-    <span>⚠️ Cadastre um e-mail de recuperação para poder redefinir sua senha sem perder os dados.</span>
-    <button type="button" id="emailBannerBtn">Cadastrar agora</button>
+  <div class="section banner" id="syncBanner" hidden>
+    <span id="syncBannerText">⚠️ Não foi possível carregar os dados da nuvem.</span>
+    <button type="button" id="syncRetryBtn">Tentar de novo</button>
   </div>
 
   <div class="cards">
@@ -289,7 +287,7 @@ const supabaseClient = window.supabase.createClient(
       <label>Fornecedor <span class="hint">(opcional)</span></label>
       <input id="supplier" placeholder="Ex.: Distribuidora X">
 
-      <button type="submit">Cadastrar produto</button>
+      <button type="submit" id="productSubmitBtn">Cadastrar produto</button>
     </form>
   </section>
 
@@ -323,12 +321,12 @@ const supabaseClient = window.supabase.createClient(
   </section>
 
   <section class="section" id="accountSection">
-    <h2>🔐 Conta e recuperação de senha</h2>
+    <h2>🔐 Conta</h2>
     <div class="hint" id="accountStatus" style="margin-bottom:8px"></div>
     <form id="accountForm">
-      <label for="accountEmail">E-mail de recuperação</label>
-      <input id="accountEmail" type="email" autocomplete="email" placeholder="voce@exemplo.com" required>
-      <button type="submit">Salvar e-mail</button>
+      <label for="accountPass">Alterar senha</label>
+      <input id="accountPass" type="password" autocomplete="new-password" minlength="6" placeholder="Nova senha (mínimo 6 caracteres)" required>
+      <button type="submit" id="accountBtn">Salvar nova senha</button>
     </form>
   </section>
 </main>
@@ -339,50 +337,26 @@ const supabaseClient = window.supabase.createClient(
 </footer>
 
 <script>
-  const EMAILJS_CONFIG = {
-    serviceId: "service_phby65e",
-    templateId: "template_68ckv3u",
-    publicKey: "OEscjf9aLiR0z8yR8"
-  };
-
+  // Chaves antigas do navegador (usadas só para migrar dados para o banco)
   const STORAGE_KEY = "operatto_movements";
   const PRODUCTS_KEY = "operatto_products";
-  const SETTINGS_KEY = "operatto_settings";
-  const AUTH_KEY = "operatto_auth";
-  const LOCK_KEY = "operatto_lock";
-  const RECOVERY_KEY = "operatto_recovery";
+  const MIGRATED_KEY = "operatto_migrated_to";
   const DISCRETE_UNITS = ["unidades", "caixas", "pacotes"];
   const EXPIRY_ALERT_DAYS = 7;
   const DEFAULT_TARGET_FACTOR = 2;
-  const MAX_ATTEMPTS = 5;
-  const LOCK_SECONDS = 30;
-  const CODE_MINUTES = 10;
-  const CODE_MAX_ATTEMPTS = 5;
   const RESEND_SECONDS = 60;
+  const PAGE_SIZE = 1000;
 
-  function load(key) {
-    try {
-      const data = JSON.parse(localStorage.getItem(key));
-      return Array.isArray(data) ? data : [];
-    } catch (error) {
-      return [];
-    }
-  }
-
-  function loadSettings() {
-    try {
-      const data = JSON.parse(localStorage.getItem(SETTINGS_KEY));
-      const factor = data && Number(data.targetFactor);
-      return { targetFactor: Number.isFinite(factor) && factor >= 1 ? factor : DEFAULT_TARGET_FACTOR };
-    } catch (error) {
-      return { targetFactor: DEFAULT_TARGET_FACTOR };
-    }
-  }
-
-  let movements = load(STORAGE_KEY);
-  let catalog = load(PRODUCTS_KEY);
-  let settings = loadSettings();
-  let currentUser = null;
+  // Dados em memória (espelho do que está no Supabase)
+  let movements = [];
+  let catalog = [];
+  let settings = { targetFactor: DEFAULT_TARGET_FACTOR };
+  let currentUser = null;      // nome exibido
+  let currentUserId = null;    // id no Supabase
+  let currentEmail = "";
+  let dataReady = false;       // só permite gravar depois de carregar tudo da nuvem
+  let lastResendAt = 0;
+  let recoverEmailValue = "";
 
   const productForm = document.getElementById("productForm");
   const factorInput = document.getElementById("targetFactor");
@@ -391,125 +365,31 @@ const supabaseClient = window.supabase.createClient(
   const loginForm = document.getElementById("loginForm");
   const recoverForm = document.getElementById("recoverForm");
   const resetForm = document.getElementById("resetForm");
-  const loginUser = document.getElementById("loginUser");
-  const loginPin = document.getElementById("loginPin");
-  const loginPin2 = document.getElementById("loginPin2");
+  const loginName = document.getElementById("loginName");
   const loginEmail = document.getElementById("loginEmail");
+  const loginPass = document.getElementById("loginPass");
+  const loginPass2 = document.getElementById("loginPass2");
   const loginError = document.getElementById("loginError");
   const loginBtn = document.getElementById("loginBtn");
   const forgotBtn = document.getElementById("forgotBtn");
+  const toggleModeBtn = document.getElementById("toggleModeBtn");
+  const nameWrap = document.getElementById("nameWrap");
   const confirmWrap = document.getElementById("confirmWrap");
-  const emailWrap = document.getElementById("emailWrap");
   const recoverEmail = document.getElementById("recoverEmail");
   const recoverMsg = document.getElementById("recoverMsg");
   const sendCodeBtn = document.getElementById("sendCodeBtn");
   const resetCode = document.getElementById("resetCode");
-  const resetPin = document.getElementById("resetPin");
-  const resetPin2 = document.getElementById("resetPin2");
+  const resetPass = document.getElementById("resetPass");
+  const resetPass2 = document.getElementById("resetPass2");
   const resetMsg = document.getElementById("resetMsg");
   const resetBtn = document.getElementById("resetBtn");
   const resendBtn = document.getElementById("resendBtn");
   const appMain = document.getElementById("appMain");
   const userBar = document.getElementById("userBar");
-  let setupMode = false;
+  const syncBanner = document.getElementById("syncBanner");
+  let signupMode = false;
 
-  function loadAuth() {
-    try {
-      const data = JSON.parse(localStorage.getItem(AUTH_KEY));
-      return data && data.user && data.hash && data.salt ? data : null;
-    } catch (error) {
-      return null;
-    }
-  }
-
-  function saveAuth(auth) {
-    localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
-  }
-
-  function loadLock() {
-    try {
-      const data = JSON.parse(localStorage.getItem(LOCK_KEY));
-      return { fails: Number(data && data.fails) || 0, until: Number(data && data.until) || 0 };
-    } catch (error) {
-      return { fails: 0, until: 0 };
-    }
-  }
-
-  function saveLock(lock) {
-    try { localStorage.setItem(LOCK_KEY, JSON.stringify(lock)); } catch (error) {}
-  }
-
-  function loadRecovery() {
-    try {
-      const data = JSON.parse(localStorage.getItem(RECOVERY_KEY));
-      return data && data.hash ? data : null;
-    } catch (error) {
-      return null;
-    }
-  }
-
-  function saveRecovery(rec) {
-    try { localStorage.setItem(RECOVERY_KEY, JSON.stringify(rec)); } catch (error) {}
-  }
-
-  function clearRecovery() {
-    try { localStorage.removeItem(RECOVERY_KEY); } catch (error) {}
-  }
-
-  function bytesToHex(buf) {
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-  }
-
-  function randomSalt() {
-    const arr = new Uint8Array(16);
-    if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(arr);
-    else for (let i = 0; i < arr.length; i++) arr[i] = Math.floor(Math.random() * 256);
-    return bytesToHex(arr);
-  }
-
-  function randomCode() {
-    let n;
-    if (window.crypto && crypto.getRandomValues) {
-      const arr = new Uint32Array(1);
-      crypto.getRandomValues(arr);
-      n = arr[0] % 1000000;
-    } else {
-      n = Math.floor(Math.random() * 1000000);
-    }
-    return String(n).padStart(6, "0");
-  }
-
-  function simpleHash(str) {
-    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
-    for (let r = 0; r < 2000; r++) {
-      for (let i = 0; i < str.length; i++) {
-        const ch = str.charCodeAt(i);
-        h1 = Math.imul(h1 ^ ch, 2654435761);
-        h2 = Math.imul(h2 ^ ch, 1597334677);
-      }
-      h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-      h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-    }
-    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
-  }
-
-  async function hashPin(pin, salt, algo) {
-    const canSubtle = !!(window.crypto && crypto.subtle);
-    const useAlgo = algo || (canSubtle ? "pbkdf2" : "simple");
-
-    if (useAlgo === "pbkdf2") {
-      if (!canSubtle) throw new Error("pbkdf2 indisponível");
-      const enc = new TextEncoder();
-      const key = await crypto.subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, ["deriveBits"]);
-      const bits = await crypto.subtle.deriveBits(
-        { name: "PBKDF2", salt: enc.encode(salt), iterations: 100000, hash: "SHA-256" },
-        key, 256
-      );
-      return { algo: "pbkdf2", hash: bytesToHex(bits) };
-    }
-
-    return { algo: "simple", hash: simpleHash(salt + ":" + pin) };
-  }
+  /* ---------------- Utilidades ---------------- */
 
   function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
@@ -523,32 +403,7 @@ const supabaseClient = window.supabase.createClient(
     const parts = String(email).split("@");
     if (parts.length !== 2) return email;
     const local = parts[0];
-    const shown = local.slice(0, Math.min(2, local.length));
-    return shown + "***@" + parts[1];
-  }
-
-  function emailConfigured() {
-    return !!(EMAILJS_CONFIG.serviceId && EMAILJS_CONFIG.templateId && EMAILJS_CONFIG.publicKey);
-  }
-
-  async function sendRecoveryEmail(to, code, userName) {
-    const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        service_id: EMAILJS_CONFIG.serviceId,
-        template_id: EMAILJS_CONFIG.templateId,
-        user_id: EMAILJS_CONFIG.publicKey,
-        template_params: {
-          to_email: to,
-          code: code,
-          user_name: userName,
-          app_name: "Operatto",
-          expires_min: String(CODE_MINUTES)
-        }
-      })
-    });
-    if (!response.ok) throw new Error("Falha no envio: " + response.status);
+    return local.slice(0, Math.min(2, local.length)) + "***@" + parts[1];
   }
 
   function setMsg(el, text, ok) {
@@ -556,429 +411,18 @@ const supabaseClient = window.supabase.createClient(
     el.classList.toggle("ok", !!ok);
   }
 
-  function showView(view) {
-    loginForm.hidden = view !== "login";
-    recoverForm.hidden = view !== "recover";
-    resetForm.hidden = view !== "reset";
+  function friendlyError(error) {
+    const msg = String((error && error.message) || error || "").toLowerCase();
+    if (msg.includes("invalid login credentials")) return "E-mail ou senha incorretos.";
+    if (msg.includes("email not confirmed")) return "Confirme seu e-mail (link enviado na criação da conta) antes de entrar.";
+    if (msg.includes("already registered") || msg.includes("already been registered")) return "Esse e-mail já tem conta. Use \"Entrar\".";
+    if (msg.includes("rate limit") || msg.includes("too many") || msg.includes("security purposes")) return "Muitas tentativas. Aguarde um pouco e tente de novo.";
+    if (msg.includes("password") && msg.includes("characters")) return "A senha precisa ter pelo menos 6 caracteres.";
+    if (msg.includes("token") && (msg.includes("expired") || msg.includes("invalid"))) return "Código inválido ou expirado. Peça um novo código.";
+    if (msg.includes("same password") || msg.includes("different from the old")) return "A nova senha precisa ser diferente da atual.";
+    if (msg.includes("failed to fetch") || msg.includes("network")) return "Sem conexão com a internet. Tente de novo.";
+    return "Erro: " + ((error && error.message) || "tente novamente.");
   }
-
-  function showLogin(infoMessage) {
-    const auth = loadAuth();
-    setupMode = !auth;
-    currentUser = null;
-
-    appMain.hidden = true;
-    userBar.hidden = true;
-    loginOverlay.hidden = false;
-    showView("login");
-
-    loginUser.value = "";
-    loginPin.value = "";
-    loginPin2.value = "";
-    loginEmail.value = "";
-    setMsg(loginError, infoMessage || "", !!infoMessage);
-
-    confirmWrap.hidden = !setupMode;
-    emailWrap.hidden = !setupMode;
-    loginPin2.required = setupMode;
-    loginEmail.required = setupMode;
-    forgotBtn.hidden = setupMode;
-
-    document.getElementById("loginTitle").textContent = setupMode ? "Criar acesso" : "Entrar";
-    document.getElementById("loginSubtitle").textContent = setupMode
-      ? "Primeiro acesso: escolha um usuário, uma senha de 6 números e um e-mail para recuperar a senha."
-      : "Digite seu usuário e sua senha de 6 números.";
-    loginBtn.textContent = setupMode ? "Criar acesso e entrar" : "Entrar";
-    loginPin.autocomplete = setupMode ? "new-password" : "current-password";
-
-    setTimeout(() => loginUser.focus(), 50);
-  }
-
-  function enterApp(name) {
-    currentUser = name;
-    loginOverlay.hidden = true;
-    appMain.hidden = false;
-    userBar.hidden = false;
-    document.getElementById("userName").textContent = "👤 " + name;
-    loginUser.value = "";
-    loginPin.value = "";
-    loginPin2.value = "";
-    setMsg(loginError, "");
-    renderAccount();
-    render();
-    window.scrollTo(0, 0);
-  }
-
-  [loginPin, loginPin2, resetCode, resetPin, resetPin2].forEach(input => {
-    input.addEventListener("input", () => {
-      input.value = input.value.replace(/\D/g, "").slice(0, 6);
-    });
-  });
-
-  loginForm.addEventListener("submit", async function (event) {
-    event.preventDefault();
-    setMsg(loginError, "");
-
-    const user = loginUser.value.trim();
-    const pin = loginPin.value;
-
-    if (!user) {
-      setMsg(loginError, "Digite o usuário.");
-      return;
-    }
-
-    if (!/^[0-9]{6}$/.test(pin)) {
-      setMsg(loginError, "A senha deve ter exatamente 6 números.");
-      return;
-    }
-
-    if (setupMode) {
-      const email = normEmail(loginEmail.value);
-
-      if (user.length < 3) {
-        setMsg(loginError, "O usuário deve ter pelo menos 3 caracteres.");
-        return;
-      }
-      if (pin !== loginPin2.value) {
-        setMsg(loginError, "As senhas não são iguais.");
-        return;
-      }
-      if (!isValidEmail(email)) {
-        setMsg(loginError, "Digite um e-mail válido para recuperar a senha.");
-        return;
-      }
-
-      loginBtn.disabled = true;
-      try {
-        const salt = randomSalt();
-        const result = await hashPin(pin, salt);
-        const auth = {
-          user: user,
-          userKey: user.toLowerCase(),
-          email: email,
-          salt: salt,
-          algo: result.algo,
-          hash: result.hash
-        };
-        saveAuth(auth);
-        saveLock({ fails: 0, until: 0 });
-        clearRecovery();
-        enterApp(auth.user);
-      } catch (error) {
-        setMsg(loginError, "Não foi possível salvar o acesso neste navegador.");
-      } finally {
-        loginBtn.disabled = false;
-      }
-      return;
-    }
-
-    const auth = loadAuth();
-    if (!auth) {
-      showLogin();
-      return;
-    }
-
-    const lock = loadLock();
-    const now = Date.now();
-    if (lock.until > now) {
-      const secs = Math.ceil((lock.until - now) / 1000);
-      setMsg(loginError, "Muitas tentativas. Aguarde " + secs + " s para tentar de novo.");
-      return;
-    }
-
-    loginBtn.disabled = true;
-    try {
-      const result = await hashPin(pin, auth.salt, auth.algo);
-      const userOk = (auth.userKey || auth.user.toLowerCase()) === user.toLowerCase();
-      const pinOk = result.hash === auth.hash;
-
-      if (userOk && pinOk) {
-        saveLock({ fails: 0, until: 0 });
-        enterApp(auth.user);
-        return;
-      }
-
-      const fails = lock.fails + 1;
-      if (fails >= MAX_ATTEMPTS) {
-        saveLock({ fails: 0, until: Date.now() + LOCK_SECONDS * 1000 });
-        setMsg(loginError, "Muitas tentativas. Aguarde " + LOCK_SECONDS + " s para tentar de novo.");
-      } else {
-        saveLock({ fails: fails, until: 0 });
-        setMsg(loginError, "Usuário ou senha incorretos. Tentativas restantes: " + (MAX_ATTEMPTS - fails) + ".");
-      }
-      loginPin.value = "";
-      loginPin.focus();
-    } catch (error) {
-      setMsg(loginError, "Este navegador não consegue verificar a senha criada em outro modo de abertura.");
-    } finally {
-      loginBtn.disabled = false;
-    }
-  });
-
-  document.getElementById("logoutBtn").addEventListener("click", () => showLogin());
-
-  forgotBtn.addEventListener("click", function () {
-    showView("recover");
-    recoverEmail.value = "";
-    setMsg(recoverMsg, "");
-    setTimeout(() => recoverEmail.focus(), 50);
-  });
-
-  document.getElementById("recoverBackBtn").addEventListener("click", () => showLogin());
-  document.getElementById("resetBackBtn").addEventListener("click", () => showLogin());
-
-  async function requestCode(auth, messageEl) {
-    if (!emailConfigured()) {
-      setMsg(messageEl, "O envio de e-mail ainda não foi configurado neste app (veja EMAILJS_CONFIG no código).");
-      return false;
-    }
-
-    const existing = loadRecovery();
-    const now = Date.now();
-    if (existing && existing.lastSent && now - existing.lastSent < RESEND_SECONDS * 1000) {
-      const wait = Math.ceil((RESEND_SECONDS * 1000 - (now - existing.lastSent)) / 1000);
-      setMsg(messageEl, "Aguarde " + wait + " s para pedir um novo código.");
-      return false;
-    }
-
-    const code = randomCode();
-    const salt = randomSalt();
-
-    try {
-      const result = await hashPin(code, salt);
-      saveRecovery({
-        salt: salt,
-        algo: result.algo,
-        hash: result.hash,
-        expires: now + CODE_MINUTES * 60 * 1000,
-        attempts: 0,
-        lastSent: now
-      });
-
-      await sendRecoveryEmail(auth.email, code, auth.user);
-      return true;
-    } catch (error) {
-      clearRecovery();
-      setMsg(messageEl, "Não foi possível enviar o e-mail. Verifique sua internet e a configuração do EmailJS.");
-      return false;
-    }
-  }
-
-  function openResetStep(auth) {
-    showView("reset");
-    resetCode.value = "";
-    resetPin.value = "";
-    resetPin2.value = "";
-    setMsg(resetMsg, "");
-    document.getElementById("resetIntro").textContent =
-      "Enviamos um código de 6 números para " + maskEmail(auth.email) + ". Ele vale por " + CODE_MINUTES + " minutos.";
-    setTimeout(() => resetCode.focus(), 50);
-  }
-
-  recoverForm.addEventListener("submit", async function (event) {
-    event.preventDefault();
-    setMsg(recoverMsg, "");
-
-    const auth = loadAuth();
-    if (!auth) {
-      showLogin();
-      return;
-    }
-
-    if (!auth.email) {
-      setMsg(recoverMsg, "Nenhum e-mail de recuperação foi cadastrado. Use a opção de apagar os dados abaixo.");
-      return;
-    }
-
-    const typed = normEmail(recoverEmail.value);
-    if (!isValidEmail(typed)) {
-      setMsg(recoverMsg, "Digite um e-mail válido.");
-      return;
-    }
-
-    if (typed !== normEmail(auth.email)) {
-      setMsg(recoverMsg, "Este e-mail não é o cadastrado.");
-      return;
-    }
-
-    sendCodeBtn.disabled = true;
-    sendCodeBtn.textContent = "Enviando...";
-    try {
-      const ok = await requestCode(auth, recoverMsg);
-      if (ok) openResetStep(auth);
-    } finally {
-      sendCodeBtn.disabled = false;
-      sendCodeBtn.textContent = "Enviar código";
-    }
-  });
-
-  resendBtn.addEventListener("click", async function () {
-    const auth = loadAuth();
-    if (!auth || !auth.email) {
-      showLogin();
-      return;
-    }
-
-    resendBtn.disabled = true;
-    try {
-      const ok = await requestCode(auth, resetMsg);
-      if (ok) {
-        resetCode.value = "";
-        setMsg(resetMsg, "Novo código enviado para " + maskEmail(auth.email) + ".", true);
-      }
-    } finally {
-      resendBtn.disabled = false;
-    }
-  });
-
-  resetForm.addEventListener("submit", async function (event) {
-    event.preventDefault();
-    setMsg(resetMsg, "");
-
-    const auth = loadAuth();
-    const rec = loadRecovery();
-
-    if (!auth) {
-      showLogin();
-      return;
-    }
-
-    const code = resetCode.value;
-    const newPin = resetPin.value;
-
-    if (!/^[0-9]{6}$/.test(code)) {
-      setMsg(resetMsg, "Digite o código de 6 números recebido por e-mail.");
-      return;
-    }
-    if (!/^[0-9]{6}$/.test(newPin)) {
-      setMsg(resetMsg, "A nova senha deve ter exatamente 6 números.");
-      return;
-    }
-    if (newPin !== resetPin2.value) {
-      setMsg(resetMsg, "As senhas não são iguais.");
-      return;
-    }
-
-    if (!rec) {
-      setMsg(resetMsg, "Nenhum código ativo. Peça um novo código.");
-      return;
-    }
-    if (Date.now() > rec.expires) {
-      clearRecovery();
-      setMsg(resetMsg, "O código expirou. Peça um novo código.");
-      return;
-    }
-    if (rec.attempts >= CODE_MAX_ATTEMPTS) {
-      clearRecovery();
-      setMsg(resetMsg, "Muitas tentativas erradas. Peça um novo código.");
-      return;
-    }
-
-    resetBtn.disabled = true;
-    try {
-      const check = await hashPin(code, rec.salt, rec.algo);
-
-      if (check.hash !== rec.hash) {
-        rec.attempts += 1;
-        if (rec.attempts >= CODE_MAX_ATTEMPTS) {
-          clearRecovery();
-          setMsg(resetMsg, "Muitas tentativas erradas. Peça um novo código.");
-        } else {
-          saveRecovery(rec);
-          setMsg(resetMsg, "Código incorreto. Tentativas restantes: " + (CODE_MAX_ATTEMPTS - rec.attempts) + ".");
-        }
-        resetCode.value = "";
-        resetCode.focus();
-        return;
-      }
-
-      const salt = randomSalt();
-      const result = await hashPin(newPin, salt);
-      saveAuth(Object.assign({}, auth, { salt: salt, algo: result.algo, hash: result.hash }));
-      saveLock({ fails: 0, until: 0 });
-      clearRecovery();
-      showLogin("Senha alterada com sucesso. Entre com a nova senha.");
-    } catch (error) {
-      setMsg(resetMsg, "Não foi possível salvar a nova senha neste navegador.");
-    } finally {
-      resetBtn.disabled = false;
-    }
-  });
-
-  document.getElementById("wipeBtn").addEventListener("click", function () {
-    const answer = prompt(
-      "Esta opção APAGA TODOS os dados do Operatto (produtos, histórico e configurações) para criar um novo acesso.\n\n" +
-      "Se você consegue acessar o e-mail cadastrado, use o código por e-mail: ele NÃO apaga nada.\n\n" +
-      "Para confirmar o apagamento, digite APAGAR:"
-    );
-    if (answer === null) return;
-    if (answer.trim().toUpperCase() !== "APAGAR") {
-      alert("Confirmação incorreta. Nada foi apagado.");
-      return;
-    }
-
-    try {
-      [AUTH_KEY, LOCK_KEY, RECOVERY_KEY, STORAGE_KEY, PRODUCTS_KEY, SETTINGS_KEY].forEach(k => localStorage.removeItem(k));
-    } catch (error) {
-      alert("Não foi possível apagar os dados neste navegador.");
-      return;
-    }
-
-    movements = [];
-    catalog = [];
-    settings = { targetFactor: DEFAULT_TARGET_FACTOR };
-    factorInput.value = settings.targetFactor;
-    showLogin();
-  });
-
-  function renderAccount() {
-    const auth = loadAuth();
-    const status = document.getElementById("accountStatus");
-    const banner = document.getElementById("emailBanner");
-    const hasEmail = !!(auth && auth.email);
-
-    banner.hidden = hasEmail;
-    document.getElementById("accountEmail").value = hasEmail ? auth.email : "";
-
-    let text = hasEmail
-      ? "E-mail cadastrado: " + maskEmail(auth.email) + ". Se esquecer a senha, um código será enviado para ele e seus dados serão mantidos."
-      : "Nenhum e-mail cadastrado. Sem ele, a única forma de recuperar o acesso é apagando todos os dados.";
-    if (!emailConfigured()) {
-      text += " ⚠️ O envio de e-mail ainda não foi configurado (veja EMAILJS_CONFIG no código).";
-    }
-    status.textContent = text;
-  }
-
-  document.getElementById("emailBannerBtn").addEventListener("click", function () {
-    const section = document.getElementById("accountSection");
-    section.scrollIntoView({ behavior: "smooth", block: "center" });
-    setTimeout(() => document.getElementById("accountEmail").focus(), 400);
-  });
-
-  document.getElementById("accountForm").addEventListener("submit", function (event) {
-    event.preventDefault();
-    if (!currentUser) return;
-
-    const auth = loadAuth();
-    if (!auth) return;
-
-    const email = normEmail(document.getElementById("accountEmail").value);
-    if (!isValidEmail(email)) {
-      alert("Digite um e-mail válido.");
-      return;
-    }
-
-    try {
-      saveAuth(Object.assign({}, auth, { email: email }));
-      clearRecovery();
-    } catch (error) {
-      alert("Não foi possível salvar o e-mail neste navegador.");
-      return;
-    }
-
-    renderAccount();
-    alert("E-mail de recuperação salvo!");
-  });
 
   function round(n) {
     return Math.round(n * 1000) / 1000;
@@ -991,7 +435,7 @@ const supabaseClient = window.supabase.createClient(
   function fmtMoney(n) {
     return Number(n)
       .toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-      .replace(/\u00a0/g, " ");
+      .replace(/ /g, " ");
   }
 
   function fmtDate(iso) {
@@ -1011,6 +455,496 @@ const supabaseClient = window.supabase.createClient(
   function plural(n) {
     return n === 1 ? "1 dia" : n + " dias";
   }
+
+  /* ---------------- Conversão banco <-> app ---------------- */
+
+  function dbToProduct(r) {
+    return {
+      id: r.id,
+      name: r.name,
+      category: r.category,
+      unit: r.unit,
+      minimum: Number(r.minimum),
+      target: r.target === null || r.target === undefined ? null : Number(r.target),
+      cost: r.cost === null || r.cost === undefined ? null : Number(r.cost),
+      supplier: r.supplier || "",
+      expiry: r.expiry || ""
+    };
+  }
+
+  function productToDb(p) {
+    return {
+      name: p.name,
+      category: p.category,
+      unit: p.unit,
+      minimum: p.minimum,
+      target: typeof p.target === "number" ? p.target : null,
+      cost: typeof p.cost === "number" ? p.cost : null,
+      supplier: p.supplier || "",
+      expiry: p.expiry || null
+    };
+  }
+
+  function dbToMovement(r) {
+    const m = {
+      id: r.id,
+      product: r.product_name,
+      unit: r.unit || "",
+      type: r.type,
+      quantity: Number(r.quantity),
+      employee: r.employee || "",
+      date: r.created_at
+    };
+    if (r.delta !== null && r.delta !== undefined) m.delta = Number(r.delta);
+    return m;
+  }
+
+  function movementToDb(m) {
+    return {
+      product_name: m.product,
+      unit: m.unit || null,
+      type: m.type,
+      quantity: m.quantity,
+      delta: m.type === "ajuste" ? m.delta : null,
+      employee: m.employee || "",
+      created_at: m.date
+    };
+  }
+
+  /* ---------------- Acesso ao banco ---------------- */
+
+  async function fetchAll(table, orderColumn) {
+    const all = [];
+    let from = 0;
+    while (true) {
+      const { data, error } = await supabaseClient
+        .from(table)
+        .select("*")
+        .order(orderColumn, { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw error;
+      all.push(...data);
+      if (data.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+    return all;
+  }
+
+  async function loadCloud() {
+    const [productRows, movementRows, settingsRes] = await Promise.all([
+      fetchAll("products", "created_at"),
+      fetchAll("movements", "created_at"),
+      supabaseClient.from("settings").select("target_factor").maybeSingle()
+    ]);
+    if (settingsRes.error) throw settingsRes.error;
+
+    catalog = productRows.map(dbToProduct);
+    movements = movementRows.map(dbToMovement);
+
+    const factor = settingsRes.data && Number(settingsRes.data.target_factor);
+    settings = { targetFactor: Number.isFinite(factor) && factor >= 1 ? factor : DEFAULT_TARGET_FACTOR };
+    factorInput.value = settings.targetFactor;
+  }
+
+  function readLocalArray(key) {
+    try {
+      const data = JSON.parse(localStorage.getItem(key));
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async function insertInChunks(table, rows) {
+    for (let i = 0; i < rows.length; i += 500) {
+      const { error } = await supabaseClient.from(table).insert(rows.slice(i, i + 500));
+      if (error) throw error;
+    }
+  }
+
+  // Envia, uma única vez, o que estava salvo só no navegador para o banco.
+  async function migrateLocalData() {
+    if (catalog.length > 0 || movements.length > 0) return;
+
+    let migratedTo = null;
+    try { migratedTo = localStorage.getItem(MIGRATED_KEY); } catch (error) {}
+    if (migratedTo === currentUserId) return;
+
+    const localProducts = readLocalArray(PRODUCTS_KEY).filter(p =>
+      p && typeof p.name === "string" && p.name.trim() && typeof p.unit === "string"
+    );
+    const localMovements = readLocalArray(STORAGE_KEY).filter(m =>
+      m && typeof m.product === "string" && ["entrada", "saida", "perda", "ajuste"].includes(m.type)
+    );
+    if (localProducts.length === 0 && localMovements.length === 0) return;
+
+    const ok = confirm(
+      "Encontrei dados salvos só neste navegador:\n" +
+      "• " + localProducts.length + " produto(s)\n" +
+      "• " + localMovements.length + " movimentação(ões)\n\n" +
+      "Enviar para a sua conta na nuvem agora?"
+    );
+    if (!ok) return;
+
+    try {
+      const seen = new Set();
+      const productRows = [];
+      localProducts.forEach(p => {
+        const key = p.name.trim().toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        productRows.push(productToDb({
+          name: p.name.trim(),
+          category: p.category || "Outros",
+          unit: p.unit,
+          minimum: Number(p.minimum) || 0,
+          target: typeof p.target === "number" && p.target > (Number(p.minimum) || 0) ? p.target : null,
+          cost: typeof p.cost === "number" ? p.cost : null,
+          supplier: p.supplier || "",
+          expiry: /^\d{4}-\d{2}-\d{2}$/.test(p.expiry || "") ? p.expiry : ""
+        }));
+      });
+
+      const movementRows = localMovements.map(m => {
+        const date = new Date(m.date);
+        return movementToDb({
+          product: m.product,
+          unit: m.unit || "",
+          type: m.type,
+          quantity: Number(m.quantity) || 0,
+          delta: m.type === "ajuste" ? Number(m.delta) || 0 : null,
+          employee: m.employee || "",
+          date: isNaN(date) ? new Date().toISOString() : date.toISOString()
+        });
+      });
+
+      await insertInChunks("products", productRows);
+      await insertInChunks("movements", movementRows);
+      try { localStorage.setItem(MIGRATED_KEY, currentUserId); } catch (error) {}
+      await loadCloud();
+      alert("Pronto! Seus dados antigos agora estão salvos na nuvem.");
+    } catch (error) {
+      alert("Não foi possível enviar os dados antigos para a nuvem: " + friendlyError(error) +
+        "\n\nNada foi apagado do navegador. Você pode tentar de novo no próximo login.");
+      await loadCloud();
+    }
+  }
+
+  /* ---------------- Telas de login ---------------- */
+
+  function showView(view) {
+    loginForm.hidden = view !== "login";
+    recoverForm.hidden = view !== "recover";
+    resetForm.hidden = view !== "reset";
+  }
+
+  function applyMode() {
+    nameWrap.hidden = !signupMode;
+    confirmWrap.hidden = !signupMode;
+    loginName.required = signupMode;
+    loginPass2.required = signupMode;
+    forgotBtn.hidden = signupMode;
+
+    document.getElementById("loginTitle").textContent = signupMode ? "Criar conta" : "Entrar";
+    document.getElementById("loginSubtitle").textContent = signupMode
+      ? "Crie sua conta com e-mail e senha. Seus dados ficam salvos na nuvem."
+      : "Digite seu e-mail e sua senha.";
+    loginBtn.textContent = signupMode ? "Criar conta e entrar" : "Entrar";
+    toggleModeBtn.textContent = signupMode ? "Já tenho conta. Entrar" : "Primeiro acesso? Criar conta";
+    loginPass.autocomplete = signupMode ? "new-password" : "current-password";
+  }
+
+  function showLogin(infoMessage) {
+    currentUser = null;
+    currentUserId = null;
+    currentEmail = "";
+    dataReady = false;
+    movements = [];
+    catalog = [];
+
+    appMain.hidden = true;
+    userBar.hidden = true;
+    syncBanner.hidden = true;
+    loginOverlay.hidden = false;
+    showView("login");
+
+    signupMode = false;
+    loginName.value = "";
+    loginPass.value = "";
+    loginPass2.value = "";
+    setMsg(loginError, infoMessage || "", !!infoMessage);
+    applyMode();
+
+    setTimeout(() => loginEmail.focus(), 50);
+  }
+
+  async function enterApp(user) {
+    currentUserId = user.id;
+    currentEmail = user.email || "";
+    const meta = user.user_metadata || {};
+    currentUser = (meta.name && String(meta.name).trim()) || (currentEmail.split("@")[0] || "Usuário");
+
+    loginOverlay.hidden = true;
+    appMain.hidden = false;
+    userBar.hidden = false;
+    document.getElementById("userName").textContent = "👤 " + currentUser;
+    loginEmail.value = "";
+    loginPass.value = "";
+    loginPass2.value = "";
+    setMsg(loginError, "");
+    renderAccount();
+    window.scrollTo(0, 0);
+
+    await syncFromCloud();
+  }
+
+  async function syncFromCloud() {
+    dataReady = false;
+    syncBanner.hidden = true;
+    document.getElementById("stockList").innerHTML = '<div class="loading">Carregando dados da nuvem...</div>';
+
+    try {
+      await loadCloud();
+      dataReady = true;
+      render();
+      await migrateLocalData();
+      render();
+    } catch (error) {
+      document.getElementById("syncBannerText").textContent =
+        "⚠️ Não foi possível carregar os dados da nuvem: " + friendlyError(error);
+      syncBanner.hidden = false;
+      document.getElementById("stockList").textContent = "Dados não carregados.";
+    }
+  }
+
+  document.getElementById("syncRetryBtn").addEventListener("click", syncFromCloud);
+
+  toggleModeBtn.addEventListener("click", function () {
+    signupMode = !signupMode;
+    setMsg(loginError, "");
+    applyMode();
+  });
+
+  resetCode.addEventListener("input", () => {
+    resetCode.value = resetCode.value.replace(/\D/g, "").slice(0, 8);
+  });
+
+  loginForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+    setMsg(loginError, "");
+
+    const email = normEmail(loginEmail.value);
+    const pass = loginPass.value;
+
+    if (!isValidEmail(email)) {
+      setMsg(loginError, "Digite um e-mail válido.");
+      return;
+    }
+    if (pass.length < 6) {
+      setMsg(loginError, "A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    loginBtn.disabled = true;
+    try {
+      if (signupMode) {
+        const name = loginName.value.trim();
+        if (name.length < 2) {
+          setMsg(loginError, "Digite seu nome.");
+          return;
+        }
+        if (pass !== loginPass2.value) {
+          setMsg(loginError, "As senhas não são iguais.");
+          return;
+        }
+
+        const { data, error } = await supabaseClient.auth.signUp({
+          email: email,
+          password: pass,
+          options: { data: { name: name } }
+        });
+        if (error) throw error;
+
+        if (!data.session) {
+          // Projeto com confirmação de e-mail ligada
+          showLogin("Conta criada! Confirme seu e-mail pelo link que enviamos e depois entre.");
+          return;
+        }
+        await enterApp(data.user);
+        return;
+      }
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email: email, password: pass });
+      if (error) throw error;
+      await enterApp(data.user);
+    } catch (error) {
+      setMsg(loginError, friendlyError(error));
+      loginPass.value = "";
+    } finally {
+      loginBtn.disabled = false;
+    }
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", async function () {
+    try { await supabaseClient.auth.signOut(); } catch (error) {}
+    showLogin();
+  });
+
+  forgotBtn.addEventListener("click", function () {
+    showView("recover");
+    recoverEmail.value = loginEmail.value;
+    setMsg(recoverMsg, "");
+    setTimeout(() => recoverEmail.focus(), 50);
+  });
+
+  document.getElementById("recoverBackBtn").addEventListener("click", () => showLogin());
+  document.getElementById("resetBackBtn").addEventListener("click", () => showLogin());
+
+  async function requestCode(email, messageEl) {
+    const wait = Math.ceil((RESEND_SECONDS * 1000 - (Date.now() - lastResendAt)) / 1000);
+    if (lastResendAt && wait > 0) {
+      setMsg(messageEl, "Aguarde " + wait + " s para pedir um novo código.");
+      return false;
+    }
+
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+    if (error) {
+      setMsg(messageEl, friendlyError(error));
+      return false;
+    }
+    lastResendAt = Date.now();
+    return true;
+  }
+
+  function openResetStep(email) {
+    showView("reset");
+    resetCode.value = "";
+    resetPass.value = "";
+    resetPass2.value = "";
+    setMsg(resetMsg, "");
+    document.getElementById("resetIntro").textContent =
+      "Se existir uma conta para " + maskEmail(email) + ", enviamos um código para esse e-mail. Ele vale por poucos minutos.";
+    setTimeout(() => resetCode.focus(), 50);
+  }
+
+  recoverForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+    setMsg(recoverMsg, "");
+
+    const email = normEmail(recoverEmail.value);
+    if (!isValidEmail(email)) {
+      setMsg(recoverMsg, "Digite um e-mail válido.");
+      return;
+    }
+
+    sendCodeBtn.disabled = true;
+    sendCodeBtn.textContent = "Enviando...";
+    try {
+      const ok = await requestCode(email, recoverMsg);
+      if (ok) {
+        recoverEmailValue = email;
+        openResetStep(email);
+      }
+    } finally {
+      sendCodeBtn.disabled = false;
+      sendCodeBtn.textContent = "Enviar código";
+    }
+  });
+
+  resendBtn.addEventListener("click", async function () {
+    if (!recoverEmailValue) {
+      showLogin();
+      return;
+    }
+    resendBtn.disabled = true;
+    try {
+      const ok = await requestCode(recoverEmailValue, resetMsg);
+      if (ok) {
+        resetCode.value = "";
+        setMsg(resetMsg, "Novo código enviado para " + maskEmail(recoverEmailValue) + ".", true);
+      }
+    } finally {
+      resendBtn.disabled = false;
+    }
+  });
+
+  resetForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+    setMsg(resetMsg, "");
+
+    const code = resetCode.value.trim();
+    const newPass = resetPass.value;
+
+    if (code.length < 6) {
+      setMsg(resetMsg, "Digite o código recebido por e-mail.");
+      return;
+    }
+    if (newPass.length < 6) {
+      setMsg(resetMsg, "A nova senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (newPass !== resetPass2.value) {
+      setMsg(resetMsg, "As senhas não são iguais.");
+      return;
+    }
+    if (!recoverEmailValue) {
+      showLogin();
+      return;
+    }
+
+    resetBtn.disabled = true;
+    try {
+      const verify = await supabaseClient.auth.verifyOtp({
+        email: recoverEmailValue,
+        token: code,
+        type: "recovery"
+      });
+      if (verify.error) throw verify.error;
+
+      const update = await supabaseClient.auth.updateUser({ password: newPass });
+      if (update.error) throw update.error;
+
+      await supabaseClient.auth.signOut();
+      showLogin("Senha alterada com sucesso. Entre com a nova senha.");
+    } catch (error) {
+      setMsg(resetMsg, friendlyError(error));
+      resetCode.value = "";
+      resetCode.focus();
+    } finally {
+      resetBtn.disabled = false;
+    }
+  });
+
+  function renderAccount() {
+    document.getElementById("accountStatus").textContent =
+      "Conectado como " + currentEmail + ". Seus dados ficam salvos na nuvem e acompanham sua conta em qualquer aparelho.";
+  }
+
+  document.getElementById("accountForm").addEventListener("submit", async function (event) {
+    event.preventDefault();
+    if (!currentUser) return;
+
+    const input = document.getElementById("accountPass");
+    const btn = document.getElementById("accountBtn");
+    if (input.value.length < 6) {
+      alert("A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    btn.disabled = true;
+    try {
+      const { error } = await supabaseClient.auth.updateUser({ password: input.value });
+      if (error) throw error;
+      input.value = "";
+      alert("Senha alterada com sucesso!");
+    } catch (error) {
+      alert(friendlyError(error));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  /* ---------------- Regras de estoque ---------------- */
 
   function expiryStatus(product, saldo) {
     const days = daysUntil(product.expiry);
@@ -1061,8 +995,12 @@ const supabaseClient = window.supabase.createClient(
     document.getElementById("targetUnitHint").textContent = text;
   }
 
-  function saveCount(product, rawValue) {
+  async function saveCount(product, rawValue, saveBtn) {
     if (!currentUser) return;
+    if (!dataReady) {
+      alert("Os dados ainda não foram carregados da nuvem.");
+      return;
+    }
 
     const value = round(Number(rawValue));
 
@@ -1082,7 +1020,7 @@ const supabaseClient = window.supabase.createClient(
       return;
     }
 
-    movements.push({
+    const movement = {
       product: product.name,
       unit: product.unit,
       type: "ajuste",
@@ -1090,13 +1028,20 @@ const supabaseClient = window.supabase.createClient(
       delta: delta,
       employee: currentUser,
       date: new Date().toISOString()
-    });
+    };
 
+    if (saveBtn) saveBtn.disabled = true;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(movements));
+      const { data, error } = await supabaseClient
+        .from("movements")
+        .insert(movementToDb(movement))
+        .select()
+        .single();
+      if (error) throw error;
+      movements.push(dbToMovement(data));
     } catch (error) {
-      movements.pop();
-      alert("Não foi possível salvar a contagem neste navegador.");
+      alert("Não foi possível salvar a contagem: " + friendlyError(error));
+      if (saveBtn) saveBtn.disabled = false;
       return;
     }
 
@@ -1204,10 +1149,10 @@ const supabaseClient = window.supabase.createClient(
       qtyInput.addEventListener("keydown", e => {
         if (e.key === "Enter") {
           e.preventDefault();
-          saveCount(product, qtyInput.value);
+          saveCount(product, qtyInput.value, saveBtn);
         }
       });
-      saveBtn.addEventListener("click", () => saveCount(product, qtyInput.value));
+      saveBtn.addEventListener("click", () => saveCount(product, qtyInput.value, saveBtn));
 
       editRow.append(editLabel, qtyInput, saveBtn);
       updatePreview();
@@ -1237,7 +1182,7 @@ const supabaseClient = window.supabase.createClient(
       removeBtn.className = "btn-remove";
       removeBtn.textContent = "🗑️ Remover";
       removeBtn.setAttribute("aria-label", "Remover produto " + product.name);
-      removeBtn.addEventListener("click", () => removeProduct(product.name));
+      removeBtn.addEventListener("click", () => removeProduct(product.name, removeBtn));
 
       item.append(info, removeBtn);
       list.appendChild(item);
@@ -1262,8 +1207,12 @@ const supabaseClient = window.supabase.createClient(
       " | Total estimado: " + fmtMoney(total);
   }
 
-  function removeProduct(name) {
+  async function removeProduct(name, btn) {
     if (!currentUser) return;
+    if (!dataReady) {
+      alert("Os dados ainda não foram carregados da nuvem.");
+      return;
+    }
 
     const product = findProduct(name);
     if (!product) return;
@@ -1279,26 +1228,21 @@ const supabaseClient = window.supabase.createClient(
 
     if (!confirm(message)) return;
 
-    const previousCatalog = catalog;
-    const previousMovements = movements;
-
-    catalog = catalog.filter(p => p.name.toLowerCase() !== key);
-    movements = movements.filter(m => m.product.toLowerCase() !== key);
-
+    if (btn) btn.disabled = true;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(movements));
-      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(catalog));
+      const delMoves = await supabaseClient.from("movements").delete().eq("product_name", product.name);
+      if (delMoves.error) throw delMoves.error;
+
+      const delProduct = await supabaseClient.from("products").delete().eq("id", product.id);
+      if (delProduct.error) throw delProduct.error;
     } catch (error) {
-      catalog = previousCatalog;
-      movements = previousMovements;
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(movements));
-        localStorage.setItem(PRODUCTS_KEY, JSON.stringify(catalog));
-      } catch (restoreError) {}
-      alert("Não foi possível remover o produto.");
+      alert("Não foi possível remover o produto: " + friendlyError(error));
+      await syncFromCloud();
       return;
     }
 
+    catalog = catalog.filter(p => p.name.toLowerCase() !== key);
+    movements = movements.filter(m => m.product.toLowerCase() !== key);
     render();
   }
 
@@ -1372,6 +1316,8 @@ const supabaseClient = window.supabase.createClient(
     });
   }
 
+  /* ---------------- Exportações ---------------- */
+
   function localStamp() {
     const d = new Date();
     const pad = n => String(n).padStart(2, "0");
@@ -1390,7 +1336,7 @@ const supabaseClient = window.supabase.createClient(
   }
 
   function toCsv(rows) {
-    return "\uFEFF" + rows.map(r =>
+    return "﻿" + rows.map(r =>
       r.map(c => {
         const text = typeof c === "number" ? String(c).replace(".", ",") : String(c);
         return '"' + text.replace(/"/g, '""') + '"';
@@ -1675,9 +1621,16 @@ const supabaseClient = window.supabase.createClient(
 
   document.getElementById("unit").addEventListener("change", updateFormUnitHints);
 
+  /* ---------------- Configuração e cadastro ---------------- */
+
   factorInput.value = settings.targetFactor;
-  factorInput.addEventListener("change", function () {
+  factorInput.addEventListener("change", async function () {
     if (!currentUser) return;
+    if (!dataReady) {
+      alert("Os dados ainda não foram carregados da nuvem.");
+      factorInput.value = settings.targetFactor;
+      return;
+    }
 
     const value = Number(factorInput.value);
     if (!Number.isFinite(value) || value < 1) {
@@ -1685,18 +1638,29 @@ const supabaseClient = window.supabase.createClient(
       factorInput.value = settings.targetFactor;
       return;
     }
-    settings = { targetFactor: value };
+
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      const { error } = await supabaseClient
+        .from("settings")
+        .upsert({ user_id: currentUserId, target_factor: value });
+      if (error) throw error;
     } catch (error) {
-      alert("Não foi possível salvar a configuração neste navegador.");
+      alert("Não foi possível salvar a configuração: " + friendlyError(error));
+      factorInput.value = settings.targetFactor;
+      return;
     }
+
+    settings = { targetFactor: value };
     render();
   });
 
-  productForm.addEventListener("submit", function (event) {
+  productForm.addEventListener("submit", async function (event) {
     event.preventDefault();
     if (!currentUser) return;
+    if (!dataReady) {
+      alert("Os dados ainda não foram carregados da nuvem.");
+      return;
+    }
 
     const name = document.getElementById("productName").value.trim();
     const category = document.getElementById("category").value;
@@ -1746,45 +1710,80 @@ const supabaseClient = window.supabase.createClient(
       expiry: expiry
     };
 
-    const previousCatalog = catalog;
-    const previousMovements = movements;
+    const submitBtn = document.getElementById("productSubmitBtn");
+    submitBtn.disabled = true;
 
-    catalog = [...catalog, product];
-
-    if (initialStock > 0) {
-      movements = [...movements, {
-        product: name,
-        unit: unit,
-        type: "entrada",
-        quantity: initialStock,
-        employee: currentUser,
-        date: new Date().toISOString()
-      }];
-    }
-
+    let savedProduct = null;
     try {
-      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(catalog));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(movements));
+      const inserted = await supabaseClient
+        .from("products")
+        .insert(productToDb(product))
+        .select()
+        .single();
+      if (inserted.error) throw inserted.error;
+      savedProduct = dbToProduct(inserted.data);
+
+      let savedMovement = null;
+      if (initialStock > 0) {
+        const mv = await supabaseClient
+          .from("movements")
+          .insert(movementToDb({
+            product: name,
+            unit: unit,
+            type: "entrada",
+            quantity: initialStock,
+            employee: currentUser,
+            date: new Date().toISOString()
+          }))
+          .select()
+          .single();
+
+        if (mv.error) {
+          // desfaz o produto para não ficar cadastrado sem o estoque inicial
+          await supabaseClient.from("products").delete().eq("id", savedProduct.id);
+          throw mv.error;
+        }
+        savedMovement = dbToMovement(mv.data);
+      }
+
+      catalog.push(savedProduct);
+      if (savedMovement) movements.push(savedMovement);
     } catch (error) {
-      catalog = previousCatalog;
-      movements = previousMovements;
-      try {
-        localStorage.setItem(PRODUCTS_KEY, JSON.stringify(catalog));
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(movements));
-      } catch (restoreError) {}
-      alert("Não foi possível salvar o produto.");
+      if (error && error.code === "23505") {
+        alert("Esse produto já está cadastrado!");
+      } else {
+        alert("Não foi possível salvar o produto: " + friendlyError(error));
+      }
+      submitBtn.disabled = false;
       return;
     }
 
+    submitBtn.disabled = false;
     render();
     this.reset();
     updateFormUnitHints();
     alert("Produto cadastrado com sucesso!");
   });
 
+  /* ---------------- Início ---------------- */
+
   updateFormUnitHints();
-  showLogin();
+
+  (async function init() {
+    try {
+      const { data, error } = await supabaseClient.auth.getSession();
+      if (error) throw error;
+      if (data.session && data.session.user) {
+        await enterApp(data.session.user);
+        return;
+      }
+    } catch (error) {
+      // sem sessão válida: cai na tela de login
+    }
+    showLogin();
+  })();
 </script>
 
 </body>
 </html>
+
