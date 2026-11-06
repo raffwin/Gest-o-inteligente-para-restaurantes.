@@ -230,57 +230,31 @@
   <!-- ===== Tela: Estoque ===== -->
   <div class="view" id="stockView" hidden>
 
-  <!-- Estoque: escolher o que contar -->
+  <!-- Estoque: só as lacunas para escolher -->
   <div class="view" id="stockHome">
   <button type="button" class="back-btn" data-back>← Voltar ao menu</button>
   <h2>Estoque</h2>
   <p>O que você vai contar? Escolha uma lacuna para abrir.</p>
 
   <div class="modules" id="stockGroups"></div>
-
-  <div class="cards">
-    <div class="card">
-      <h3>Produtos cadastrados</h3>
-      <div class="number" id="products">0</div>
-    </div>
-    <div class="card">
-      <h3>Produtos com estoque baixo</h3>
-      <div class="number negative" id="lowCount">0</div>
-    </div>
-    <div class="card">
-      <h3>Itens para pedir</h3>
-      <div class="number warning" id="orderCount">0</div>
-    </div>
-    <div class="card">
-      <h3>Vencidos ou vencendo (7 dias)</h3>
-      <div class="number negative" id="expiringCount">0</div>
-    </div>
   </div>
 
-  <section class="section">
-    <h2>📤 Exportar</h2>
-    <div class="actions" style="margin-bottom:0">
-      <button type="button" id="exportBtn">📥 Exportar para Excel</button>
-      <button type="button" id="pdfBtn">📄 Exportar para PDF</button>
-    </div>
-  </section>
+  <!-- Estoque: lacuna aberta (Bar, Molhos, Mercearia, Hortifruti ou Limpeza) -->
+  <div class="view" id="stockGroupView" hidden>
+  <button type="button" class="back-btn" id="stockBackBtn">← Voltar ao Estoque</button>
+  <h2 id="stockGroupTitle"></h2>
+  <p>Cadastre os produtos desta lacuna e faça a contagem.</p>
 
   <section class="section">
-    <h2>📝 Cadastro de produtos</h2>
+    <h2>📝 Cadastrar produto</h2>
     <form id="productForm">
       <label>Nome do produto</label>
       <input id="productName" placeholder="Ex.: Arroz" required>
 
       <div class="row">
         <div>
-          <label>Categoria</label>
-          <select id="category" required>
-            <option value="Bar">Bar</option>
-            <option value="Molhos">Molhos</option>
-            <option value="Mercearia">Mercearia</option>
-            <option value="Hortifruti">Hortifruti</option>
-            <option value="Limpeza">Limpeza</option>
-          </select>
+          <label for="categoryShown">Categoria</label>
+          <input id="categoryShown" disabled>
         </div>
         <div>
           <label>Unidade</label>
@@ -329,6 +303,47 @@
   </section>
 
   <section class="section">
+    <h2>📊 Contagem do estoque</h2>
+    <div class="hint" style="margin-bottom:8px">💡 Digite a contagem de cada produto para ver o pedido possível na hora. Use "Salvar contagem" em um produto ou "Salvar tudo" para registrar todas as contagens de uma vez.</div>
+
+    <div class="order-summary" id="orderSummary"></div>
+
+    <div id="stockList">Nenhum produto cadastrado.</div>
+
+    <div class="actions">
+      <button type="button" id="saveAllBtn">💾 Salvar tudo</button>
+    </div>
+    <div class="sim" id="saveStatus" role="status" style="margin-bottom:10px"></div>
+  </section>
+
+  <div class="cards">
+    <div class="card">
+      <h3>Produtos cadastrados</h3>
+      <div class="number" id="products">0</div>
+    </div>
+    <div class="card">
+      <h3>Produtos com estoque baixo</h3>
+      <div class="number negative" id="lowCount">0</div>
+    </div>
+    <div class="card">
+      <h3>Itens para pedir</h3>
+      <div class="number warning" id="orderCount">0</div>
+    </div>
+    <div class="card">
+      <h3>Vencidos ou vencendo (7 dias)</h3>
+      <div class="number negative" id="expiringCount">0</div>
+    </div>
+  </div>
+
+  <section class="section">
+    <h2>📤 Exportar</h2>
+    <div class="actions" style="margin-bottom:0">
+      <button type="button" id="exportBtn">📥 Exportar para Excel</button>
+      <button type="button" id="pdfBtn">📄 Exportar para PDF</button>
+    </div>
+  </section>
+
+  <section class="section">
     <h2>⚙️ Meta de reposição</h2>
     <div class="settings">
       <div class="row">
@@ -345,27 +360,7 @@
     <h2>📋 Histórico</h2>
     <div id="history">Nenhuma movimentação registrada.</div>
   </section>
-  </div>
-  <!-- Fim: Estoque (escolha) -->
 
-  <!-- Estoque: lacuna aberta (Bar, Molhos, Mercearia, Hortifruti ou Limpeza) -->
-  <div class="view" id="stockGroupView" hidden>
-  <button type="button" class="back-btn" id="stockBackBtn">← Voltar ao Estoque</button>
-  <h2 id="stockGroupTitle"></h2>
-  <p>Digite a contagem de cada produto e salve.</p>
-
-  <section class="section">
-    <div class="hint" style="margin-bottom:8px">💡 Digite a contagem de cada produto para ver o pedido possível na hora. Use "Salvar contagem" em um produto ou "Salvar tudo" para registrar todas as contagens de uma vez.</div>
-
-    <div class="order-summary" id="orderSummary"></div>
-
-    <div id="stockList">Nenhum produto cadastrado.</div>
-
-    <div class="actions">
-      <button type="button" id="saveAllBtn">💾 Salvar tudo</button>
-    </div>
-    <div class="sim" id="saveStatus" role="status" style="margin-bottom:10px"></div>
-  </section>
   </div>
   <!-- Fim: lacuna aberta -->
 
@@ -1398,6 +1393,7 @@
     const groupEls = {};
     const lowBy = {};
     const totalBy = {};
+    const expiringBy = {};
     groupNames.forEach(g => {
       const el = document.createElement("div");
       el.className = "stock-group";
@@ -1406,6 +1402,7 @@
       groupEls[g] = el;
       lowBy[g] = 0;
       totalBy[g] = 0;
+      expiringBy[g] = 0;
       list.appendChild(el);
     });
 
@@ -1517,6 +1514,7 @@
       const status = expiryStatus(product, quantity);
       if (status) {
         expiring++;
+        expiringBy[group]++;
         expiryEl = document.createElement("div");
         if (status.type === "vencido") {
           expiryEl.className = "negative";
@@ -1553,7 +1551,7 @@
 
     renderStockGroupCards(groupNames, totalBy, lowBy);
 
-    return { low: low, expiring: expiring };
+    return { low: low, expiring: expiring, lowBy: lowBy, totalBy: totalBy, expiringBy: expiringBy };
   }
 
   // Em qual aba da contagem o produto aparece (pela categoria dele)
@@ -1628,6 +1626,7 @@
     activeStockTab = name;
 
     document.getElementById("stockGroupTitle").textContent = STOCK_ICONS[name] + " " + name;
+    document.getElementById("categoryShown").value = name;
     document.querySelectorAll("#stockList .stock-group").forEach(p => {
       const show = p.dataset.group === name;
       p.hidden = !show;
@@ -1639,6 +1638,7 @@
     });
 
     setSaveStatus("");
+    render(); // atualiza totais, pedido e histórico para a lacuna escolhida
     document.getElementById("stockHome").hidden = true;
     const view = document.getElementById("stockGroupView");
     view.hidden = false;
@@ -1658,10 +1658,11 @@
 
   function renderOrderSummary() {
     const el = document.getElementById("orderSummary");
-    const rows = buildRows().filter(r => r.pedido > 0);
+    const all = buildRows(activeStockTab);
+    const rows = all.filter(r => r.pedido > 0);
 
     if (rows.length === 0) {
-      el.textContent = catalog.length === 0 ? "" : "✓ Nenhum pedido necessário no momento.";
+      el.textContent = all.length === 0 ? "" : "✓ Nenhum pedido necessário no momento.";
       el.className = "order-summary positive";
       return;
     }
@@ -1715,12 +1716,17 @@
     const history = document.getElementById("history");
     history.replaceChildren();
 
-    if (movements.length === 0) {
+    const names = new Set(
+      catalog.filter(p => stockGroupOf(p) === activeStockTab).map(p => p.name.toLowerCase())
+    );
+    const groupMovements = movements.filter(m => names.has(m.product.toLowerCase()));
+
+    if (groupMovements.length === 0) {
       history.textContent = "Nenhuma movimentação registrada.";
       return;
     }
 
-    [...movements].reverse().forEach(m => {
+    [...groupMovements].reverse().forEach(m => {
       const div = document.createElement("div");
       div.className = "movement";
 
@@ -1752,17 +1758,18 @@
     renderOrderSummary();
     renderHistory();
 
-    document.getElementById("products").textContent = catalog.length;
+    const g = activeStockTab;
+    document.getElementById("products").textContent = counts.totalBy[g] || 0;
     document.getElementById("orderCount").textContent =
-      buildRows().filter(r => r.pedido > 0).length;
-    document.getElementById("lowCount").textContent = counts.low;
-    document.getElementById("expiringCount").textContent = counts.expiring;
+      buildRows(g).filter(r => r.pedido > 0).length;
+    document.getElementById("lowCount").textContent = counts.lowBy[g] || 0;
+    document.getElementById("expiringCount").textContent = counts.expiringBy[g] || 0;
 
     renderTemp();
   }
 
-  function buildRows() {
-    return catalog.map(p => {
+  function buildRows(group) {
+    return catalog.filter(p => !group || stockGroupOf(p) === group).map(p => {
       const saldo = getBalance(p.name);
       const alvo = targetOf(p);
       return {
@@ -1814,12 +1821,12 @@
   function exportExcel() {
     if (!currentUser) return;
 
-    if (catalog.length === 0) {
-      alert("Cadastre produtos antes de exportar.");
+    const rows = buildRows(activeStockTab);
+    if (rows.length === 0) {
+      alert("Cadastre produtos em " + activeStockTab + " antes de exportar.");
       return;
     }
 
-    const rows = buildRows();
     const stamp = localStamp();
     const header = ["Produto", "Quantidade", "Mínimo", "Meta", "Pedido", "Fornecedor", "Custo unitário", "Custo do pedido"];
 
@@ -1899,12 +1906,12 @@
       ws["!cols"] = [{ wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 24 }, { wch: 15 }, { wch: 17 }];
 
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Pedido");
-      XLSX.writeFile(wb, "operatto_pedido_" + stamp + ".xlsx");
+      XLSX.utils.book_append_sheet(wb, ws, "Pedido " + activeStockTab);
+      XLSX.writeFile(wb, "operatto_pedido_" + activeStockTab.toLowerCase() + "_" + stamp + ".xlsx");
       return;
     }
 
-    downloadBlob(new Blob([toCsv(data)], { type: "text/csv;charset=utf-8" }), "operatto_pedido_" + stamp + ".csv");
+    downloadBlob(new Blob([toCsv(data)], { type: "text/csv;charset=utf-8" }), "operatto_pedido_" + activeStockTab.toLowerCase() + "_" + stamp + ".csv");
     alert("Biblioteca do Excel indisponível (sem internet). Baixei um CSV, que abre no Excel, mas sem a fórmula.");
   }
 
@@ -1915,8 +1922,8 @@
   function exportPdf() {
     if (!currentUser) return;
 
-    if (catalog.length === 0) {
-      alert("Cadastre produtos antes de exportar.");
+    if (buildRows(activeStockTab).length === 0) {
+      alert("Cadastre produtos em " + activeStockTab + " antes de exportar.");
       return;
     }
 
@@ -1934,7 +1941,7 @@
         return;
       }
 
-      const rows = buildRows();
+      const rows = buildRows(activeStockTab);
       const lowCount = rows.filter(r => r.baixo).length;
       const orderRows = rows
         .filter(r => r.pedido > 0)
@@ -1947,7 +1954,7 @@
       doc.setFont("helvetica", "bold");
       doc.setFontSize(18);
       doc.setTextColor(17, 24, 39);
-      doc.text("Operatto - Saldo do estoque", margin, 48);
+      doc.text("Operatto - Estoque: " + activeStockTab, margin, 48);
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
@@ -2077,7 +2084,7 @@
         doc.text("Página " + i + " de " + pages, w - margin, h - 20, { align: "right" });
       }
 
-      doc.save("operatto_estoque_" + localStamp() + ".pdf");
+      doc.save("operatto_estoque_" + activeStockTab.toLowerCase() + "_" + localStamp() + ".pdf");
     } catch (error) {
       alert("Não foi possível gerar o PDF.");
     }
@@ -2132,7 +2139,7 @@
     }
 
     const name = document.getElementById("productName").value.trim();
-    const category = document.getElementById("category").value;
+    const category = activeStockTab;
     const unit = document.getElementById("unit").value;
     const initialStock = round(Number(document.getElementById("initialStock").value));
     const minimum = Number(document.getElementById("minimum").value);
@@ -2231,6 +2238,7 @@
     submitBtn.disabled = false;
     render();
     this.reset();
+    document.getElementById("categoryShown").value = activeStockTab;
     updateFormUnitHints();
     alert("Produto cadastrado com sucesso!");
   });
