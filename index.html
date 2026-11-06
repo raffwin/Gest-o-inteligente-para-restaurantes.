@@ -44,6 +44,9 @@
     .actions button { width: 100%; }
     #pdfBtn { background: #dc2626; }
     #pdfBtn:hover { background: #b91c1c; }
+    #saveAllBtn { background: #2563eb; }
+    #saveAllBtn:hover { background: #1d4ed8; }
+    #saveAllBtn:disabled { background: #9ca3af; }
     input, select { width: 100%; padding: 9px 10px; margin: 3px 0 9px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; background: white; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .movement, .stock-item { padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; line-height: 1.35; }
@@ -304,14 +307,16 @@
       </div>
     </div>
 
-    <div class="hint" style="margin-bottom:8px">💡 Digite a contagem de cada produto para ver o pedido possível na hora. Clique em "Salvar contagem" para registrar.</div>
+    <div class="hint" style="margin-bottom:8px">💡 Digite a contagem de cada produto para ver o pedido possível na hora. Use "Salvar contagem" em um produto ou "Salvar tudo" para registrar todas as contagens de uma vez.</div>
 
     <div class="order-summary" id="orderSummary"></div>
 
     <div class="actions">
+      <button type="button" id="saveAllBtn">💾 Salvar tudo</button>
       <button type="button" id="exportBtn">📥 Exportar para Excel</button>
       <button type="button" id="pdfBtn">📄 Exportar para PDF</button>
     </div>
+    <div class="sim" id="saveStatus" role="status" style="margin-bottom:10px"></div>
     <div id="stockList">Nenhum produto cadastrado.</div>
   </section>
 
@@ -357,6 +362,7 @@
   let dataReady = false;       // só permite gravar depois de carregar tudo da nuvem
   let lastResendAt = 0;
   let recoverEmailValue = "";
+  let countInputs = [];        // campos de contagem exibidos na lista (usados pelo "Salvar tudo")
 
   const productForm = document.getElementById("productForm");
   const factorInput = document.getElementById("targetFactor");
@@ -665,6 +671,7 @@
     appMain.hidden = true;
     userBar.hidden = true;
     syncBanner.hidden = true;
+    setSaveStatus("");
     loginOverlay.hidden = false;
     showView("login");
 
@@ -1048,9 +1055,104 @@
     render();
   }
 
+  function setSaveStatus(text, cls) {
+    const el = document.getElementById("saveStatus");
+    el.textContent = text || "";
+    el.className = "sim " + (cls || "");
+  }
+
+  function nowHHMM() {
+    return new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  // Salva de uma vez todas as contagens que foram digitadas e ainda não registradas,
+  // e depois confere com o banco que está tudo lá.
+  async function saveAll() {
+    if (!currentUser) return;
+    if (!dataReady) {
+      alert("Os dados ainda não foram carregados da nuvem.");
+      return;
+    }
+
+    const pending = [];
+    for (const entry of countInputs) {
+      const product = entry.product;
+      const typed = entry.input.value;
+      const value = round(Number(typed));
+
+      if (typed === "" || !Number.isFinite(value) || value < 0) {
+        alert('Contagem inválida em "' + product.name + '". Digite 0 ou mais.');
+        entry.input.focus();
+        return;
+      }
+      if (DISCRETE_UNITS.includes(product.unit) && !Number.isInteger(value)) {
+        alert('Em "' + product.name + '" (' + product.unit + ") use apenas números inteiros.");
+        entry.input.focus();
+        return;
+      }
+
+      const delta = round(value - getBalance(product.name));
+      if (delta === 0) continue;
+
+      pending.push({
+        product: product.name,
+        unit: product.unit,
+        type: "ajuste",
+        quantity: Math.abs(delta),
+        delta: delta,
+        employee: currentUser,
+        date: new Date().toISOString()
+      });
+    }
+
+    const btn = document.getElementById("saveAllBtn");
+    btn.disabled = true;
+    setSaveStatus("Salvando...", "hint");
+
+    try {
+      if (pending.length > 0) {
+        const { data, error } = await supabaseClient
+          .from("movements")
+          .insert(pending.map(movementToDb))
+          .select();
+        if (error) throw error;
+        data.forEach(r => movements.push(dbToMovement(r)));
+      }
+    } catch (error) {
+      setSaveStatus("✗ Não foi possível salvar: " + friendlyError(error), "negative");
+      btn.disabled = false;
+      return;
+    }
+
+    // Confere com o banco que está tudo salvo
+    try {
+      await loadCloud();
+    } catch (error) {
+      render();
+      setSaveStatus(
+        pending.length > 0
+          ? "✓ " + pending.length + " contagem(ns) salva(s), mas não consegui reconferir com a nuvem agora."
+          : "Sem conexão para conferir com a nuvem agora.",
+        "warning"
+      );
+      btn.disabled = false;
+      return;
+    }
+
+    render();
+    setSaveStatus(
+      pending.length > 0
+        ? "✓ " + pending.length + (pending.length === 1 ? " contagem salva" : " contagens salvas") + ". Tudo salvo na nuvem às " + nowHHMM() + "."
+        : "✓ Nada novo para salvar. Tudo já está na nuvem (conferido às " + nowHHMM() + ").",
+      "positive"
+    );
+    btn.disabled = false;
+  }
+
   function renderStockList() {
     const list = document.getElementById("stockList");
     list.replaceChildren();
+    countInputs = [];
 
     if (catalog.length === 0) {
       list.textContent = "Nenhum produto cadastrado.";
@@ -1112,6 +1214,7 @@
       qtyInput.step = "any";
       qtyInput.value = quantity;
       qtyInput.setAttribute("aria-label", "Contagem de " + product.name);
+      countInputs.push({ product: product, input: qtyInput });
 
       const saveBtn = document.createElement("button");
       saveBtn.type = "button";
@@ -1616,6 +1719,7 @@
     }
   }
 
+  document.getElementById("saveAllBtn").addEventListener("click", saveAll);
   document.getElementById("exportBtn").addEventListener("click", exportExcel);
   document.getElementById("pdfBtn").addEventListener("click", exportPdf);
 
