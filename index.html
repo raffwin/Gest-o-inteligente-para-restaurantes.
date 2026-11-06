@@ -12,6 +12,8 @@
   <script>
     const SUPABASE_URL = "https://mrjotnfqjlbswnuyjytr.supabase.co";
     const SUPABASE_KEY = "sb_publishable_i6qRtfdDg-oz8fr4mqPkXQ_ggEgdHLj";
+    // Chegou pelo link do e-mail de recuperação de senha? (precisa ser lido antes do Supabase limpar a URL)
+    const RECOVERY_FROM_URL = /type=recovery/.test(window.location.hash + window.location.search);
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   </script>
 
@@ -203,8 +205,10 @@
       <h2>Nova senha</h2>
       <p class="login-sub" id="resetIntro"></p>
 
-      <label for="resetCode">Código recebido por e-mail</label>
-      <input id="resetCode" inputmode="numeric" maxlength="8" autocomplete="one-time-code" placeholder="000000" required>
+      <div id="resetCodeWrap">
+        <label for="resetCode">Código recebido por e-mail</label>
+        <input id="resetCode" inputmode="numeric" maxlength="8" autocomplete="one-time-code" placeholder="000000" required>
+      </div>
 
       <label for="resetPass">Nova senha</label>
       <input id="resetPass" type="password" autocomplete="new-password" minlength="6" placeholder="Mínimo 6 caracteres" required>
@@ -525,6 +529,7 @@
   let dataReady = false;       // só permite gravar depois de carregar tudo da nuvem
   let lastResendAt = 0;
   let recoverEmailValue = "";
+  let resetViaLink = false;    // true = a pessoa chegou pelo link do e-mail (não precisa digitar código)
   let countInputs = [];        // campos de contagem exibidos na lista (usados pelo "Salvar tudo")
   let activeStockTab = STOCK_GROUPS[0];
   let equipments = [];         // freezers, geladeiras e balcões resfriados
@@ -596,6 +601,9 @@
     if (msg.includes("token") && (msg.includes("expired") || msg.includes("invalid"))) return "Código inválido ou expirado. Peça um novo código.";
     if (msg.includes("same password") || msg.includes("different from the old")) return "A nova senha precisa ser diferente da atual.";
     if (msg.includes("failed to fetch") || msg.includes("network")) return "Sem conexão com a internet. Tente de novo.";
+    if (msg.includes("not authorized")) return "O Supabase só envia e-mail para membros da sua equipe enquanto não houver um SMTP próprio. Configure em Authentication > SMTP.";
+    if (msg.includes("error sending") || msg.includes("sending recovery") || msg.includes("sending confirmation")) return "O Supabase não conseguiu enviar o e-mail. Confira a configuração de e-mail (SMTP) no painel do Supabase.";
+    if (msg.includes("session missing") || msg.includes("session_not_found")) return "O link de recuperação expirou ou já foi usado. Peça um novo.";
     return "Erro: " + ((error && error.message) || "tente novamente.");
   }
 
@@ -1046,7 +1054,9 @@
       return false;
     }
 
-    const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
     if (error) {
       setMsg(messageEl, friendlyError(error));
       return false;
@@ -1056,14 +1066,36 @@
   }
 
   function openResetStep(email) {
+    resetViaLink = false;
+    document.getElementById("resetCodeWrap").hidden = false;
+    resetCode.required = true;
+    resendBtn.hidden = false;
     showView("reset");
     resetCode.value = "";
     resetPass.value = "";
     resetPass2.value = "";
     setMsg(resetMsg, "");
     document.getElementById("resetIntro").textContent =
-      "Se existir uma conta para " + maskEmail(email) + ", enviamos um código para esse e-mail. Ele vale por poucos minutos.";
+      "Se existir uma conta para " + maskEmail(email) + ", enviamos um e-mail. Digite o código que veio nele (ou clique no link do e-mail). Olhe também a caixa de spam.";
     setTimeout(() => resetCode.focus(), 50);
+  }
+
+  // A pessoa clicou no link do e-mail: o Supabase já abriu uma sessão temporária,
+  // então basta escolher a nova senha (sem digitar código).
+  function showRecoveryFromLink() {
+    resetViaLink = true;
+    loginOverlay.hidden = false;
+    appMain.hidden = true;
+    userBar.hidden = true;
+    document.getElementById("resetCodeWrap").hidden = true;
+    resetCode.required = false;
+    resendBtn.hidden = true;
+    showView("reset");
+    resetPass.value = "";
+    resetPass2.value = "";
+    setMsg(resetMsg, "");
+    document.getElementById("resetIntro").textContent = "Escolha a sua nova senha.";
+    setTimeout(() => resetPass.focus(), 50);
   }
 
   recoverForm.addEventListener("submit", async function (event) {
@@ -1114,7 +1146,7 @@
     const code = resetCode.value.trim();
     const newPass = resetPass.value;
 
-    if (code.length < 6) {
+    if (!resetViaLink && code.length < 6) {
       setMsg(resetMsg, "Digite o código recebido por e-mail.");
       return;
     }
@@ -1126,23 +1158,27 @@
       setMsg(resetMsg, "As senhas não são iguais.");
       return;
     }
-    if (!recoverEmailValue) {
+    if (!resetViaLink && !recoverEmailValue) {
       showLogin();
       return;
     }
 
     resetBtn.disabled = true;
     try {
-      const verify = await supabaseClient.auth.verifyOtp({
-        email: recoverEmailValue,
-        token: code,
-        type: "recovery"
-      });
-      if (verify.error) throw verify.error;
+      if (!resetViaLink) {
+        const verify = await supabaseClient.auth.verifyOtp({
+          email: recoverEmailValue,
+          token: code,
+          type: "recovery"
+        });
+        if (verify.error) throw verify.error;
+      }
 
       const update = await supabaseClient.auth.updateUser({ password: newPass });
       if (update.error) throw update.error;
 
+      resetViaLink = false;
+      try { history.replaceState(null, "", window.location.pathname); } catch (e) {}
       await supabaseClient.auth.signOut();
       showLogin("Senha alterada com sucesso. Entre com a nova senha.");
     } catch (error) {
@@ -2735,7 +2771,15 @@
 
   updateFormUnitHints();
 
+  supabaseClient.auth.onAuthStateChange(function (event) {
+    if (event === "PASSWORD_RECOVERY") showRecoveryFromLink();
+  });
+
   (async function init() {
+    if (RECOVERY_FROM_URL) {
+      showRecoveryFromLink();
+      return;
+    }
     try {
       const { data, error } = await supabaseClient.auth.getSession();
       if (error) throw error;
