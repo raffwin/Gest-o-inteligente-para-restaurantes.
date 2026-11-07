@@ -17,6 +17,11 @@
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   </script>
 
+  <!-- Fontes: Inter (texto) e Plus Jakarta Sans (títulos) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+
   <style>
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
@@ -111,39 +116,67 @@
     .link-btn:hover { background: none; color: #111827; }
 
     @media (min-width: 700px) {
-      /* ----- Efeito de clique nos botões ----- */
-button {
-  transition: transform .12s ease, filter .12s ease, box-shadow .15s ease,
-              background-color .2s ease, color .2s ease, border-color .2s ease;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-button:active:not(:disabled) {
-  transform: scale(.96);
-  filter: brightness(.92);
-}
-.module:active:not(:disabled) {
-  transform: scale(.98);
-  box-shadow: inset 0 2px 6px #00000014;
-  background: #dcfce7;
-  border-color: #16a34a;
-}
-.tab:active:not(:disabled),
-.back-btn:active:not(:disabled),
-.btn-remove:active:not(:disabled) {
-  transform: scale(.95);
-}
-.btn-remove:active:not(:disabled) { background: #fecaca; }
-.link-btn:active:not(:disabled) { transform: none; filter: none; opacity: .6; }
-button:focus-visible {
-  outline: 3px solid #86efac;
-  outline-offset: 2px;
-}
-@media (prefers-reduced-motion: reduce) {
-  button { transition: none; }
-  button:active:not(:disabled) { transform: none; }
-}
+      header { padding: 22px 24px; }
+      header h1 { font-size: 28px; }
+      main { padding: 20px; }
+      .card, .section { padding: 18px 20px; }
+      form button { width: auto; }
+      .login-card form button, .login-card button { width: 100%; }
+      .actions { grid-template-columns: repeat(2, max-content); }
+      .actions button { width: auto; }
     }
+
+    /* ----- Efeito de clique nos botões ----- */
+    button {
+      transition: transform .12s ease, filter .12s ease, box-shadow .15s ease,
+                  background-color .2s ease, color .2s ease, border-color .2s ease;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    button:active:not(:disabled) {
+      transform: scale(.96);
+      filter: brightness(.92);
+    }
+    .module:active:not(:disabled) {
+      transform: scale(.98);
+      box-shadow: inset 0 2px 6px #00000014;
+      background: #dcfce7;
+      border-color: #16a34a;
+    }
+    .tab:active:not(:disabled),
+    .back-btn:active:not(:disabled),
+    .btn-remove:active:not(:disabled) {
+      transform: scale(.95);
+    }
+    .btn-remove:active:not(:disabled) { background: #fecaca; }
+    .link-btn:active:not(:disabled) { transform: none; filter: none; opacity: .6; }
+    button:focus-visible {
+      outline: 3px solid #86efac;
+      outline-offset: 2px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button { transition: none; }
+      button:active:not(:disabled) { transform: none; }
+    }
+
+    /* ----- Fontes ----- */
+    body, button, input, select {
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    body { -webkit-font-smoothing: antialiased; line-height: 1.45; }
+
+    header h1, .login-card h2, .view > h2, .section h2, .module strong, .number {
+      font-family: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+      letter-spacing: -0.01em;
+    }
+    header h1 { font-weight: 800; letter-spacing: -0.02em; }
+    .view > h2, .section h2, .login-card h2 { font-weight: 700; }
+    .module strong { font-weight: 700; }
+    .number { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+    button { font-weight: 600; letter-spacing: .005em; }
+    label { font-weight: 500; }
+    .stock-item strong, .movement strong { font-weight: 600; }
   </style>
   <!-- xlsx-js-style: mesma API do SheetJS, mas aceita bordas e estilos nas células -->
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -642,7 +675,7 @@ button:focus-visible {
   function fmtMoney(n) {
     return Number(n)
       .toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-      .replace(/ /g, " ");
+      .replace(/\u00a0/g, "\u00a0");
   }
 
   function fmtDate(iso) {
@@ -1870,7 +1903,7 @@ button:focus-visible {
   }
 
   function toCsv(rows) {
-    return "﻿" + rows.map(r =>
+    return "\uFEFF" + rows.map(r =>
       r.map(c => {
         const text = typeof c === "number" ? String(c).replace(".", ",") : String(c);
         return '"' + text.replace(/"/g, '""') + '"';
