@@ -21,7 +21,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
-  
 
   <style>
     * { box-sizing: border-box; }
@@ -179,26 +178,103 @@
     label { font-weight: 500; }
     .stock-item strong, .movement strong { font-weight: 600; }
 
-  /* Efeito Glass apenas nas barras */
-header,
-nav,
-.navbar,
-.bottom-bar,
-.toolbar {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-}
+    /* ----- Dashboard e janelas de edição ----- */
+    .btn-edit { background: white; color: #16a34a; border: 1px solid #86efac; padding: 6px 10px; font-size: 13px; flex-shrink: 0; }
+    .btn-edit:hover { background: #f0fdf4; }
+    .btn-cancel { background: white; color: #374151; border: 1px solid #d1d5db; margin-top: 8px; }
+    .btn-cancel:hover { background: #f3f4f6; }
+    .item-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .dash-reading { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; font-size: 14px; }
+    .table-wrap { overflow-x: auto; }
+    .dash-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .dash-table th, .dash-table td { text-align: right; padding: 8px 6px; border-bottom: 1px solid #eee; white-space: nowrap; }
+    .dash-table th:first-child, .dash-table td:first-child { text-align: left; }
+    .dash-table th { color: #6b7280; font-weight: 600; font-size: 12px; }
+    .dash-table tbody tr { cursor: pointer; }
+    .dash-table tbody tr:hover { background: #f0fdf4; }
+    .dash-table tfoot td { font-weight: 700; border-bottom: 0; }
+    .modal-overlay { position: fixed; inset: 0; z-index: 2000; background: #000000aa; display: flex; align-items: flex-start; justify-content: center; padding: 16px; overflow-y: auto; }
+    .modal-card { background: white; width: 100%; max-width: 460px; border-radius: 14px; padding: 20px 18px; margin: auto; box-shadow: 0 10px 30px #00000055; }
+    .modal-card h2 { margin: 0 0 12px; font-size: 19px; font-family: "Plus Jakarta Sans", "Inter", system-ui, sans-serif; font-weight: 700; }
+    .modal-card form button { width: 100%; }
 
-/* Efeito Glass apenas nos botões */
-button,
-.btn {
-    background: rgba(255, 255, 255, 0.10);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-}
+    /* ===== Efeito de vidro (glass) — só nas barras e botões ===== */
+    /* Fundo suave para o vidro ter o que desfocar (cards e tabelas continuam brancos) */
+    body {
+      background:
+        radial-gradient(900px 500px at 8% -5%, #bbf7d0aa, transparent 60%),
+        radial-gradient(800px 500px at 100% 10%, #bfdbfe99, transparent 60%),
+        radial-gradient(700px 500px at 50% 110%, #fde68a66, transparent 60%),
+        #f3f4f6;
+      background-attachment: fixed;
+    }
+
+    /* Barra do topo */
+    header {
+      position: sticky; top: 0; z-index: 50;
+      background: linear-gradient(135deg, rgb(17 24 39 / .78), rgb(17 24 39 / .62));
+      -webkit-backdrop-filter: blur(16px) saturate(160%);
+      backdrop-filter: blur(16px) saturate(160%);
+      border-bottom: 1px solid rgb(255 255 255 / .14);
+      box-shadow: 0 8px 24px rgb(0 0 0 / .18), inset 0 1px 0 rgb(255 255 255 / .12);
+    }
+
+    /* Botões: cor = --tint (R G B), transparência = --alpha */
+    button:not(.link-btn) {
+      --tint: 22 163 74;
+      --alpha: .78;
+      background: rgb(var(--tint) / var(--alpha)) !important;
+      -webkit-backdrop-filter: blur(10px) saturate(170%);
+      backdrop-filter: blur(10px) saturate(170%);
+      border: 1px solid rgb(255 255 255 / .38) !important;
+      box-shadow: 0 4px 14px rgb(var(--tint) / .22),
+                  inset 0 1px 0 rgb(255 255 255 / .45),
+                  inset 0 -1px 0 rgb(0 0 0 / .06);
+    }
+    button:not(.link-btn):hover:not(:disabled) {
+      --alpha: .9;
+      box-shadow: 0 6px 18px rgb(var(--tint) / .3),
+                  inset 0 1px 0 rgb(255 255 255 / .55),
+                  inset 0 -1px 0 rgb(0 0 0 / .06);
+    }
+    button:not(.link-btn):disabled { --tint: 156 163 175; --alpha: .6; box-shadow: none; }
+
+    #pdfBtn { --tint: 220 38 38; }
+    #saveAllBtn { --tint: 37 99 235; }
+    .banner button { --tint: 217 119 6; }
+
+    /* Botões claros (texto escuro): vidro branco */
+    .back-btn, .tab, .btn-cancel, .btn-remove, .btn-edit, .module {
+      --tint: 255 255 255;
+      --alpha: .55;
+      border-color: rgb(255 255 255 / .7) !important;
+      box-shadow: 0 4px 14px rgb(0 0 0 / .07), inset 0 1px 0 rgb(255 255 255 / .9);
+    }
+    .back-btn:hover:not(:disabled), .tab:hover:not(:disabled), .btn-cancel:hover:not(:disabled),
+    .btn-remove:hover:not(:disabled), .btn-edit:hover:not(:disabled), .module:hover:not(:disabled) {
+      --alpha: .8;
+      box-shadow: 0 6px 18px rgb(0 0 0 / .1), inset 0 1px 0 #fff;
+    }
+    .tab.active { --tint: 22 163 74; --alpha: .8; border-color: rgb(255 255 255 / .38) !important; box-shadow: 0 4px 14px rgb(22 163 74 / .25), inset 0 1px 0 rgb(255 255 255 / .45); }
+    .btn-remove { --tint: 255 241 242; }
+    .btn-edit { --tint: 240 253 244; }
+    .module { --alpha: .6; border-radius: 12px; }
+
+    /* "Sair" na barra escura: vidro claro translúcido */
+    .btn-logout { --tint: 255 255 255; --alpha: .12; border-color: rgb(255 255 255 / .28) !important; box-shadow: inset 0 1px 0 rgb(255 255 255 / .25); }
+    .btn-logout:hover:not(:disabled) { --alpha: .22; box-shadow: inset 0 1px 0 rgb(255 255 255 / .35); }
+
+    /* Sem suporte a blur ou com "reduzir transparência": cores sólidas */
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      header { background: #111827; }
+      button:not(.link-btn) { --alpha: 1; }
+      .back-btn, .tab, .btn-cancel, .btn-remove, .btn-edit, .module { --alpha: 1; }
+    }
+    @media (prefers-reduced-transparency: reduce) {
+      header { background: #111827; -webkit-backdrop-filter: none; backdrop-filter: none; }
+      button:not(.link-btn) { --alpha: 1; -webkit-backdrop-filter: none; backdrop-filter: none; }
+      .back-btn, .tab, .btn-cancel, .btn-remove, .btn-edit, .module { --alpha: 1; }
+    }
   </style>
   <!-- xlsx-js-style: mesma API do SheetJS, mas aceita bordas e estilos nas células -->
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
