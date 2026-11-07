@@ -445,6 +445,36 @@
       #homeView .modules { grid-template-columns: 1fr; gap: 12px; }
       #homeView .module { min-height: 125px; padding: 18px; }
     }
+
+    /* ===== Estoque: categorias (visual escuro) ===== */
+    body:has(#stockHome:not([hidden])):not(:has(#stockView[hidden])) { background: #111820; }
+    body:has(#stockHome:not([hidden])):not(:has(#stockView[hidden])) footer { color: #687780; }
+    #stockHome { max-width: 1050px; margin: auto; padding: 22px 13px; color: #edf2ef; }
+    #stockHome button.back-btn { --tint: 32 43 50; --alpha: .7; color: #cbd5d0; border: 1px solid #39464d !important; box-shadow: inset 0 1px 0 rgb(255 255 255 / .06); margin-bottom: 18px; }
+    #stockHome .op-stock-heading { margin-bottom: 25px; }
+    #stockHome .op-stock-heading h2 { font-size: 25px; font-weight: 700; letter-spacing: -.7px; margin: 0 0 8px; color: #edf2ef; }
+    #stockHome .op-stock-heading p { font-size: 13px; color: #89969e; margin: 0; }
+    #stockHome .op-stock-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #1a242b; border: 1px solid #303c43; border-radius: 11px; padding: 17px 19px; margin-bottom: 22px; }
+    #stockHome .op-stock-summary span { color: #929fa6; font-size: 12px; }
+    #stockHome .op-stock-summary strong { font-size: 14px; color: #72c296; }
+    #stockHome .op-stock-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-bottom: 0; }
+    #stockHome .op-category {
+      --tint: 26 35 42; --alpha: .75; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; position: relative; width: 100%; min-height: 158px; padding: 22px; text-align: left;
+      border-radius: 13px; border: 1px solid #303c43 !important; color: #edf2ef; cursor: pointer;
+      transition: background .2s, border-color .2s, transform .2s; box-shadow: inset 0 1px 0 rgb(255 255 255 / .06);
+    }
+    #stockHome .op-category:hover:not(:disabled) { --tint: 32 45 43; --alpha: .9; border-color: #65b98b !important; transform: translateY(-3px); }
+    #stockHome .op-category:active { transform: scale(.985); }
+    #stockHome .op-category-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; background: #253b31; color: #72c296; margin-bottom: 17px; }
+    #stockHome .op-category-icon svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    #stockHome .op-category h3 { font-size: 17px; font-weight: 650; margin: 0 0 8px; color: #edf2ef; }
+    #stockHome .op-category p { color: #929fa6; font-size: 12px; margin: 0; }
+    #stockHome .op-low-stock { display: inline-flex; align-items: center; gap: 6px; margin-top: 13px; padding: 6px 9px; border-radius: 6px; background: #482426; color: #ff8585; font-size: 11px; font-weight: 600; }
+    @media (max-width: 600px) {
+      #stockHome .op-stock-heading h2 { font-size: 23px; }
+      #stockHome .op-stock-grid { grid-template-columns: 1fr; gap: 12px; }
+      #stockHome .op-category { min-height: 140px; padding: 19px; }
+    }
   </style>
   <!-- xlsx-js-style: mesma API do SheetJS, mas aceita bordas e estilos nas células -->
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -559,10 +589,16 @@
   <!-- Estoque: só as lacunas para escolher -->
   <div class="view" id="stockHome">
   <button type="button" class="back-btn" data-back>← Voltar ao menu</button>
-  <h2>Estoque</h2>
-  <p>O que você vai contar? Escolha uma lacuna para abrir.</p>
+  <div class="op-stock-heading">
+    <h2>Categorias</h2>
+    <p>Organize e acompanhe os produtos do seu estoque.</p>
+  </div>
+  <div class="op-stock-summary">
+    <span>Gerenciamento de categorias</span>
+    <strong>ESTOQUE</strong>
+  </div>
 
-  <div class="modules" id="stockGroups"></div>
+  <div class="modules op-stock-grid" id="stockGroups"></div>
   </div>
 
   <!-- Estoque: lacuna aberta (Bar, Molhos, Mercearia, Hortifruti ou Limpeza) -->
@@ -939,6 +975,15 @@
   const DISCRETE_UNITS = ["unidades", "caixas", "pacotes"];
   // Abas da contagem de estoque (cada produto vai para a aba da sua categoria)
   const STOCK_GROUPS = ["Bar", "Destilados", "Molhos", "Mercearia", "Hortifruti", "Limpeza"];
+  const STOCK_SVG = {
+    Bar: '<path d="M4 4h16l-8 9z"/><path d="M12 13v7M8 20h8"/>',
+    Destilados: '<path d="M9 3h6"/><path d="M10 3v5l-4 5v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7l-4-5V3"/><path d="M7 14h10"/><path d="M9 17h6"/>',
+    Molhos: '<path d="M7 3h10l2 3v15H5V6z"/><path d="M5 7h14"/><path d="M9 3v4M15 3v4"/><path d="M9 13h6M9 17h6"/>',
+    Mercearia: '<path d="M3 8h18l-2 10H5z"/><path d="M3 8l2-4h14l2 4"/><circle cx="8" cy="21" r="1"/><circle cx="17" cy="21" r="1"/>',
+    Hortifruti: '<path d="M12 21C5 18 3 12 6 7c2-3 5-3 6-2 3-3 8-1 8 4 0 6-3 10-8 12z"/><path d="M12 21V8"/><path d="M12 15l-5-5"/><path d="M12 13l6-5"/>',
+    Limpeza: '<path d="M4 14l3-8h11l3 8-3 5H7z"/><path d="M7 6l2-3h6l3 3"/><path d="M8 14h8"/>',
+    Outros: '<path d="M3 7l9-4 9 4-9 4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>'
+  };
   const STOCK_OTHER = "Outros"; // produtos antigos com categoria que não é nenhuma das abas acima
   const STOCK_ICONS = { Bar: "🍹", Destilados: "🥃", Molhos: "🥫", Mercearia: "🛒", Hortifruti: "🥬", Limpeza: "🧽", Outros: "📦" };
   // Temperatura: tipos de equipamento (faixa sugerida, editável no cadastro) e as 2 aferições do dia
@@ -2073,17 +2118,17 @@
     names.forEach(g => {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "module";
+      btn.className = "module op-category";
       btn.dataset.group = g;
 
-      const icon = document.createElement("span");
-      icon.className = "module-icon";
-      icon.textContent = STOCK_ICONS[g];
+      const icon = document.createElement("div");
+      icon.className = "op-category-icon";
+      icon.innerHTML = '<svg viewBox="0 0 24 24">' + (STOCK_SVG[g] || STOCK_SVG.Outros) + "</svg>";
 
-      const title = document.createElement("strong");
+      const title = document.createElement("h3");
       title.textContent = g;
 
-      const desc = document.createElement("span");
+      const desc = document.createElement("p");
       desc.textContent = totalBy[g] === 0
         ? "Nenhum produto"
         : totalBy[g] + (totalBy[g] === 1 ? " produto" : " produtos");
@@ -2092,10 +2137,8 @@
 
       if (lowBy[g] > 0) {
         const badge = document.createElement("span");
-        badge.className = "badge";
-        badge.style.marginLeft = "0";
-        badge.style.alignSelf = "flex-start";
-        badge.textContent = "⚠️ " + lowBy[g] + (lowBy[g] === 1 ? " com estoque baixo" : " com estoque baixo");
+        badge.className = "op-low-stock";
+        badge.textContent = lowBy[g] + " com estoque baixo";
         btn.appendChild(badge);
       }
 
