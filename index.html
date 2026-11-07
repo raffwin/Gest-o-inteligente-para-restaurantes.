@@ -177,6 +177,26 @@
     button { font-weight: 600; letter-spacing: .005em; }
     label { font-weight: 500; }
     .stock-item strong, .movement strong { font-weight: 600; }
+
+    /* ----- Dashboard e janelas de edição ----- */
+    .btn-edit { background: white; color: #16a34a; border: 1px solid #86efac; padding: 6px 10px; font-size: 13px; flex-shrink: 0; }
+    .btn-edit:hover { background: #f0fdf4; }
+    .btn-cancel { background: white; color: #374151; border: 1px solid #d1d5db; margin-top: 8px; }
+    .btn-cancel:hover { background: #f3f4f6; }
+    .item-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .dash-reading { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; font-size: 14px; }
+    .table-wrap { overflow-x: auto; }
+    .dash-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .dash-table th, .dash-table td { text-align: right; padding: 8px 6px; border-bottom: 1px solid #eee; white-space: nowrap; }
+    .dash-table th:first-child, .dash-table td:first-child { text-align: left; }
+    .dash-table th { color: #6b7280; font-weight: 600; font-size: 12px; }
+    .dash-table tbody tr { cursor: pointer; }
+    .dash-table tbody tr:hover { background: #f0fdf4; }
+    .dash-table tfoot td { font-weight: 700; border-bottom: 0; }
+    .modal-overlay { position: fixed; inset: 0; z-index: 2000; background: #000000aa; display: flex; align-items: flex-start; justify-content: center; padding: 16px; overflow-y: auto; }
+    .modal-card { background: white; width: 100%; max-width: 460px; border-radius: 14px; padding: 20px 18px; margin: auto; box-shadow: 0 10px 30px #00000055; }
+    .modal-card h2 { margin: 0 0 12px; font-size: 19px; font-family: "Plus Jakarta Sans", "Inter", system-ui, sans-serif; font-weight: 700; }
+    .modal-card form button { width: 100%; }
   </style>
   <!-- xlsx-js-style: mesma API do SheetJS, mas aceita bordas e estilos nas células -->
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -444,6 +464,11 @@
       <strong>Checklist</strong>
       <span>Rotinas e tarefas do dia a dia</span>
     </button>
+    <button type="button" class="module" data-view="dashboard">
+      <span class="module-icon">📊</span>
+      <strong>Dashboard</strong>
+      <span>Acompanhe e altere tudo num só lugar</span>
+    </button>
   </div>
 
   <section class="section" id="accountSection">
@@ -460,15 +485,38 @@
 
   <!-- ===== Tela: Checklist ===== -->
   <div class="view" id="checklistView" hidden>
+
+  <!-- Checklist: só as lacunas para escolher -->
+  <div class="view" id="checklistHome">
   <button type="button" class="back-btn" data-back>← Voltar ao menu</button>
   <h2>Checklist</h2>
-  <p>Rotinas e tarefas do dia a dia do restaurante.</p>
+  <p>Qual checklist você vai fazer? Escolha uma lacuna para abrir.</p>
 
-  <div class="tabs" id="checklistTabs" role="tablist">
-    <button type="button" class="tab active" role="tab" data-tab="temperatura">🌡️ Temperatura</button>
-    <button type="button" class="tab" role="tab" data-tab="limpeza">🧽 Limpeza</button>
-    <button type="button" class="tab" role="tab" data-tab="gerencial">📋 Gerencial</button>
+  <div class="modules" id="checklistGroups">
+    <button type="button" class="module" data-check="temperatura">
+      <span class="module-icon">🌡️</span>
+      <strong>Temperatura</strong>
+      <span id="checkDescTemp">Aferição de freezers, geladeiras e balcões</span>
+      <span class="badge" id="checkBadgeTemp" style="margin-left:0;align-self:flex-start" hidden></span>
+    </button>
+    <button type="button" class="module" data-check="limpeza">
+      <span class="module-icon">🧽</span>
+      <strong>Limpeza</strong>
+      <span>Em configuração</span>
+    </button>
+    <button type="button" class="module" data-check="gerencial">
+      <span class="module-icon">📋</span>
+      <strong>Gerencial</strong>
+      <span>Em configuração</span>
+    </button>
   </div>
+  </div>
+
+  <!-- Checklist: lacuna aberta -->
+  <div class="view" id="checklistOpenView" hidden>
+  <button type="button" class="back-btn" id="checklistBackBtn">← Voltar ao Checklist</button>
+  <h2 id="checklistOpenTitle"></h2>
+  <p>Preencha o checklist e salve.</p>
 
   <div class="tab-panel" id="tab-temperatura" role="tabpanel">
 
@@ -546,7 +594,25 @@
     <div class="hint">Em configuração. Aqui ficará o checklist de gestão e conferência da operação.</div>
   </section>
   </div>
+  </div>
   <!-- ===== Fim da tela: Checklist ===== -->
+
+  <!-- ===== Tela: Dashboard ===== -->
+  <div class="view" id="dashboardView" hidden>
+  <button type="button" class="back-btn" data-back>← Voltar ao menu</button>
+  <h2>Dashboard</h2>
+  <p>Acompanhe o estoque, as temperaturas e o histórico. Você pode editar ou remover qualquer item.</p>
+
+  <div class="tabs" id="dashTabs" role="tablist">
+    <button type="button" class="tab active" role="tab" data-dtab="resumo">📊 Resumo</button>
+    <button type="button" class="tab" role="tab" data-dtab="estoque">📦 Estoque</button>
+    <button type="button" class="tab" role="tab" data-dtab="temperatura">🌡️ Temperatura</button>
+    <button type="button" class="tab" role="tab" data-dtab="historico">📋 Histórico</button>
+  </div>
+
+  <div id="dashContent"></div>
+  </div>
+  <!-- ===== Fim da tela: Dashboard ===== -->
 </main>
 
 <footer>
@@ -561,9 +627,9 @@
   const MIGRATED_KEY = "operatto_migrated_to";
   const DISCRETE_UNITS = ["unidades", "caixas", "pacotes"];
   // Abas da contagem de estoque (cada produto vai para a aba da sua categoria)
-  const STOCK_GROUPS = ["Bar", "Molhos", "Mercearia", "Hortifruti", "Limpeza"];
+  const STOCK_GROUPS = ["Bar", "Destilados", "Molhos", "Mercearia", "Hortifruti", "Limpeza"];
   const STOCK_OTHER = "Outros"; // produtos antigos com categoria que não é nenhuma das abas acima
-  const STOCK_ICONS = { Bar: "🍹", Molhos: "🥫", Mercearia: "🛒", Hortifruti: "🥬", Limpeza: "🧽", Outros: "📦" };
+  const STOCK_ICONS = { Bar: "🍹", Destilados: "🥃", Molhos: "🥫", Mercearia: "🛒", Hortifruti: "🥬", Limpeza: "🧽", Outros: "📦" };
   // Temperatura: tipos de equipamento (faixa sugerida, editável no cadastro) e as 2 aferições do dia
   const TEMP_TYPES = {
     freezer:   { label: "Freezer",          icon: "❄️", min: -25, max: -18 },
@@ -894,38 +960,16 @@
   // Troca a tela do app depois do login: "home" (menu), "stock" (estoque) ou "checklist"
   function showScreen(name) {
     if (name === "stock") resetStockScreen();
-    ["home", "stock", "checklist"].forEach(n => {
+    if (name === "checklist") resetChecklistScreen();
+    ["home", "stock", "checklist", "dashboard"].forEach(n => {
       document.getElementById(n + "View").hidden = n !== name;
     });
+    if (name === "dashboard") renderDashboard();
     window.scrollTo(0, 0);
   }
 
-  document.querySelectorAll(".module").forEach(btn => {
+  document.querySelectorAll(".module[data-view]").forEach(btn => {
     btn.addEventListener("click", () => showScreen(btn.dataset.view));
-  });
-  // Abas dentro do Checklist: "temperatura", "limpeza" ou "gerencial"
-  function showTab(name) {
-    const current = document.querySelector("#checklistTabs .tab.active");
-    if (current && current.dataset.tab === name) return; // já está nessa aba
-
-    document.querySelectorAll("#checklistTabs .tab").forEach(t => {
-      const active = t.dataset.tab === name;
-      t.classList.toggle("active", active);
-      t.setAttribute("aria-selected", active ? "true" : "false");
-    });
-    document.querySelectorAll("#checklistView .tab-panel").forEach(p => {
-      const show = p.id === "tab-" + name;
-      p.hidden = !show;
-      p.classList.remove("enter");
-      if (show) {
-        void p.offsetWidth; // reinicia a animação
-        p.classList.add("enter");
-      }
-    });
-  }
-
-  document.querySelectorAll("#checklistTabs .tab").forEach(btn => {
-    btn.addEventListener("click", () => showTab(btn.dataset.tab));
   });
   document.querySelectorAll("[data-back]").forEach(btn => {
     btn.addEventListener("click", () => showScreen("home"));
@@ -1859,6 +1903,8 @@
     document.getElementById("expiringCount").textContent = counts.expiringBy[g] || 0;
 
     renderTemp();
+
+    if (!document.getElementById("dashboardView").hidden) renderDashboard();
   }
 
   function buildRows(group) {
@@ -2383,6 +2429,7 @@
   }
 
   function renderTemp() {
+    renderChecklistCards();
     const list = document.getElementById("tempList");
     const progress = document.getElementById("tempProgress");
     const dateEl = document.getElementById("tempDate");
@@ -2821,6 +2868,865 @@
       alert("Não foi possível gerar o PDF.");
     }
   }
+
+  /* ---------------- Checklist: escolher qual fazer ---------------- */
+
+  const CHECKLIST_TITLES = { temperatura: "🌡️ Temperatura", limpeza: "🧽 Limpeza", gerencial: "📋 Gerencial" };
+
+  function resetChecklistScreen() {
+    document.getElementById("checklistHome").hidden = false;
+    document.getElementById("checklistOpenView").hidden = true;
+  }
+
+  function openChecklist(name) {
+    document.getElementById("checklistOpenTitle").textContent = CHECKLIST_TITLES[name] || "Checklist";
+    document.querySelectorAll("#checklistOpenView .tab-panel").forEach(p => {
+      const show = p.id === "tab-" + name;
+      p.hidden = !show;
+      p.classList.remove("enter");
+      if (show) {
+        void p.offsetWidth; // reinicia a animação
+        p.classList.add("enter");
+      }
+    });
+    document.getElementById("checklistHome").hidden = true;
+    const view = document.getElementById("checklistOpenView");
+    view.hidden = false;
+    view.classList.remove("enter");
+    void view.offsetWidth;
+    view.classList.add("enter");
+    window.scrollTo(0, 0);
+  }
+
+  function closeChecklist() {
+    resetChecklistScreen();
+    window.scrollTo(0, 0);
+  }
+
+  // Resumo do dia no cartão "Temperatura"
+  function renderChecklistCards() {
+    const desc = document.getElementById("checkDescTemp");
+    const badge = document.getElementById("checkBadgeTemp");
+    if (!desc || !badge) return;
+
+    if (!tempReady || equipments.length === 0) {
+      desc.textContent = "Aferição de freezers, geladeiras e balcões";
+      badge.hidden = true;
+      return;
+    }
+
+    const today = localStamp();
+    const n = equipments.length;
+    const p1 = equipments.filter(e => findReading(e.id, today, 1)).length;
+    const p2 = equipments.filter(e => findReading(e.id, today, 2)).length;
+    desc.textContent = "Hoje — 1ª: " + p1 + "/" + n + " | 2ª: " + p2 + "/" + n;
+
+    const pending = p1 < n || (new Date().getHours() >= 12 && p2 < n);
+    badge.hidden = !pending;
+    badge.textContent = "⏳ Aferição pendente hoje";
+  }
+
+  document.querySelectorAll("#checklistGroups .module").forEach(btn => {
+    btn.addEventListener("click", () => openChecklist(btn.dataset.check));
+  });
+  document.getElementById("checklistBackBtn").addEventListener("click", closeChecklist);
+
+  /* ---------------- Dashboard ---------------- */
+
+  const UNIT_OPTIONS = [
+    { value: "unidades", label: "Unidades" },
+    { value: "kg", label: "Quilogramas (kg)" },
+    { value: "g", label: "Gramas (g)" },
+    { value: "litros", label: "Litros" },
+    { value: "ml", label: "Mililitros (ml)" },
+    { value: "caixas", label: "Caixas" },
+    { value: "pacotes", label: "Pacotes" }
+  ];
+
+  let dashTab = "resumo";
+  let dashStockGroup = "";
+  let dashSearch = "";
+  let dashTempDate = "";
+  let dashMovGroup = "";
+
+  function mk(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+
+  function actionBtn(text, cls, handler) {
+    const b = mk("button", cls, text);
+    b.type = "button";
+    b.addEventListener("click", () => handler(b));
+    return b;
+  }
+
+  function itemRow(title, lines, buttons) {
+    const item = mk("div", "stock-item");
+    const info = mk("div", "stock-info");
+    info.appendChild(mk("strong", "", title));
+    lines.forEach(l => info.appendChild(mk("div", l[1] || "hint", l[0])));
+    item.appendChild(info);
+    if (buttons && buttons.length > 0) {
+      const act = mk("div", "item-actions");
+      buttons.forEach(b => act.appendChild(b));
+      item.appendChild(act);
+    }
+    return item;
+  }
+
+  function statCard(title, value, cls) {
+    const c = mk("div", "card");
+    c.appendChild(mk("h3", "", title));
+    c.appendChild(mk("div", "number " + (cls || ""), String(value)));
+    return c;
+  }
+
+  function dashSection(title) {
+    const sec = mk("section", "section");
+    sec.appendChild(mk("h2", "", title));
+    return sec;
+  }
+
+  // Janela de edição genérica. onSave recebe os valores (texto) e devolve
+  // uma mensagem de erro (string) para continuar aberta, ou nada para fechar.
+  function openModal(title, fields, onSave, saveLabel) {
+    const overlay = mk("div", "modal-overlay");
+    const card = mk("div", "modal-card");
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-modal", "true");
+    card.appendChild(mk("h2", "", title));
+
+    const form = document.createElement("form");
+    const inputs = {};
+
+    fields.forEach(f => {
+      const wrap = mk("div");
+      wrap.appendChild(mk("label", "", f.label));
+
+      let input;
+      if (f.type === "select") {
+        input = document.createElement("select");
+        f.options.forEach(o => {
+          const opt = document.createElement("option");
+          opt.value = o.value;
+          opt.textContent = o.label;
+          input.appendChild(opt);
+        });
+        input.value = f.value;
+      } else {
+        input = document.createElement("input");
+        input.type = f.type || "text";
+        if (f.step) input.step = f.step;
+        if (f.min !== undefined) input.min = f.min;
+        if (f.maxLength) input.maxLength = f.maxLength;
+        if (f.placeholder) input.placeholder = f.placeholder;
+        input.value = f.value === null || f.value === undefined ? "" : f.value;
+      }
+      input.required = !!f.required;
+      wrap.appendChild(input);
+
+      if (f.hint) {
+        const h = mk("div", "hint", f.hint);
+        h.style.margin = "-6px 0 9px";
+        wrap.appendChild(h);
+      }
+      form.appendChild(wrap);
+      inputs[f.key] = input;
+    });
+
+    const msg = mk("div", "login-error");
+    msg.setAttribute("role", "alert");
+    const saveBtn = mk("button", "", saveLabel || "Salvar");
+    saveBtn.type = "submit";
+    const cancelBtn = mk("button", "btn-cancel", "Cancelar");
+    cancelBtn.type = "button";
+    form.append(msg, saveBtn, cancelBtn);
+
+    function onKey(e) { if (e.key === "Escape") close(); }
+    function close() {
+      overlay.remove();
+      document.removeEventListener("keydown", onKey);
+    }
+    document.addEventListener("keydown", onKey);
+    cancelBtn.addEventListener("click", close);
+    overlay.addEventListener("mousedown", e => { if (e.target === overlay) close(); });
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      msg.textContent = "";
+      const values = {};
+      Object.keys(inputs).forEach(k => { values[k] = inputs[k].value; });
+
+      saveBtn.disabled = true;
+      try {
+        const err = await onSave(values);
+        if (err) {
+          msg.textContent = err;
+          saveBtn.disabled = false;
+          return;
+        }
+        close();
+      } catch (error) {
+        msg.textContent = friendlyError(error);
+        saveBtn.disabled = false;
+      }
+    });
+
+    card.appendChild(form);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    const first = form.querySelector("input, select");
+    if (first) setTimeout(() => first.focus(), 50);
+  }
+
+  /* ----- Editar produto ----- */
+
+  function editProductModal(product) {
+    if (!dataReady) {
+      alert("Os dados ainda não foram carregados da nuvem.");
+      return;
+    }
+
+    const saldo = getBalance(product.name);
+    const group = stockGroupOf(product);
+    const currentGroup = group === STOCK_OTHER ? product.category : group;
+    const groups = STOCK_GROUPS.slice();
+    if (!groups.includes(currentGroup)) groups.push(currentGroup);
+    const unitOptions = UNIT_OPTIONS.slice();
+    if (!unitOptions.some(o => o.value === product.unit)) unitOptions.push({ value: product.unit, label: product.unit });
+
+    openModal("Editar produto", [
+      { key: "name", label: "Nome do produto", value: product.name, required: true, maxLength: 80 },
+      { key: "category", label: "Lacuna (categoria)", type: "select", value: currentGroup, options: groups.map(g => ({ value: g, label: g })) },
+      { key: "unit", label: "Unidade", type: "select", value: product.unit, options: unitOptions },
+      { key: "saldo", label: "Saldo atual", type: "number", step: "any", min: "0", value: saldo, required: true, hint: "Se mudar o saldo, um ajuste é registrado no histórico." },
+      { key: "minimum", label: "Estoque mínimo", type: "number", step: "any", min: "0", value: product.minimum, required: true },
+      { key: "target", label: "Estoque ideal (opcional)", type: "number", step: "any", min: "0", value: product.target },
+      { key: "cost", label: "Custo unitário (R$)", type: "number", step: "0.01", min: "0", value: product.cost, required: true },
+      { key: "supplier", label: "Fornecedor (opcional)", value: product.supplier, maxLength: 80 },
+      { key: "expiry", label: "Validade (opcional)", type: "date", value: product.expiry }
+    ], async function (v) {
+      const name = v.name.trim();
+      const minimum = Number(v.minimum);
+      const target = v.target.trim() === "" ? null : Number(v.target);
+      const cost = Number(v.cost);
+      const newSaldo = round(Number(v.saldo));
+
+      if (!name) return "Digite o nome do produto.";
+      if (v.minimum.trim() === "" || !Number.isFinite(minimum) || minimum < 0) return "Estoque mínimo inválido.";
+      if (v.cost.trim() === "" || !Number.isFinite(cost) || cost < 0) return "Custo unitário inválido.";
+      if (v.saldo.trim() === "" || !Number.isFinite(newSaldo) || newSaldo < 0) return "Saldo atual inválido.";
+      if (target !== null && (!Number.isFinite(target) || target <= minimum)) return "O estoque ideal precisa ser maior que o mínimo (ou deixe em branco).";
+      if (DISCRETE_UNITS.includes(v.unit) && !Number.isInteger(newSaldo)) return "Para " + v.unit + ", o saldo deve ser um número inteiro.";
+      if (catalog.some(p => p.id !== product.id && p.name.toLowerCase() === name.toLowerCase())) return "Já existe outro produto com esse nome.";
+
+      const oldName = product.name;
+      try {
+        const upd = await supabaseClient
+          .from("products")
+          .update(productToDb({
+            name: name,
+            category: v.category,
+            unit: v.unit,
+            minimum: minimum,
+            target: target,
+            cost: roundMoney(cost),
+            supplier: v.supplier.trim(),
+            expiry: v.expiry
+          }))
+          .eq("id", product.id)
+          .select()
+          .single();
+        if (upd.error) throw upd.error;
+
+        // As movimentações ligam ao produto pelo nome: acompanha a mudança de nome
+        if (name !== oldName) {
+          const mv = await supabaseClient.from("movements").update({ product_name: name }).eq("product_name", oldName);
+          if (mv.error) throw mv.error;
+        }
+
+        Object.assign(product, dbToProduct(upd.data));
+        if (name !== oldName) {
+          movements.forEach(m => { if (m.product === oldName) m.product = name; });
+        }
+
+        const delta = round(newSaldo - getBalance(name));
+        if (delta !== 0) {
+          const ins = await supabaseClient
+            .from("movements")
+            .insert(movementToDb({
+              product: name,
+              unit: v.unit,
+              type: "ajuste",
+              quantity: Math.abs(delta),
+              delta: delta,
+              employee: currentUser,
+              date: new Date().toISOString()
+            }))
+            .select()
+            .single();
+          if (ins.error) throw ins.error;
+          movements.push(dbToMovement(ins.data));
+        }
+      } catch (error) {
+        try { await loadCloud(); } catch (e) {}
+        render();
+        if (error && error.code === "23505") return "Já existe outro produto com esse nome.";
+        throw error;
+      }
+
+      render();
+      return null;
+    }, "Salvar alterações");
+  }
+
+  /* ----- Editar equipamento e aferições ----- */
+
+  function editEquipModal(eq) {
+    if (!tempReady) return;
+
+    openModal("Editar equipamento", [
+      { key: "type", label: "Tipo", type: "select", value: eq.type, options: Object.keys(TEMP_TYPES).map(k => ({ value: k, label: TEMP_TYPES[k].label })) },
+      { key: "name", label: "Nome / identificação", value: eq.name, required: true, maxLength: 60 },
+      { key: "min", label: "Temperatura mínima aceitável (°C)", type: "number", step: "0.1", value: eq.min, required: true },
+      { key: "max", label: "Temperatura máxima aceitável (°C)", type: "number", step: "0.1", value: eq.max, required: true }
+    ], async function (v) {
+      const name = v.name.trim();
+      const min = Number(v.min);
+      const max = Number(v.max);
+
+      if (!name || !TEMP_TYPES[v.type] || v.min.trim() === "" || v.max.trim() === "" || !Number.isFinite(min) || !Number.isFinite(max)) {
+        return "Preencha os dados corretamente.";
+      }
+      if (min > max) return "A temperatura mínima não pode ser maior que a máxima.";
+      if (equipments.some(e => e.id !== eq.id && e.name.toLowerCase() === name.toLowerCase())) return "Já existe um equipamento com esse nome.";
+
+      const res = await supabaseClient
+        .from("equipment")
+        .update({ type: v.type, name: name, min_temp: min, max_temp: max })
+        .eq("id", eq.id)
+        .select()
+        .single();
+      if (res.error) {
+        if (res.error.code === "23505") return "Já existe um equipamento com esse nome.";
+        throw res.error;
+      }
+
+      Object.assign(eq, dbToEquipment(res.data));
+      renderTemp();
+      renderDashboard();
+      return null;
+    }, "Salvar alterações");
+  }
+
+  function readingModal(eq, date, period, existing) {
+    if (!tempReady) return;
+
+    openModal((existing ? "Editar aferição — " : "Registrar aferição — ") + eq.name, [
+      {
+        key: "temperature",
+        label: TEMP_PERIODS[period] + " em " + fmtDate(date) + " — Temperatura (°C)",
+        type: "number",
+        step: "0.1",
+        value: existing ? existing.temperature : "",
+        required: true,
+        hint: "Faixa aceitável: " + fmtNum1(eq.min) + " a " + fmtNum1(eq.max) + " °C"
+      },
+      { key: "note", label: "Observação / ação corretiva (opcional)", value: existing ? existing.note : "", maxLength: 120 }
+    ], async function (v) {
+      const value = Math.round(Number(v.temperature) * 10) / 10;
+      if (v.temperature.trim() === "" || !Number.isFinite(value) || value < -100 || value > 100) return "Temperatura inválida.";
+
+      const res = await supabaseClient
+        .from("temperature_readings")
+        .upsert({
+          user_id: currentUserId,
+          equipment_id: eq.id,
+          reading_date: date,
+          period: period,
+          temperature: value,
+          note: v.note.trim(),
+          employee: currentUser,
+          measured_at: new Date().toISOString()
+        }, { onConflict: "user_id,equipment_id,reading_date,period" })
+        .select();
+      if (res.error) throw res.error;
+
+      res.data.map(dbToReading).forEach(nr => {
+        const i = readings.findIndex(r => r.equipmentId === nr.equipmentId && r.date === nr.date && r.period === nr.period);
+        if (i >= 0) readings[i] = nr;
+        else readings.push(nr);
+      });
+
+      renderTemp();
+      renderDashboard();
+      return null;
+    }, "Salvar");
+  }
+
+  async function deleteReading(r, eq) {
+    if (!confirm("Excluir a aferição de " + eq.name + " (" + TEMP_PERIODS[r.period] + ", " + fmtDate(r.date) + ")?\n\nEssa ação não pode ser desfeita.")) return;
+
+    try {
+      const { error } = await supabaseClient.from("temperature_readings").delete().eq("id", r.id);
+      if (error) throw error;
+    } catch (error) {
+      alert("Não foi possível excluir a aferição: " + friendlyError(error));
+      return;
+    }
+
+    readings = readings.filter(x => x.id !== r.id);
+    renderTemp();
+    renderDashboard();
+  }
+
+  async function deleteMovement(m, btn) {
+    if (!confirm('Excluir esta movimentação de "' + m.product + '"?\n\nO saldo do produto será recalculado sem ela. Essa ação não pode ser desfeita.')) return;
+
+    btn.disabled = true;
+    try {
+      const { error } = await supabaseClient.from("movements").delete().eq("id", m.id);
+      if (error) throw error;
+    } catch (error) {
+      alert("Não foi possível excluir a movimentação: " + friendlyError(error));
+      btn.disabled = false;
+      return;
+    }
+
+    movements = movements.filter(x => x.id !== m.id);
+    render();
+  }
+
+  /* ----- Telas do Dashboard ----- */
+
+  function renderDashboard() {
+    const box = document.getElementById("dashContent");
+    if (!box) return;
+
+    document.querySelectorAll("#dashTabs .tab").forEach(t => {
+      const active = t.dataset.dtab === dashTab;
+      t.classList.toggle("active", active);
+      t.setAttribute("aria-selected", active ? "true" : "false");
+    });
+
+    box.replaceChildren();
+    if (!dataReady) {
+      box.appendChild(mk("div", "loading", "Carregando dados da nuvem..."));
+      return;
+    }
+
+    if (dashTab === "resumo") renderDashSummary(box);
+    else if (dashTab === "estoque") renderDashStock(box);
+    else if (dashTab === "temperatura") renderDashTemp(box);
+    else renderDashHistory(box);
+  }
+
+  function renderDashSummary(box) {
+    const groups = stockGroupNames();
+    const totals = { products: 0, low: 0, order: 0, expiring: 0, value: 0, orderCost: 0 };
+
+    const perGroup = groups.map(g => {
+      const rows = buildRows(g);
+      const orderRows = rows.filter(r => r.pedido > 0);
+      const info = {
+        g: g,
+        count: rows.length,
+        low: rows.filter(r => r.baixo).length,
+        order: orderRows.length,
+        orderCost: orderRows.reduce((sum, r) => sum + (r.cost === null ? 0 : r.pedido * r.cost), 0),
+        value: rows.reduce((sum, r) => sum + (r.cost === null ? 0 : r.saldo * r.cost), 0),
+        expiring: rows.filter(r => r.expiryStatus).length
+      };
+      totals.products += info.count;
+      totals.low += info.low;
+      totals.order += info.order;
+      totals.expiring += info.expiring;
+      totals.value += info.value;
+      totals.orderCost += info.orderCost;
+      return info;
+    });
+
+    // Estoque
+    const stockSec = dashSection("📦 Estoque");
+    const cards = mk("div", "cards");
+    cards.append(
+      statCard("Produtos cadastrados", totals.products),
+      statCard("Com estoque baixo", totals.low, totals.low > 0 ? "negative" : "positive"),
+      statCard("Itens para pedir", totals.order, totals.order > 0 ? "warning" : "positive"),
+      statCard("Vencidos ou vencendo", totals.expiring, totals.expiring > 0 ? "negative" : "positive"),
+      statCard("Valor em estoque", fmtMoney(totals.value)),
+      statCard("Pedido estimado", fmtMoney(totals.orderCost))
+    );
+    stockSec.appendChild(cards);
+    box.appendChild(stockSec);
+
+    // Temperatura de hoje
+    const tempSec = dashSection("🌡️ Temperatura de hoje");
+    const today = localStamp();
+    if (!tempReady) {
+      tempSec.appendChild(mk("div", "hint", "Tabelas de temperatura indisponíveis: " + (tempError || "ainda não criadas") + "."));
+    } else if (equipments.length === 0) {
+      tempSec.appendChild(mk("div", "hint", "Nenhum equipamento cadastrado."));
+    } else {
+      const n = equipments.length;
+      const p1 = equipments.filter(e => findReading(e.id, today, 1)).length;
+      const p2 = equipments.filter(e => findReading(e.id, today, 2)).length;
+      let outCount = 0;
+      equipments.forEach(e => [1, 2].forEach(p => {
+        const r = findReading(e.id, today, p);
+        if (r && !tempOk(e, r.temperature)) outCount++;
+      }));
+      const tcards = mk("div", "cards");
+      tcards.append(
+        statCard("Equipamentos", n),
+        statCard("1ª aferição (manhã)", p1 + "/" + n, p1 === n ? "positive" : "warning"),
+        statCard("2ª aferição (tarde)", p2 + "/" + n, p2 === n ? "positive" : "warning"),
+        statCard("Fora da faixa", outCount, outCount > 0 ? "negative" : "positive")
+      );
+      tempSec.appendChild(tcards);
+    }
+    box.appendChild(tempSec);
+
+    // Precisa de atenção
+    const alerts = [];
+    groups.forEach(g => buildRows(g).forEach(r => {
+      const product = findProduct(r.name);
+      if (r.baixo) {
+        alerts.push({
+          title: r.name + " — estoque baixo",
+          line: g + " | Saldo: " + fmt(r.saldo) + " " + r.unit + " | Mínimo: " + fmt(r.minimum) + " " + r.unit,
+          cls: "negative",
+          product: product
+        });
+      }
+      if (r.expiryStatus) {
+        const d = r.expiryStatus.days;
+        const vencido = r.expiryStatus.type === "vencido";
+        alerts.push({
+          title: r.name + (vencido ? " — vencido há " + plural(Math.abs(d)) : d === 0 ? " — vence hoje" : " — vence em " + plural(d)),
+          line: g + " | Validade: " + fmtDate(r.expiry),
+          cls: vencido ? "negative" : "warning",
+          product: product
+        });
+      }
+    }));
+    if (tempReady) {
+      equipments.forEach(eq => [1, 2].forEach(p => {
+        const r = findReading(eq.id, today, p);
+        if (r && !tempOk(eq, r.temperature)) {
+          alerts.push({
+            title: eq.name + " — temperatura fora da faixa",
+            line: TEMP_PERIODS[p] + ": " + fmtTemp(r.temperature) + " (aceitável: " + fmtNum1(eq.min) + " a " + fmtNum1(eq.max) + " °C)",
+            cls: "negative",
+            eq: eq,
+            period: p
+          });
+        }
+      }));
+    }
+
+    const alertSec = dashSection("⚠️ Precisa de atenção");
+    if (alerts.length === 0) {
+      alertSec.appendChild(mk("div", "positive", "✓ Tudo em ordem."));
+    } else {
+      alerts.slice(0, 30).forEach(a => {
+        const buttons = [];
+        if (a.product) buttons.push(actionBtn("✏️ Editar", "btn-edit", () => editProductModal(a.product)));
+        if (a.eq) buttons.push(actionBtn("✏️ Editar", "btn-edit", () => readingModal(a.eq, today, a.period, findReading(a.eq.id, today, a.period))));
+        alertSec.appendChild(itemRow(a.title, [[a.line, a.cls]], buttons));
+      });
+      if (alerts.length > 30) alertSec.appendChild(mk("div", "hint", "…e mais " + (alerts.length - 30) + " alerta(s). Veja os detalhes nas outras abas."));
+    }
+    box.appendChild(alertSec);
+
+    // Por lacuna
+    const tableSec = dashSection("🗂️ Por lacuna");
+    tableSec.appendChild(mk("div", "hint", "Toque numa lacuna para ver e editar os produtos dela."));
+    const wrap = mk("div", "table-wrap");
+    const table = mk("table", "dash-table");
+
+    const thead = mk("thead");
+    const hr = mk("tr");
+    ["Lacuna", "Produtos", "Baixo", "Pedir", "Pedido (R$)", "Em estoque (R$)"].forEach(h => hr.appendChild(mk("th", "", h)));
+    thead.appendChild(hr);
+
+    const tbody = mk("tbody");
+    perGroup.forEach(info => {
+      const tr = mk("tr");
+      const cells = [STOCK_ICONS[info.g] + " " + info.g, info.count, info.low, info.order, fmtMoney(info.orderCost), fmtMoney(info.value)];
+      cells.forEach((c, i) => tr.appendChild(mk("td", i === 2 && info.low > 0 ? "negative" : "", String(c))));
+      tr.addEventListener("click", () => {
+        dashStockGroup = info.g;
+        dashTab = "estoque";
+        renderDashboard();
+      });
+      tbody.appendChild(tr);
+    });
+
+    const tfoot = mk("tfoot");
+    const fr = mk("tr");
+    ["Total", totals.products, totals.low, totals.order, fmtMoney(totals.orderCost), fmtMoney(totals.value)]
+      .forEach(c => fr.appendChild(mk("td", "", String(c))));
+    tfoot.appendChild(fr);
+
+    table.append(thead, tbody, tfoot);
+    wrap.appendChild(table);
+    tableSec.appendChild(wrap);
+    box.appendChild(tableSec);
+  }
+
+  function renderDashStock(box) {
+    const names = stockGroupNames();
+    if (dashStockGroup && !names.includes(dashStockGroup)) dashStockGroup = "";
+
+    const controls = mk("div", "settings");
+    const row = mk("div", "row");
+
+    const w1 = mk("div");
+    w1.appendChild(mk("label", "", "Lacuna"));
+    const sel = document.createElement("select");
+    sel.style.marginBottom = "0";
+    [{ value: "", label: "Todas as lacunas" }].concat(names.map(g => ({ value: g, label: STOCK_ICONS[g] + " " + g }))).forEach(o => {
+      const opt = document.createElement("option");
+      opt.value = o.value;
+      opt.textContent = o.label;
+      sel.appendChild(opt);
+    });
+    sel.value = dashStockGroup;
+    sel.addEventListener("change", () => {
+      dashStockGroup = sel.value;
+      renderDashStockList();
+    });
+    w1.appendChild(sel);
+
+    const w2 = mk("div");
+    w2.appendChild(mk("label", "", "Buscar produto"));
+    const search = document.createElement("input");
+    search.type = "search";
+    search.placeholder = "Digite o nome";
+    search.value = dashSearch;
+    search.addEventListener("input", () => {
+      dashSearch = search.value;
+      renderDashStockList();
+    });
+    w2.appendChild(search);
+
+    row.append(w1, w2);
+    controls.appendChild(row);
+
+    const list = mk("section", "section");
+    list.id = "dashStockList";
+    box.append(controls, list);
+    renderDashStockList();
+  }
+
+  function renderDashStockList() {
+    const list = document.getElementById("dashStockList");
+    if (!list) return;
+    list.replaceChildren();
+
+    const q = dashSearch.trim().toLowerCase();
+    const items = catalog.filter(p =>
+      (!dashStockGroup || stockGroupOf(p) === dashStockGroup) &&
+      (!q || p.name.toLowerCase().includes(q))
+    );
+
+    list.appendChild(mk("div", "hint", items.length === 0
+      ? "Nenhum produto encontrado."
+      : items.length + (items.length === 1 ? " produto" : " produtos")));
+
+    items.forEach(p => {
+      const saldo = getBalance(p.name);
+      const baixo = saldo <= p.minimum;
+      const lines = [
+        [p.category + " | Mínimo: " + fmt(p.minimum) + " " + p.unit + " | Meta: " + fmt(targetOf(p)) + " " + p.unit, "hint"]
+      ];
+
+      const extra = [];
+      if (typeof p.cost === "number") extra.push("Custo: " + fmtMoney(p.cost));
+      if (p.supplier) extra.push("Fornecedor: " + p.supplier);
+      if (p.expiry) extra.push("Validade: " + fmtDate(p.expiry));
+      if (extra.length > 0) lines.push([extra.join(" | "), "hint"]);
+
+      lines.push([
+        "Saldo atual: " + fmt(saldo) + " " + p.unit + (baixo ? " ⚠️ ESTOQUE BAIXO" : " ✓ Estoque normal"),
+        baixo ? "negative" : "positive"
+      ]);
+
+      const qty = orderQty(p, saldo);
+      if (qty > 0) {
+        lines.push([
+          "🛒 Pedir: " + fmt(qty) + " " + p.unit + (typeof p.cost === "number" ? " (" + fmtMoney(qty * p.cost) + ")" : ""),
+          "warning"
+        ]);
+      }
+
+      const status = expiryStatus(p, saldo);
+      if (status) {
+        lines.push([
+          status.type === "vencido"
+            ? "❌ VENCIDO há " + plural(Math.abs(status.days))
+            : status.days === 0 ? "⏳ Vence hoje" : "⏳ Vence em " + plural(status.days),
+          status.type === "vencido" ? "negative" : "warning"
+        ]);
+      }
+
+      list.appendChild(itemRow(p.name, lines, [
+        actionBtn("✏️ Editar", "btn-edit", () => editProductModal(p)),
+        actionBtn("🗑️ Remover", "btn-remove", b => removeProduct(p.name, b))
+      ]));
+    });
+  }
+
+  function renderDashTemp(box) {
+    if (!tempReady) {
+      const sec = mk("section", "section hint", "⚠️ Tabelas de temperatura indisponíveis: " + (tempError || "ainda não criadas") + ".");
+      box.appendChild(sec);
+      return;
+    }
+
+    const today = localStamp();
+    if (!dashTempDate) dashTempDate = today;
+    const date = dashTempDate;
+
+    const controls = mk("div", "settings");
+    const row = mk("div", "row");
+
+    const w1 = mk("div");
+    w1.appendChild(mk("label", "", "Data"));
+    const dateInput = document.createElement("input");
+    dateInput.type = "date";
+    dateInput.max = today;
+    dateInput.value = date;
+    dateInput.style.marginBottom = "0";
+    dateInput.addEventListener("change", () => {
+      dashTempDate = dateInput.value || today;
+      renderDashboard();
+    });
+    w1.appendChild(dateInput);
+
+    const w2 = mk("div", "hint");
+    const n = equipments.length;
+    w2.textContent = n === 0
+      ? "Nenhum equipamento cadastrado."
+      : [1, 2].map(p => TEMP_PERIODS[p] + ": " + equipments.filter(e => findReading(e.id, date, p)).length + "/" + n).join("   |   ");
+
+    row.append(w1, w2);
+    controls.appendChild(row);
+
+    const sec = mk("section", "section");
+    if (n === 0) sec.appendChild(mk("div", "hint", "Cadastre equipamentos em Checklist → Temperatura."));
+
+    equipments.forEach(eq => {
+      const type = TEMP_TYPES[eq.type] || { label: eq.type, icon: "🌡️" };
+      const item = mk("div", "stock-item");
+      const info = mk("div", "stock-info");
+      info.appendChild(mk("strong", "", type.icon + " " + eq.name));
+      info.appendChild(mk("div", "hint", type.label + " | Faixa aceitável: " + fmtNum1(eq.min) + " a " + fmtNum1(eq.max) + " °C"));
+
+      [1, 2].forEach(p => {
+        const r = findReading(eq.id, date, p);
+        const line = mk("div", "dash-reading");
+
+        if (r) {
+          const ok = tempOk(eq, r.temperature);
+          let text = TEMP_PERIODS[p] + ": " + fmtTemp(r.temperature) + (ok ? " ✓" : " ⚠️ FORA DA FAIXA") +
+            " — " + fmtHour(r.measuredAt) + (r.employee ? " por " + r.employee : "");
+          if (r.note) text += " | Obs: " + r.note;
+          line.appendChild(mk("span", ok ? "positive" : "negative", text));
+          line.appendChild(actionBtn("✏️ Editar", "btn-edit", () => readingModal(eq, date, p, r)));
+          line.appendChild(actionBtn("🗑️ Excluir", "btn-remove", () => deleteReading(r, eq)));
+        } else {
+          line.appendChild(mk("span", "warning", TEMP_PERIODS[p] + ": pendente"));
+          line.appendChild(actionBtn("➕ Registrar", "btn-edit", () => readingModal(eq, date, p, null)));
+        }
+        info.appendChild(line);
+      });
+
+      item.appendChild(info);
+
+      const act = mk("div", "item-actions");
+      act.appendChild(actionBtn("✏️ Equipamento", "btn-edit", () => editEquipModal(eq)));
+      act.appendChild(actionBtn("🗑️ Remover", "btn-remove", async b => {
+        await removeEquipment(eq, b);
+        renderDashboard();
+      }));
+      item.appendChild(act);
+      sec.appendChild(item);
+    });
+
+    box.append(controls, sec);
+  }
+
+  function renderDashHistory(box) {
+    const names = stockGroupNames();
+    if (dashMovGroup && !names.includes(dashMovGroup)) dashMovGroup = "";
+
+    const controls = mk("div", "settings");
+    controls.appendChild(mk("label", "", "Lacuna"));
+    const sel = document.createElement("select");
+    sel.style.marginBottom = "0";
+    [{ value: "", label: "Todas as lacunas" }].concat(names.map(g => ({ value: g, label: STOCK_ICONS[g] + " " + g }))).forEach(o => {
+      const opt = document.createElement("option");
+      opt.value = o.value;
+      opt.textContent = o.label;
+      sel.appendChild(opt);
+    });
+    sel.value = dashMovGroup;
+    sel.addEventListener("change", () => {
+      dashMovGroup = sel.value;
+      renderDashMovList();
+    });
+    controls.appendChild(sel);
+
+    const list = mk("section", "section");
+    list.id = "dashMovList";
+    box.append(controls, list);
+    renderDashMovList();
+  }
+
+  function renderDashMovList() {
+    const list = document.getElementById("dashMovList");
+    if (!list) return;
+    list.replaceChildren();
+
+    let source = movements;
+    if (dashMovGroup) {
+      const names = new Set(catalog.filter(p => stockGroupOf(p) === dashMovGroup).map(p => p.name.toLowerCase()));
+      source = movements.filter(m => names.has(m.product.toLowerCase()));
+    }
+
+    const sorted = [...source].reverse();
+    const LIMIT = 150;
+    list.appendChild(mk("div", "hint", sorted.length === 0
+      ? "Nenhuma movimentação registrada."
+      : "Mostrando " + Math.min(LIMIT, sorted.length) + " de " + sorted.length + " movimentações (mais recentes primeiro)."));
+
+    sorted.slice(0, LIMIT).forEach(m => {
+      const detail = m.type === "ajuste"
+        ? "Ajuste: " + (m.delta > 0 ? "+" : "") + m.delta + (m.unit ? " " + m.unit : "")
+        : "Quantidade: " + m.quantity + (m.unit ? " " + m.unit : "");
+
+      list.appendChild(itemRow(
+        m.product + " — " + m.type.toUpperCase(),
+        [
+          [detail + " | Responsável: " + m.employee, "hint"],
+          [new Date(m.date).toLocaleString("pt-BR"), "hint"]
+        ],
+        [actionBtn("🗑️ Excluir", "btn-remove", b => deleteMovement(m, b))]
+      ));
+    });
+  }
+
+  document.querySelectorAll("#dashTabs .tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      dashTab = btn.dataset.dtab;
+      renderDashboard();
+    });
+  });
 
   applyEquipTypeDefaults();
 
