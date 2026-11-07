@@ -475,6 +475,68 @@
       #stockHome .op-stock-grid { grid-template-columns: 1fr; gap: 12px; }
       #stockHome .op-category { min-height: 140px; padding: 19px; }
     }
+
+    /* ===== Checklist de limpeza (visual escuro) ===== */
+    body:has(#checklistView:not([hidden]) #checklistHome:not([hidden])),
+    body:has(#checklistView:not([hidden]) #checklistOpenView:not([hidden]) #tab-limpeza:not([hidden])) { background: #111820; }
+    body:has(#checklistView:not([hidden]) #checklistHome:not([hidden])) footer,
+    body:has(#checklistView:not([hidden]) #checklistOpenView:not([hidden]) #tab-limpeza:not([hidden])) footer { color: #687780; }
+
+    #checklistHome, #checklistOpenView:has(#tab-limpeza:not([hidden])) { max-width: 1050px; margin: auto; padding: 22px 13px; color: #edf2ef; }
+    #checklistHome > h2, #checklistOpenView:has(#tab-limpeza:not([hidden])) > h2 { color: #edf2ef; font-size: 25px; letter-spacing: -.7px; }
+    #checklistHome > p, #checklistOpenView:has(#tab-limpeza:not([hidden])) > p { color: #89969e; font-size: 13px; }
+    #checklistOpenView:has(#tab-limpeza:not([hidden])) > p { display: none; }
+    #checklistHome button.back-btn, #checklistOpenView:has(#tab-limpeza:not([hidden])) button.back-btn {
+      --tint: 32 43 50; --alpha: .7; color: #cbd5d0; border: 1px solid #39464d !important; box-shadow: inset 0 1px 0 rgb(255 255 255 / .06); margin-bottom: 18px;
+    }
+    #checklistHome .modules { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; }
+    #checklistHome button.module {
+      --tint: 26 35 42; --alpha: .75; min-height: 130px; padding: 22px; border-radius: 13px; gap: 4px; align-items: flex-start;
+      border: 1px solid #303c43 !important; color: #edf2ef; box-shadow: inset 0 1px 0 rgb(255 255 255 / .06);
+    }
+    #checklistHome button.module:hover:not(:disabled) { --tint: 32 45 43; --alpha: .9; border-color: #65b98b !important; transform: translateY(-2px); }
+    #checklistHome .module strong { color: #edf2ef; font-size: 16px; }
+    #checklistHome .module span { color: #929fa6; font-size: 12px; }
+    #checklistHome .module .module-icon { font-size: 26px; margin-bottom: 8px; }
+
+    #operatto-limpeza { color: #edf2ef; width: 100%; --lc-panel: 26 35 42; --lc-border: #303c43; --lc-muted: #929fa6; --lc-green: #65b98b; }
+    #operatto-limpeza .lc-header { margin-bottom: 18px; }
+    #operatto-limpeza .lc-header h2 { display: none; }
+    #operatto-limpeza .lc-header p { font-size: 13px; color: #89969e; margin: 0; }
+    #operatto-limpeza .lc-setores, #operatto-limpeza .lc-lista { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    #operatto-limpeza .lc-painel { display: none; }
+    #operatto-limpeza button.lc-setor {
+      --tint: 26 35 42; --alpha: .75; display: block; width: 100%; padding: 19px 15px; text-align: left; border-radius: 13px;
+      border: 1px solid var(--lc-border) !important; color: #edf2ef; cursor: pointer; box-shadow: inset 0 1px 0 rgb(255 255 255 / .06);
+    }
+    #operatto-limpeza button.lc-setor:hover:not(:disabled) { --tint: 32 45 43; --alpha: .9; border-color: var(--lc-green) !important; }
+    #operatto-limpeza .lc-setor strong { display: block; font-size: 15px; color: #edf2ef; }
+    #operatto-limpeza .lc-setor small { display: block; color: var(--lc-muted); margin-top: 7px; font-size: 12px; }
+    #operatto-limpeza .lc-status { display: block; color: #72c296; font-size: 11px; margin-top: 10px; min-height: 13px; }
+    #operatto-limpeza .lc-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+    #operatto-limpeza .lc-topo h3 { margin: 0; font-size: 19px; color: #edf2ef; }
+    #operatto-limpeza .lc-progresso { color: var(--lc-muted); font-size: 12px; margin-top: 6px; }
+    #operatto-limpeza button.lc-voltar {
+      --tint: 32 43 50; --alpha: .7; color: #cbd5d0; border: 1px solid #39464d !important; padding: 9px 13px; border-radius: 9px; cursor: pointer;
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / .06);
+    }
+    #operatto-limpeza .lc-item { min-width: 0; background: #1a232a; border: 1px solid var(--lc-border); border-radius: 12px; padding: 14px; }
+    #operatto-limpeza .lc-nome { font-size: 13px; font-weight: 600; line-height: 1.4; min-height: 38px; margin-bottom: 13px; color: #edf2ef; }
+    #operatto-limpeza .lc-opcoes { display: flex; gap: 8px; }
+    #operatto-limpeza .lc-opcoes button {
+      --tint: 20 28 34; --alpha: .6; flex: 1; border: 1px solid #39464d !important; color: var(--lc-muted);
+      border-radius: 8px; padding: 9px; cursor: pointer; font-weight: 700; box-shadow: none;
+    }
+    #operatto-limpeza .lc-opcoes .lc-c.ativo { --tint: 101 185 139; --alpha: .22; border-color: #65b98b !important; color: #8be0b3; }
+    #operatto-limpeza .lc-opcoes .lc-nc.ativo { --tint: 220 85 85; --alpha: .2; border-color: #dc5555 !important; color: #ff8585; }
+    #operatto-limpeza .lc-legenda { color: var(--lc-muted); font-size: 12px; margin-top: 16px; line-height: 1.5; }
+    #operatto-limpeza .lc-acoes { display: flex; justify-content: flex-end; margin-top: 20px; }
+    #operatto-limpeza button.lc-salvar { --tint: 77 152 113; --alpha: .9; border: 1px solid #65b98b !important; color: #fff; border-radius: 9px; padding: 12px 22px; font-weight: 700; cursor: pointer; }
+    @media (max-width: 700px) {
+      #operatto-limpeza .lc-setores { grid-template-columns: 1fr; }
+      #operatto-limpeza .lc-lista { grid-template-columns: repeat(2, minmax(145px, 1fr)); }
+    }
+    @media (max-width: 360px) { #operatto-limpeza .lc-lista { grid-template-columns: 1fr; } }
   </style>
   <!-- xlsx-js-style: mesma API do SheetJS, mas aceita bordas e estilos nas células -->
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -849,7 +911,7 @@
     <button type="button" class="module" data-check="limpeza">
       <span class="module-icon">🧽</span>
       <strong>Limpeza</strong>
-      <span>Em configuração</span>
+      <span>Cozinha, salão e copa</span>
     </button>
     <button type="button" class="module" data-check="gerencial">
       <span class="module-icon">📋</span>
@@ -931,9 +993,37 @@
 
   </div>
 
-  <section class="section tab-panel" id="tab-limpeza" role="tabpanel" hidden>
-    <h2>🧽 Checklist de limpeza</h2>
-    <div class="hint">Em configuração. Aqui ficará o controle de limpeza e higienização.</div>
+  <section class="tab-panel" id="tab-limpeza" role="tabpanel" hidden>
+  <div id="operatto-limpeza">
+    <div class="lc-header">
+      <h2>Checklist de limpeza</h2>
+      <p>Selecione o setor para iniciar a conferência.</p>
+    </div>
+
+    <div class="lc-setores" id="lcSetores">
+      <button type="button" class="lc-setor" data-setor="cozinha"><strong>Cozinha</strong><small>Higienização e organização</small><span class="lc-status"></span></button>
+      <button type="button" class="lc-setor" data-setor="salao"><strong>Salão / Caixa</strong><small>Limpeza e organização</small><span class="lc-status"></span></button>
+      <button type="button" class="lc-setor" data-setor="copa"><strong>Copa</strong><small>Limpeza e organização</small><span class="lc-status"></span></button>
+    </div>
+
+    <div class="lc-painel" id="lcPainel">
+      <div class="lc-topo">
+        <div>
+          <h3 id="lcTitulo"></h3>
+          <div class="lc-progresso" id="lcProgresso"></div>
+        </div>
+        <button type="button" class="lc-voltar" id="lcVoltar">← Voltar</button>
+      </div>
+      <div class="lc-lista" id="lcLista"></div>
+      <div class="lc-legenda">
+        <strong>C</strong> = Conforme &nbsp; | &nbsp; <strong>NC</strong> = Não conforme.<br>
+        Se marcar NC, solicite que a tarefa seja refeita.
+      </div>
+      <div class="lc-acoes">
+        <button type="button" class="lc-salvar" id="lcSalvar">Salvar setor</button>
+      </div>
+    </div>
+  </div>
   </section>
 
   <section class="section tab-panel" id="tab-gerencial" role="tabpanel" hidden>
@@ -4161,6 +4251,141 @@
     showLogin();
   })();
 </script>
+<script>
+// Checklist de limpeza: C (conforme) / NC (não conforme) por setor, salvo neste aparelho por conta
+(() => {
+  const root = document.getElementById("operatto-limpeza");
+  if (!root || root.dataset.ready) return;
+  root.dataset.ready = "1";
+
+  const STORAGE = "operatto_checklist_limpeza_v2";
+  const setores = {
+    cozinha: { nome: "Cozinha", itens: ["Banho-maria (os dois)", "Coifa (por fora)", "Fogões", "Chapa", "Bancadas", "Prateleiras", "Bancada refrigerada", "Pista fria", "Micro-ondas", "Utensílios", "Fritadeiras", "Processador", "Lixeiras", "Balança", "Estoque seco", "Piso do estoque"] },
+    salao: { nome: "Salão / Caixa", itens: ["Mesas, estofados e cadeiras", "Freezer, geladeira e adega por fora", "Aparadores", "Utensílios", "Balcão caixa", "Piso", "Cardápios", "Computadores", "Portas de vidros", "Estufa para quibes", "Cafeteira", "Chopeira", "Microondas"] },
+    copa: { nome: "Copa", itens: ["Geladeira e freezer (por fora)", "Balcão refrigerado (por fora)", "Máquina de gelo", "Utensílios", "Lixeiras", "Bancadas", "Liquidificadores e espremedores"] }
+  };
+
+  let dados = {};
+  let atual = null;
+
+  const setoresEl = root.querySelector("#lcSetores");
+  const painel = root.querySelector("#lcPainel");
+  const lista = root.querySelector("#lcLista");
+  const titulo = root.querySelector("#lcTitulo");
+  const progresso = root.querySelector("#lcProgresso");
+
+  // Cada conta tem o seu próprio registro neste aparelho
+  function chave() {
+    let uid = "";
+    try { uid = typeof currentUserId !== "undefined" && currentUserId ? currentUserId : ""; } catch (e) { uid = ""; }
+    return STORAGE + (uid ? "_" + uid : "");
+  }
+  function ler() {
+    try { dados = JSON.parse(localStorage.getItem(chave())) || {}; } catch (e) { dados = {}; }
+  }
+  function persistir() {
+    try { localStorage.setItem(chave(), JSON.stringify(dados)); } catch (e) {}
+  }
+
+  function respostas() { return (dados[atual] && dados[atual].itens) || []; }
+
+  function atualizarProgresso() {
+    const total = setores[atual].itens.length;
+    const preenchidos = respostas().filter(Boolean).length;
+    progresso.textContent = preenchidos + " de " + total + " itens conferidos";
+  }
+
+  function renderizarSetores() {
+    setoresEl.querySelectorAll("[data-setor]").forEach(botao => {
+      const k = botao.dataset.setor;
+      const total = setores[k].itens.length;
+      const preenchidos = ((dados[k] && dados[k].itens) || []).filter(Boolean).length;
+      const status = botao.querySelector(".lc-status");
+      if (dados[k] && dados[k].salvo) status.textContent = "✓ Setor salvo";
+      else if (preenchidos) status.textContent = preenchidos + "/" + total + " preenchidos";
+      else status.textContent = "";
+    });
+  }
+
+  function mostrarSetores() {
+    painel.style.display = "none";
+    setoresEl.style.display = "grid";
+    atual = null;
+    renderizarSetores();
+  }
+
+  function abrirSetor(k) {
+    atual = k;
+    titulo.textContent = setores[k].nome;
+    setoresEl.style.display = "none";
+    painel.style.display = "block";
+    lista.replaceChildren();
+
+    setores[k].itens.forEach((nome, index) => {
+      const valor = respostas()[index] || "";
+      const card = document.createElement("div");
+      card.className = "lc-item";
+      const texto = document.createElement("div");
+      texto.className = "lc-nome";
+      texto.textContent = nome;
+      const opcoes = document.createElement("div");
+      opcoes.className = "lc-opcoes";
+
+      const btnC = document.createElement("button");
+      btnC.type = "button";
+      btnC.textContent = "C";
+      btnC.className = "lc-c" + (valor === "C" ? " ativo" : "");
+      const btnNC = document.createElement("button");
+      btnNC.type = "button";
+      btnNC.textContent = "NC";
+      btnNC.className = "lc-nc" + (valor === "NC" ? " ativo" : "");
+      btnC.addEventListener("click", () => marcar(index, "C"));
+      btnNC.addEventListener("click", () => marcar(index, "NC"));
+
+      opcoes.append(btnC, btnNC);
+      card.append(texto, opcoes);
+      lista.appendChild(card);
+    });
+    atualizarProgresso();
+  }
+
+  function marcar(index, valor) {
+    if (!dados[atual]) dados[atual] = { itens: [], salvo: false };
+    dados[atual].itens[index] = valor;
+    dados[atual].salvo = false;
+    persistir();
+    const y = window.scrollY;
+    abrirSetor(atual);
+    window.scrollTo(0, y);
+  }
+
+  setoresEl.querySelectorAll("[data-setor]").forEach(b => b.addEventListener("click", () => abrirSetor(b.dataset.setor)));
+  root.querySelector("#lcVoltar").addEventListener("click", mostrarSetores);
+
+  root.querySelector("#lcSalvar").addEventListener("click", () => {
+    const total = setores[atual].itens.length;
+    const preenchidos = respostas().filter(Boolean).length;
+    if (preenchidos !== total) {
+      alert("Preencha todos os itens com C ou NC antes de salvar.");
+      return;
+    }
+    dados[atual].salvo = true;
+    dados[atual].dataSalvamento = new Date().toISOString();
+    persistir();
+    alert("Setor salvo com sucesso!");
+    mostrarSetores();
+  });
+
+  // Ao abrir o checklist de limpeza, relê os dados da conta atual
+  document.querySelectorAll('.module[data-check="limpeza"]').forEach(b => {
+    b.addEventListener("click", () => { ler(); mostrarSetores(); });
+  });
+
+  ler();
+  renderizarSetores();
+})();
+</script>
+
 
 </body>
 </html>
