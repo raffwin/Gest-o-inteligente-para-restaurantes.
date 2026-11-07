@@ -537,6 +537,38 @@
       #operatto-limpeza .lc-lista { grid-template-columns: repeat(2, minmax(145px, 1fr)); }
     }
     @media (max-width: 360px) { #operatto-limpeza .lc-lista { grid-template-columns: 1fr; } }
+
+    /* ===== Dashboard: tabela mensal de limpeza ===== */
+    .cleaning-checklist { --cc-primary: #243449; --cc-border: #e5e9ef; --cc-muted: #8290a2; color: #253247; }
+    .cleaning-checklist .cc-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
+    .cleaning-checklist .cc-title { font-size: 19px; font-weight: 700; margin: 0; }
+    .cleaning-checklist .cc-subtitle { font-size: 12px; color: var(--cc-muted); margin-top: 5px; }
+    .cleaning-checklist .cc-month { background: #edf2f7; color: var(--cc-primary); padding: 8px 13px; border-radius: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    .cleaning-checklist .cc-responsibles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .cleaning-checklist .cc-field { border: 1px solid var(--cc-border); border-radius: 9px; padding: 11px 13px; background: #fff; }
+    .cleaning-checklist .cc-field label { display: block; font-size: 10px; font-weight: 700; color: var(--cc-muted); text-transform: uppercase; margin-bottom: 6px; }
+    .cleaning-checklist .cc-field input { width: 100%; border: none; outline: none; font-size: 13px; color: #253247; background: transparent; margin: 0; padding: 0; }
+    .cleaning-checklist .cc-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--cc-border); border-radius: 11px; background: #fff; }
+    .cleaning-checklist .cc-table { width: 100%; min-width: 1500px; border-collapse: collapse; font-size: 11px; }
+    .cleaning-checklist .cc-table th { background: #f4f6f9; color: #59677a; font-weight: 700; padding: 12px 5px; border: 1px solid var(--cc-border); white-space: nowrap; }
+    .cleaning-checklist .cc-table th.cc-today { background: #e7f5ee; color: #18804b; }
+    .cleaning-checklist .cc-table td { padding: 7px 3px; border: 1px solid var(--cc-border); text-align: center; height: 32px; }
+    .cleaning-checklist .cc-table .cc-sector { background: #eef2f7; color: #34465d; font-weight: 800; letter-spacing: 1px; width: 34px; writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; text-transform: uppercase; }
+    .cleaning-checklist .cc-table .cc-task { text-align: left; padding: 8px 12px; font-size: 11px; font-weight: 600; min-width: 190px; color: #344256; }
+    .cleaning-checklist .cc-date { min-width: 34px; }
+    .cleaning-checklist .cc-choice { display: inline-block; min-width: 22px; padding: 3px 4px; border: 1px solid #d9e0e8; border-radius: 5px; font-size: 9px; font-weight: 700; }
+    .cleaning-checklist .cc-choice.selected-c { background: #e7f5ee; border-color: #65b68b; color: #18804b; }
+    .cleaning-checklist .cc-choice.selected-nc { background: #fff0ed; border-color: #e69a8b; color: #c54c38; }
+    .cleaning-checklist .cc-legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 14px 0; font-size: 11px; color: #66758a; }
+    .cleaning-checklist .cc-legend span { display: flex; align-items: center; gap: 6px; }
+    .cleaning-checklist .cc-dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+    .cleaning-checklist .cc-note { margin-top: 15px; padding: 13px; background: #f5f7fa; border-radius: 9px; color: #66758a; font-size: 11px; line-height: 1.7; }
+    .cleaning-checklist .cc-signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 28px; }
+    .cleaning-checklist .cc-signature { border-top: 1px solid #9ba7b5; padding-top: 8px; font-size: 11px; color: #66758a; text-align: center; }
+    @media (max-width: 600px) {
+      .cleaning-checklist .cc-responsibles { grid-template-columns: 1fr; }
+      .cleaning-checklist .cc-title { font-size: 17px; }
+    }
   </style>
   <!-- xlsx-js-style: mesma API do SheetJS, mas aceita bordas e estilos nas células -->
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -1044,16 +1076,11 @@
     <button type="button" class="tab active" role="tab" data-dtab="resumo">📊 Resumo</button>
     <button type="button" class="tab" role="tab" data-dtab="estoque">📦 Estoque</button>
     <button type="button" class="tab" role="tab" data-dtab="temperatura">🌡️ Temperatura</button>
+    <button type="button" class="tab" role="tab" data-dtab="limpeza">🧽 Limpeza</button>
     <button type="button" class="tab" role="tab" data-dtab="historico">📋 Histórico</button>
   </div>
 
-  <div style="display:flex;justify-content:flex-end;margin:15px 0;">
-  <button type="button" onclick="exportarChecklistLimpezaPDF()">
-    📄 Exportar Checklist de Limpeza em PDF
-  </button>
-</div>
-
-<div id="dashContent"></div>
+  <div id="dashContent"></div>
   </div>
   <!-- ===== Fim da tela: Dashboard ===== -->
 </main>
@@ -3370,6 +3397,266 @@
     }
   }
 
+  /* ---------------- Dashboard: checklist de limpeza (tabela do mês) ---------------- */
+
+  let dashLimpezaMonth = "";
+  const MESES_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+  function limpezaMonthInfo(mes) {
+    const parts = mes.split("-");
+    const ano = Number(parts[0]);
+    const m = Number(parts[1]);
+    return { ano: ano, mes: m, dias: new Date(ano, m, 0).getDate(), nome: MESES_PT[m - 1] + " de " + ano };
+  }
+
+  // Valor (C / NC / "") de um item num dia do mês
+  function limpezaCell(registros, mes, dia, setorKey, index) {
+    const stamp = mes + "-" + String(dia).padStart(2, "0");
+    const r = registros[stamp] && registros[stamp][setorKey];
+    return (r && r.itens && r.itens[index]) || "";
+  }
+
+  function renderDashLimpeza(box) {
+    const api = window.operattoLimpeza;
+    if (!api) {
+      box.appendChild(mk("section", "section hint", "⚠️ Checklist de limpeza indisponível."));
+      return;
+    }
+
+    const hoje = localStamp();
+    if (!dashLimpezaMonth) dashLimpezaMonth = hoje.slice(0, 7);
+    const mes = dashLimpezaMonth;
+    const info = limpezaMonthInfo(mes);
+    const registros = api.registros();
+
+    // Mês e botão do PDF
+    const controls = mk("div", "settings");
+    const row = mk("div", "row");
+    const w1 = mk("div");
+    w1.appendChild(mk("label", "", "Mês"));
+    const monthInput = document.createElement("input");
+    monthInput.type = "month";
+    monthInput.max = hoje.slice(0, 7);
+    monthInput.value = mes;
+    monthInput.style.marginBottom = "0";
+    monthInput.addEventListener("change", () => {
+      dashLimpezaMonth = monthInput.value || hoje.slice(0, 7);
+      renderDashboard();
+    });
+    w1.appendChild(monthInput);
+    const pdfBtn = actionBtn("📄 Gerar PDF", "", exportLimpezaPdf);
+    pdfBtn.style.cssText = "width:auto;flex:none;align-self:flex-end;margin:0";
+    row.append(w1, pdfBtn);
+    controls.appendChild(row);
+    box.appendChild(controls);
+
+    const wrap = mk("section", "section cleaning-checklist");
+
+    const head = mk("div", "cc-header");
+    const titleBox = mk("div");
+    titleBox.appendChild(mk("h2", "cc-title", "Checklist de Limpeza"));
+    titleBox.appendChild(mk("div", "cc-subtitle", "Controle diário de higienização e conservação — preenchido conforme o checklist é feito"));
+    head.append(titleBox, mk("div", "cc-month", info.nome));
+    wrap.appendChild(head);
+
+    // Responsáveis (ficam salvos por mês)
+    const resp = api.responsaveis(mes);
+    const respBox = mk("div", "cc-responsibles");
+    const campos = [["chefe", "Chefe de cozinha", "Nome do responsável"], ["gerente", "Gerente", "Nome do gerente"]];
+    const inputs = {};
+    campos.forEach(c => {
+      const f = mk("div", "cc-field");
+      f.appendChild(mk("label", "", c[1]));
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.maxLength = 60;
+      inp.placeholder = c[2];
+      inp.value = resp[c[0]] || "";
+      inp.addEventListener("change", () => {
+        api.salvarResponsaveis(mes, { chefe: inputs.chefe.value.trim(), gerente: inputs.gerente.value.trim() });
+      });
+      inputs[c[0]] = inp;
+      f.appendChild(inp);
+      respBox.appendChild(f);
+    });
+    wrap.appendChild(respBox);
+
+    // Tabela: setor | atividade | dias do mês
+    const tableWrap = mk("div", "cc-table-wrap");
+    const table = mk("table", "cc-table");
+    const thead = document.createElement("thead");
+    const hr = document.createElement("tr");
+    hr.appendChild(mk("th", "", "SETOR"));
+    hr.appendChild(mk("th", "", "ATIVIDADES"));
+    for (let d = 1; d <= info.dias; d++) {
+      const th = mk("th", "cc-date", String(d));
+      if (mes + "-" + String(d).padStart(2, "0") === hoje) th.classList.add("cc-today");
+      hr.appendChild(th);
+    }
+    thead.appendChild(hr);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    Object.keys(api.setores).forEach(key => {
+      const setor = api.setores[key];
+      setor.itens.forEach((tarefa, index) => {
+        const tr = document.createElement("tr");
+        if (index === 0) {
+          const sc = mk("td", "cc-sector", setor.nome);
+          sc.rowSpan = setor.itens.length;
+          tr.appendChild(sc);
+        }
+        tr.appendChild(mk("td", "cc-task", tarefa));
+        for (let d = 1; d <= info.dias; d++) {
+          const td = document.createElement("td");
+          const v = limpezaCell(registros, mes, d, key, index);
+          if (v) {
+            const mark = mk("span", "cc-choice " + (v === "C" ? "selected-c" : "selected-nc"), v);
+            mark.setAttribute("aria-label", tarefa + ", dia " + d + ": " + v);
+            td.appendChild(mark);
+          }
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      });
+    });
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+    wrap.appendChild(tableWrap);
+
+    const legend = mk("div", "cc-legend");
+    [["#65b68b", "C - Conforme"], ["#e69a8b", "NC - Não Conforme"], ["#d9e0e8", "Não preenchido"]].forEach(l => {
+      const sp = mk("span");
+      const dot = mk("i", "cc-dot");
+      dot.style.background = l[0];
+      sp.append(dot, document.createTextNode(l[1]));
+      legend.appendChild(sp);
+    });
+    wrap.appendChild(legend);
+
+    const note = mk("div", "cc-note");
+    note.innerHTML = "<strong>Orientações:</strong><br>" +
+      "• Todas as tarefas devem ser supervisionadas pelo Gerente e pelo Chefe de Cozinha.<br>" +
+      "• Marcar C para Conforme e NC para Não Conforme.<br>" +
+      "• Quando a tarefa estiver marcada como NC, deverá ser solicitada a sua execução novamente.";
+    wrap.appendChild(note);
+
+    const sig = mk("div", "cc-signatures");
+    sig.append(mk("div", "cc-signature", "Assinatura do Gerente"), mk("div", "cc-signature", "Assinatura do Chefe de Cozinha"));
+    wrap.appendChild(sig);
+
+    box.appendChild(wrap);
+  }
+
+  function exportLimpezaPdf() {
+    const api = window.operattoLimpeza;
+    if (!api) return;
+
+    const JsPDF = window.jspdf && window.jspdf.jsPDF;
+    if (!JsPDF) {
+      alert("Biblioteca de PDF indisponível (sem internet). Conecte-se e tente novamente.");
+      return;
+    }
+
+    const mes = dashLimpezaMonth || localStamp().slice(0, 7);
+    const info = limpezaMonthInfo(mes);
+    const registros = api.registros();
+    const resp = api.responsaveis(mes);
+
+    try {
+      const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+      if (typeof doc.autoTable !== "function") {
+        alert("Biblioteca de tabelas do PDF indisponível (sem internet). Conecte-se e tente novamente.");
+        return;
+      }
+
+      const margin = 28;
+      const gridLine = { lineWidth: 0.4, lineColor: [156, 163, 175] };
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(17, 24, 39);
+      doc.text("Operatto - Checklist de Limpeza", margin, 36);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(107, 114, 128);
+      doc.text(info.nome + "   |   Chefe de cozinha: " + (resp.chefe || "____________________") +
+        "   |   Gerente: " + (resp.gerente || "____________________"), margin, 50);
+      doc.text("Gerado em " + new Date().toLocaleString("pt-BR") + (currentUser ? " por " + currentUser : ""), margin, 62);
+
+      const head = ["Setor", "Atividades"];
+      for (let d = 1; d <= info.dias; d++) head.push(String(d));
+
+      const body = [];
+      Object.keys(api.setores).forEach(key => {
+        const setor = api.setores[key];
+        setor.itens.forEach((tarefa, index) => {
+          const line = [];
+          if (index === 0) line.push({ content: setor.nome, rowSpan: setor.itens.length, styles: { fontStyle: "bold", valign: "middle", halign: "center" } });
+          line.push(tarefa);
+          for (let d = 1; d <= info.dias; d++) line.push(limpezaCell(registros, mes, d, key, index));
+          body.push(line);
+        });
+      });
+
+      const dayStyles = {};
+      for (let i = 2; i < head.length; i++) dayStyles[i] = { halign: "center", cellWidth: 16 };
+
+      doc.autoTable({
+        startY: 72,
+        theme: "grid",
+        margin: { left: margin, right: margin, bottom: 55 },
+        head: [head],
+        body: body,
+        styles: Object.assign({ font: "helvetica", fontSize: 6, cellPadding: 1.5, overflow: "linebreak" }, gridLine),
+        headStyles: { fillColor: [17, 24, 39], textColor: 255, halign: "center" },
+        columnStyles: Object.assign({ 0: { cellWidth: 46 }, 1: { cellWidth: 120, halign: "left" } }, dayStyles),
+        didParseCell: function (data) {
+          if (data.section !== "body" || data.column.index < 2) return;
+          const t = data.cell.text && data.cell.text[0];
+          if (t === "C") {
+            data.cell.styles.textColor = [24, 128, 75];
+            data.cell.styles.fillColor = [231, 245, 238];
+            data.cell.styles.fontStyle = "bold";
+          } else if (t === "NC") {
+            data.cell.styles.textColor = [197, 76, 56];
+            data.cell.styles.fillColor = [255, 240, 237];
+            data.cell.styles.fontStyle = "bold";
+          }
+        }
+      });
+
+      const h0 = doc.internal.pageSize.getHeight();
+      let y = doc.lastAutoTable.finalY + 30;
+      if (y > h0 - 60) {
+        doc.addPage();
+        y = 70;
+      }
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(17, 24, 39);
+      doc.text("Assinatura do Gerente: ______________________________", margin, y);
+      doc.text("Assinatura do Chefe de Cozinha: ______________________________", margin + 380, y);
+      doc.setFontSize(7);
+      doc.setTextColor(107, 114, 128);
+      doc.text("C = Conforme   |   NC = Não conforme (solicitar que a tarefa seja refeita)   |   Em branco = não preenchido.", margin, y + 16);
+
+      const pages = doc.internal.getNumberOfPages();
+      const w = doc.internal.pageSize.getWidth();
+      const h = doc.internal.pageSize.getHeight();
+      doc.setFontSize(8);
+      for (let i = 1; i <= pages; i++) {
+        doc.setPage(i);
+        doc.text("Operatto", margin, h - 18);
+        doc.text("Página " + i + " de " + pages, w - margin, h - 18, { align: "right" });
+      }
+
+      doc.save("operatto_limpeza_" + mes + ".pdf");
+    } catch (error) {
+      alert("Não foi possível gerar o PDF.");
+    }
+  }
+
   /* ---------------- Checklist: escolher qual fazer ---------------- */
 
   const CHECKLIST_TITLES = { temperatura: "🌡️ Temperatura", limpeza: "🧽 Limpeza", gerencial: "📋 Gerencial" };
@@ -3822,6 +4109,7 @@
     if (dashTab === "resumo") renderDashSummary(box);
     else if (dashTab === "estoque") renderDashStock(box);
     else if (dashTab === "temperatura") renderDashTemp(box);
+    else if (dashTab === "limpeza") renderDashLimpeza(box);
     else renderDashHistory(box);
   }
 
@@ -4258,7 +4546,7 @@
   })();
 </script>
 <script>
-// Checklist de limpeza: C (conforme) / NC (não conforme) por setor, salvo neste aparelho por conta
+// Checklist de limpeza: C (conforme) / NC (não conforme) por setor e por dia, salvo neste aparelho por conta
 (() => {
   const root = document.getElementById("operatto-limpeza");
   if (!root || root.dataset.ready) return;
@@ -4271,7 +4559,8 @@
     copa: { nome: "Copa", itens: ["Geladeira e freezer (por fora)", "Balcão refrigerado (por fora)", "Máquina de gelo", "Utensílios", "Lixeiras", "Bancadas", "Liquidificadores e espremedores"] }
   };
 
-  let dados = {};
+  // dados = { registros: { "AAAA-MM-DD": { setor: { itens: [], salvo, dataSalvamento } } }, responsaveis: { "AAAA-MM": { chefe, gerente } } }
+  let dados = { registros: {}, responsaveis: {} };
   let atual = null;
 
   const setoresEl = root.querySelector("#lcSetores");
@@ -4280,6 +4569,10 @@
   const titulo = root.querySelector("#lcTitulo");
   const progresso = root.querySelector("#lcProgresso");
 
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function dataLocal(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function hoje() { return dataLocal(new Date()); }
+
   // Cada conta tem o seu próprio registro neste aparelho
   function chave() {
     let uid = "";
@@ -4287,28 +4580,52 @@
     return STORAGE + (uid ? "_" + uid : "");
   }
   function ler() {
-    try { dados = JSON.parse(localStorage.getItem(chave())) || {}; } catch (e) { dados = {}; }
+    let bruto = {};
+    try { bruto = JSON.parse(localStorage.getItem(chave())) || {}; } catch (e) { bruto = {}; }
+    if (bruto.registros) {
+      dados = { registros: bruto.registros, responsaveis: bruto.responsaveis || {} };
+      return;
+    }
+    // Formato antigo (um registro por setor, sem data): passa para o dia em que foi salvo
+    dados = { registros: {}, responsaveis: {} };
+    Object.keys(setores).forEach(k => {
+      const antigo = bruto[k];
+      if (!antigo || !Array.isArray(antigo.itens)) return;
+      const dia = antigo.dataSalvamento ? dataLocal(new Date(antigo.dataSalvamento)) : hoje();
+      if (!dados.registros[dia]) dados.registros[dia] = {};
+      dados.registros[dia][k] = antigo;
+    });
   }
   function persistir() {
     try { localStorage.setItem(chave(), JSON.stringify(dados)); } catch (e) {}
   }
 
-  function respostas() { return (dados[atual] && dados[atual].itens) || []; }
+  // Registro do setor no dia de hoje
+  function registro(k, criar) {
+    const dia = hoje();
+    if (!dados.registros[dia] && criar) dados.registros[dia] = {};
+    const d = dados.registros[dia];
+    if (!d) return null;
+    if (!d[k] && criar) d[k] = { itens: [], salvo: false };
+    return d[k] || null;
+  }
+  function respostas() { const r = registro(atual, false); return (r && r.itens) || []; }
 
   function atualizarProgresso() {
     const total = setores[atual].itens.length;
     const preenchidos = respostas().filter(Boolean).length;
-    progresso.textContent = preenchidos + " de " + total + " itens conferidos";
+    progresso.textContent = "Hoje: " + preenchidos + " de " + total + " itens conferidos";
   }
 
   function renderizarSetores() {
     setoresEl.querySelectorAll("[data-setor]").forEach(botao => {
       const k = botao.dataset.setor;
       const total = setores[k].itens.length;
-      const preenchidos = ((dados[k] && dados[k].itens) || []).filter(Boolean).length;
+      const r = registro(k, false);
+      const preenchidos = ((r && r.itens) || []).filter(Boolean).length;
       const status = botao.querySelector(".lc-status");
-      if (dados[k] && dados[k].salvo) status.textContent = "✓ Setor salvo";
-      else if (preenchidos) status.textContent = preenchidos + "/" + total + " preenchidos";
+      if (r && r.salvo) status.textContent = "✓ Setor salvo hoje";
+      else if (preenchidos) status.textContent = preenchidos + "/" + total + " preenchidos hoje";
       else status.textContent = "";
     });
   }
@@ -4356,9 +4673,9 @@
   }
 
   function marcar(index, valor) {
-    if (!dados[atual]) dados[atual] = { itens: [], salvo: false };
-    dados[atual].itens[index] = valor;
-    dados[atual].salvo = false;
+    const r = registro(atual, true);
+    r.itens[index] = valor;
+    r.salvo = false;
     persistir();
     const y = window.scrollY;
     abrirSetor(atual);
@@ -4375,8 +4692,9 @@
       alert("Preencha todos os itens com C ou NC antes de salvar.");
       return;
     }
-    dados[atual].salvo = true;
-    dados[atual].dataSalvamento = new Date().toISOString();
+    const r = registro(atual, true);
+    r.salvo = true;
+    r.dataSalvamento = new Date().toISOString();
     persistir();
     alert("Setor salvo com sucesso!");
     mostrarSetores();
@@ -4386,6 +4704,19 @@
   document.querySelectorAll('.module[data-check="limpeza"]').forEach(b => {
     b.addEventListener("click", () => { ler(); mostrarSetores(); });
   });
+
+  // Usado pelo Dashboard (tabela mensal e PDF)
+  window.operattoLimpeza = {
+    setores: setores,
+    registros: () => { ler(); return dados.registros; },
+    responsaveis: mes => { ler(); return (dados.responsaveis && dados.responsaveis[mes]) || { chefe: "", gerente: "" }; },
+    salvarResponsaveis: (mes, valores) => {
+      ler();
+      if (!dados.responsaveis) dados.responsaveis = {};
+      dados.responsaveis[mes] = valores;
+      persistir();
+    }
+  };
 
   ler();
   renderizarSetores();
