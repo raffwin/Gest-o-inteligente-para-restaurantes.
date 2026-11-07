@@ -275,6 +275,83 @@
       button:not(.link-btn) { --alpha: 1; -webkit-backdrop-filter: none; backdrop-filter: none; }
       .back-btn, .tab, .btn-cancel, .btn-remove, .btn-edit, .module { --alpha: 1; }
     }
+    /* ===== Tela: Visão geral (painel escuro com menu lateral) ===== */
+    #overviewView {
+      --ov-bg: #101418; --ov-panel: #191f25; --ov-panel2: #202830; --ov-border: #2a343c;
+      --ov-text: #edf2f4; --ov-muted: #89959e; --ov-green: #65b98b;
+      position: fixed; inset: 0; z-index: 100; overflow-y: auto;
+      background: var(--ov-bg); color: var(--ov-text);
+    }
+    #overviewView[hidden] { display: none; }
+    #overviewView, #overviewView * { box-sizing: border-box; }
+    #overviewView .ov-app { display: flex; min-height: 100%; }
+    #overviewView .ov-sidebar { width: 245px; flex-shrink: 0; background: #151b20; border-right: 1px solid var(--ov-border); padding: 28px 18px; display: flex; flex-direction: column; }
+    #overviewView .ov-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 45px; padding-left: 8px; }
+    #overviewView .ov-logo { width: 39px; height: 39px; border: 1.5px solid var(--ov-green); border-radius: 12px; display: grid; place-items: center; animation: ovLogoPulse 3s ease-in-out infinite; }
+    #overviewView .ov-logo svg { width: 24px; height: 24px; stroke: var(--ov-green); stroke-width: 1.7; fill: none; stroke-dasharray: 80; stroke-dashoffset: 80; animation: ovDraw 2s ease forwards; }
+    @keyframes ovDraw { to { stroke-dashoffset: 0; } }
+    @keyframes ovLogoPulse { 50% { box-shadow: 0 0 17px #65b98b30; } }
+    #overviewView .ov-brand-name { font-size: 21px; font-weight: 750; letter-spacing: -1px; }
+    #overviewView .ov-brand-name span { color: var(--ov-green); }
+    #overviewView .ov-nav-label { color: #65717b; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; margin: 0 0 13px 12px; }
+    #overviewView .ov-nav { display: flex; flex-direction: column; gap: 5px; }
+    #overviewView .ov-nav a { color: #98a4ac; text-decoration: none; padding: 12px; border-radius: 8px; display: flex; align-items: center; gap: 13px; font-size: 13px; transition: .2s; cursor: pointer; }
+    #overviewView .ov-nav a:hover, #overviewView .ov-nav a.active { background: #26332f; color: var(--ov-green); }
+    #overviewView svg.ov-ico, #overviewView .ov-nav svg, #overviewView .ov-action svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    #overviewView .ov-nav svg { width: 18px; height: 18px; }
+    #overviewView .ov-main { flex: 1; min-width: 0; }
+    #overviewView .ov-topbar { height: 76px; padding: 0 35px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--ov-border); }
+    #overviewView .ov-page-title { font-size: 15px; font-weight: 600; }
+    #overviewView .ov-user { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--ov-muted); }
+    #overviewView .ov-avatar { width: 34px; height: 34px; border-radius: 50%; background: #30483d; display: grid; place-items: center; color: var(--ov-green); font-weight: 700; }
+    #overviewView .ov-content { padding: 35px; max-width: 1450px; margin: auto; }
+    #overviewView .ov-welcome { margin-bottom: 30px; }
+    #overviewView .ov-welcome h1 { font-size: 25px; letter-spacing: -.7px; margin-bottom: 8px; }
+    #overviewView .ov-welcome p { color: var(--ov-muted); font-size: 13px; }
+    #overviewView .ov-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 25px; }
+    #overviewView .ov-card { background: var(--ov-panel); border: 1px solid var(--ov-border); border-radius: 12px; padding: 21px; transition: .2s; }
+    #overviewView .ov-card:hover { border-color: #52645a; transform: translateY(-2px); }
+    #overviewView .ov-card-label { color: var(--ov-muted); font-size: 12px; margin-bottom: 17px; }
+    #overviewView .ov-card-value { font-size: 27px; font-weight: 650; letter-spacing: -1px; }
+    #overviewView .ov-card-info { color: var(--ov-green); font-size: 11px; margin-top: 12px; }
+    #overviewView .ov-panels { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; }
+    #overviewView .ov-panel { background: var(--ov-panel); border: 1px solid var(--ov-border); border-radius: 12px; padding: 23px; }
+    #overviewView .ov-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    #overviewView .ov-panel-header h3 { font-size: 14px; font-weight: 600; }
+    #overviewView .ov-panel-header span { color: var(--ov-muted); font-size: 11px; }
+    #overviewView .ov-movement { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--ov-border); }
+    #overviewView .ov-movement:last-child { border: none; }
+    #overviewView .ov-movement strong { display: block; font-size: 12px; margin-bottom: 5px; }
+    #overviewView .ov-movement small { color: var(--ov-muted); font-size: 10px; }
+    #overviewView .ov-status { color: var(--ov-green); font-size: 11px; }
+    #overviewView .ov-empty { color: var(--ov-muted); font-size: 12px; padding: 10px 0; }
+    #overviewView .ov-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    /* Botões do painel: vidro escuro (sobrescreve o vidro verde padrão) */
+    #overviewView button.ov-action, #overviewView button.ov-back {
+      --tint: 32 40 48; --alpha: .6; color: var(--ov-text);
+      border: 1px solid var(--ov-border) !important; border-radius: 9px;
+      padding: 17px 12px; font-size: 12px; text-align: left; cursor: pointer; transition: .2s;
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / .08);
+    }
+    #overviewView button.ov-action:hover:not(:disabled), #overviewView button.ov-back:hover:not(:disabled) {
+      --alpha: .85; border-color: var(--ov-green) !important; color: var(--ov-green);
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / .12);
+    }
+    #overviewView .ov-action svg { width: 19px; height: 19px; display: block; margin-bottom: 13px; }
+    #overviewView button.ov-back { padding: 9px 14px; width: auto; }
+    @media (max-width: 950px) {
+      #overviewView .ov-stats { grid-template-columns: repeat(2, 1fr); }
+      #overviewView .ov-panels { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 650px) {
+      #overviewView .ov-sidebar { display: none; }
+      #overviewView .ov-topbar { padding: 0 18px; }
+      #overviewView .ov-content { padding: 24px 16px; }
+      #overviewView .ov-welcome h1 { font-size: 22px; }
+      #overviewView .ov-stats { gap: 10px; }
+      #overviewView .ov-card { padding: 15px; }
+      #overviewView .ov-card-value { font-size: 23px; }
+    }
   </style>
   <!-- xlsx-js-style: mesma API do SheetJS, mas aceita bordas e estilos nas células -->
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -526,12 +603,72 @@
   </div>
   <!-- ===== Fim da tela: Estoque ===== -->
 
+  <!-- ===== Tela: Visão geral ===== -->
+  <div class="view" id="overviewView" hidden>
+  <div class="ov-app">
+    <aside class="ov-sidebar">
+      <div class="ov-brand">
+        <div class="ov-logo"><svg viewBox="0 0 24 24"><path d="M5 18V6L19 18V6"/><path d="M5 6L19 18"/></svg></div>
+        <div class="ov-brand-name">operat<span>to</span></div>
+      </div>
+      <div class="ov-nav-label">GESTÃO</div>
+      <nav class="ov-nav">
+        <a class="active" data-go="overview"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Visão geral</a>
+        <a data-go="stock"><svg viewBox="0 0 24 24"><path d="M4 7h16v14H4z"/><path d="M4 11h16M9 7V4h6v3"/></svg>Estoque</a>
+        <a data-go="checklist"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Checklist</a>
+        <a data-go="dashboard"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Relatórios</a>
+        <a data-go="home"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Menu e conta</a>
+      </nav>
+    </aside>
+    <div class="ov-main">
+      <div class="ov-topbar">
+        <button type="button" class="ov-back" data-go="home">← Menu</button>
+        <div class="ov-page-title">Visão geral</div>
+        <div class="ov-user"><span id="ovUserName">Administrador</span><div class="ov-avatar" id="ovAvatar">A</div></div>
+      </div>
+      <section class="ov-content">
+        <div class="ov-welcome">
+          <h1>Painel de controle</h1>
+          <p>Acompanhe o desempenho da sua operação.</p>
+        </div>
+        <div class="ov-stats">
+          <div class="ov-card"><div class="ov-card-label">Produtos cadastrados</div><div class="ov-card-value" id="ovProducts">–</div><div class="ov-card-info">Cadastro de produtos</div></div>
+          <div class="ov-card"><div class="ov-card-label">Entradas do mês</div><div class="ov-card-value" id="ovIn">–</div><div class="ov-card-info">Movimentações registradas</div></div>
+          <div class="ov-card"><div class="ov-card-label">Saídas e perdas</div><div class="ov-card-value" id="ovOut">–</div><div class="ov-card-info">Ajustes negativos no mês</div></div>
+          <div class="ov-card"><div class="ov-card-label">Itens para pedir</div><div class="ov-card-value" id="ovOrder">–</div><div class="ov-card-info">Abaixo do estoque alvo</div></div>
+        </div>
+        <div class="ov-panels">
+          <div class="ov-panel">
+            <div class="ov-panel-header"><h3>Movimentações recentes</h3><span>Últimos registros</span></div>
+            <div id="ovRecent"></div>
+          </div>
+          <div class="ov-panel">
+            <div class="ov-panel-header"><h3>Acesso rápido</h3><span>Atalhos</span></div>
+            <div class="ov-actions">
+              <button type="button" class="ov-action" data-go="stock"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Novo produto</button>
+              <button type="button" class="ov-action" data-go="stock"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 12h14"/></svg>Registrar entrada</button>
+              <button type="button" class="ov-action" data-go="stock"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Contar estoque</button>
+              <button type="button" class="ov-action" data-go="dashboard"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8"/></svg>Consultar relatórios</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  </div>
+  <!-- ===== Fim da tela: Visão geral ===== -->
+
   <!-- ===== Tela: Menu inicial ===== -->
   <div class="view" id="homeView">
   <h2>O que você quer fazer?</h2>
   <p>Escolha uma área para abrir.</p>
 
   <div class="modules">
+    <button type="button" class="module" data-view="overview">
+      <span class="module-icon">🧭</span>
+      <strong>Visão geral</strong>
+      <span>Painel com os números da operação</span>
+    </button>
     <button type="button" class="module" data-view="stock">
       <span class="module-icon">📦</span>
       <strong>Estoque</strong>
@@ -1039,16 +1176,65 @@
   function showScreen(name) {
     if (name === "stock") resetStockScreen();
     if (name === "checklist") resetChecklistScreen();
-    ["home", "stock", "checklist", "dashboard"].forEach(n => {
+    ["home", "stock", "checklist", "dashboard", "overview"].forEach(n => {
       document.getElementById(n + "View").hidden = n !== name;
     });
     if (name === "dashboard") renderDashboard();
+    if (name === "overview") renderOverview();
     window.scrollTo(0, 0);
   }
 
   document.querySelectorAll(".module[data-view]").forEach(btn => {
     btn.addEventListener("click", () => showScreen(btn.dataset.view));
   });
+  // Painel "Visão geral": números reais, lidos dos mesmos dados do Estoque
+  function renderOverview() {
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    const nm = currentUser || "Administrador";
+    set("ovUserName", nm);
+    set("ovAvatar", nm.trim().charAt(0).toUpperCase() || "A");
+
+    const recent = document.getElementById("ovRecent");
+    if (!recent) return;
+    recent.replaceChildren();
+    if (!dataReady) {
+      ["ovProducts", "ovIn", "ovOut", "ovOrder"].forEach(id => set(id, "–"));
+      recent.appendChild(mk("div", "ov-empty", "Carregando dados da nuvem..."));
+      return;
+    }
+
+    const rows = buildRows("");
+    const now = new Date();
+    const inMonth = m => {
+      const d = new Date(m.date);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    };
+    set("ovProducts", rows.length);
+    set("ovIn", movements.filter(m => m.type === "entrada" && inMonth(m)).length);
+    set("ovOut", movements.filter(m => m.type === "ajuste" && Number(m.delta) < 0 && inMonth(m)).length);
+    set("ovOrder", rows.filter(r => r.pedido > 0).length);
+
+    const last = movements.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+    if (last.length === 0) {
+      recent.appendChild(mk("div", "ov-empty", "Nenhuma movimentação ainda."));
+      return;
+    }
+    last.forEach(m => {
+      const row = mk("div", "ov-movement");
+      const info = mk("div");
+      info.appendChild(mk("strong", "", m.product));
+      const when = new Date(m.date).toLocaleDateString("pt-BR");
+      info.appendChild(mk("small", "", (m.employee ? m.employee + " • " : "") + when));
+      const label = m.type === "entrada" ? "Entrada" : (Number(m.delta) < 0 ? "Saída" : "Contagem");
+      row.append(info, mk("span", "ov-status", label));
+      recent.appendChild(row);
+    });
+  }
+
+  document.querySelectorAll("#overviewView [data-go]").forEach(el => {
+    el.addEventListener("click", () => showScreen(el.dataset.go));
+  });
+
   document.querySelectorAll("[data-back]").forEach(btn => {
     btn.addEventListener("click", () => showScreen("home"));
   });
@@ -1983,6 +2169,7 @@
     renderTemp();
 
     if (!document.getElementById("dashboardView").hidden) renderDashboard();
+    if (!document.getElementById("overviewView").hidden) renderOverview();
   }
 
   function buildRows(group) {
