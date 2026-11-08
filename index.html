@@ -323,6 +323,40 @@
       .cleaning-checklist .cc-responsibles { grid-template-columns: 1fr; }
     }
     @media (max-width: 360px) { #operatto-limpeza .lc-lista { grid-template-columns: 1fr; } }
+
+    /* ----- Termos de uso ----- */
+    .terms-overlay { position: fixed; inset: 0; z-index: 999999; background: #0F1114; display: flex; align-items: center; justify-content: center; padding: 20px; color: var(--text); }
+    .terms-container { width: 100%; max-width: 680px; max-height: 94vh; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 30px 100px #0009; }
+    .terms-header { padding: 20px 26px; display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .terms-brand { display: flex; align-items: center; gap: 12px; }
+    .terms-logo { width: 38px; height: 38px; flex-shrink: 0; }
+    .terms-brand strong { display: block; font-family: "Manrope", sans-serif; font-size: 15px; letter-spacing: 2px; }
+    .terms-brand small { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; letter-spacing: 1.3px; }
+    .terms-version { font-size: 10px; color: var(--muted); border: 1px solid var(--border); padding: 7px 10px; border-radius: 5px; white-space: nowrap; }
+    .terms-content { padding: 28px 30px 22px; overflow-y: auto; }
+    .terms-eyebrow { font-size: 10px; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+    .terms-content h1 { font-family: "Manrope", sans-serif; font-size: clamp(26px, 5vw, 36px); line-height: 1.15; letter-spacing: -1px; margin: 14px 0 10px; }
+    .terms-description { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 0 0 22px; }
+    .terms-scroll { background: #15181B; border: 1px solid var(--border); border-radius: 7px; padding: 20px; max-height: 310px; overflow-y: auto; }
+    .terms-scroll h3 { color: var(--text); font-size: 13px; margin: 0 0 7px; }
+    .terms-scroll p { font-size: 12px; line-height: 1.75; color: var(--muted); margin: 0 0 20px; }
+    .terms-scroll .terms-date { color: #717782; margin-bottom: 0; }
+    .terms-checkbox { display: flex; align-items: flex-start; gap: 12px; margin: 22px 0; cursor: pointer; font-size: 12px; line-height: 1.6; color: #C3C8CE; position: relative; }
+    .terms-checkbox input { position: absolute; opacity: 0; pointer-events: none; width: auto; margin: 0; }
+    .custom-check { flex-shrink: 0; width: 18px; height: 18px; border: 1px solid #52606E; border-radius: 4px; margin-top: 1px; background: #15181B; }
+    .terms-checkbox input:focus-visible + .custom-check { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .terms-checkbox input:checked + .custom-check { background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2315181B' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 14px no-repeat; border-color: var(--accent); }
+    #terms-accept { width: 100%; padding: 16px; border-radius: 6px; font-weight: 800; font-size: 11px; letter-spacing: 1.3px; display: flex; justify-content: space-between; align-items: center; }
+    #terms-accept svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    #terms-accept:disabled { opacity: .45; }
+    .terms-footer { color: #5B6470; font-size: 9px; letter-spacing: 1.5px; text-align: center; margin: 20px 0 0; }
+    @media (max-width: 600px) {
+      .terms-overlay { padding: 8px; }
+      .terms-container { max-height: 96vh; }
+      .terms-header { padding: 16px; }
+      .terms-content { padding: 22px 18px; }
+      .terms-scroll { max-height: 38vh; padding: 15px; }
+    }
   </style>
   <!-- xlsx-js-style: mesma API do SheetJS, mas aceita bordas e estilos nas células -->
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -331,6 +365,86 @@
 </head>
 
 <body>
+
+<!-- Termos de uso e responsabilidade -->
+<div id="operatto-terms" class="terms-overlay" role="dialog" aria-modal="true" aria-labelledby="terms-title">
+  <div class="terms-container">
+    <div class="terms-header">
+      <div class="terms-brand">
+        <svg class="terms-logo" viewBox="0 0 48 48" fill="none" role="img" aria-label="Logo do Operatto"><path d="M8 34V14L24 5L40 14V34L24 43L8 34Z" stroke="#56899A" stroke-width="2"/><path d="M17 30V18L24 14L31 18V30L24 34L17 30Z" stroke="#F0F1F3" stroke-width="2"/><path d="M24 14V34M17 18L31 30" stroke="#56899A" stroke-width="1.5"/></svg>
+        <div>
+          <strong>OPERATTO</strong>
+          <small>PLATAFORMA DE GESTÃO</small>
+        </div>
+      </div>
+      <span class="terms-version">VERSÃO 1.0</span>
+    </div>
+
+    <div class="terms-content">
+      <span class="terms-eyebrow">DOCUMENTAÇÃO LEGAL</span>
+      <h1 id="terms-title">Termos de uso e<br>responsabilidade</h1>
+      <p class="terms-description">
+        Leia atentamente as condições de utilização da plataforma
+        antes de continuar.
+      </p>
+
+      <div class="terms-scroll" tabindex="0">
+        <h3>01. Finalidade da plataforma</h3>
+        <p>O OPERATTO é uma ferramenta digital de apoio à gestão empresarial, organização de rotinas, controle de estoque e acompanhamento de processos operacionais. A plataforma não substitui a administração ou fiscalização da empresa.</p>
+
+        <h3>02. Responsabilidade da empresa</h3>
+        <p>A empresa contratante é responsável pela veracidade dos dados inseridos, supervisão dos colaboradores, execução dos procedimentos internos e conferência das informações registradas.</p>
+
+        <h3>03. Responsabilidade dos usuários</h3>
+        <p>Cada usuário deve utilizar sua conta de maneira individual e responsável, mantendo suas credenciais protegidas e evitando acessos não autorizados.</p>
+
+        <h3>04. Checklists operacionais</h3>
+        <p>O preenchimento de checklists não comprova, isoladamente, que uma atividade foi executada corretamente. A fiscalização e validação dos procedimentos permanecem sob responsabilidade da empresa.</p>
+
+        <h3>05. Controle de estoque</h3>
+        <p>Os registros de estoque possuem finalidade auxiliar. A conferência física, movimentações, perdas, descartes e ajustes devem ser realizados e validados pela empresa.</p>
+
+        <h3>06. Disponibilidade do sistema</h3>
+        <p>Poderão ocorrer interrupções para manutenção, atualizações, falhas de infraestrutura, conexão ou serviços externos. Serão adotadas medidas razoáveis para restabelecer o funcionamento.</p>
+
+        <h3>07. Limitação de responsabilidade</h3>
+        <p>Na extensão permitida pela legislação, o responsável pela plataforma não assume responsabilidade por informações incorretas inseridas pelos usuários, decisões administrativas da empresa ou falhas decorrentes de fatores externos fora de seu controle razoável. Esta disposição não afasta responsabilidades legais que não possam ser excluídas.</p>
+
+        <h3>08. Proteção de dados — LGPD</h3>
+        <p>O tratamento de dados pessoais deverá observar a Lei nº 13.709/2018 (LGPD), incluindo os princípios de finalidade, necessidade, segurança e transparência. As responsabilidades de cada parte serão definidas conforme sua atuação no tratamento dos dados.</p>
+
+        <h3>09. Segurança e acesso</h3>
+        <p>É proibida qualquer tentativa de invasão, exploração de vulnerabilidades, manipulação indevida ou comprometimento da segurança da plataforma.</p>
+
+        <h3>10. Propriedade intelectual</h3>
+        <p>Os componentes próprios do OPERATTO, incluindo identidade visual, marca, interface e funcionalidades, são protegidos pela legislação aplicável.</p>
+
+        <h3>11. Atualizações</h3>
+        <p>Os termos poderão ser atualizados. Alterações relevantes poderão exigir novo aceite dos usuários.</p>
+
+        <h3>12. Legislação aplicável</h3>
+        <p>Aplicam-se as leis brasileiras, incluindo o Código Civil, o Código de Defesa do Consumidor quando aplicável e a Lei Geral de Proteção de Dados.</p>
+
+        <p class="terms-date">Última atualização: 08/11/2026</p>
+      </div>
+
+      <label class="terms-checkbox">
+        <input type="checkbox" id="terms-check">
+        <span class="custom-check"></span>
+        <span>Li e concordo com os Termos de Uso e Responsabilidade do OPERATTO.</span>
+      </label>
+
+      <button type="button" id="terms-accept" disabled>
+        ACEITAR E CONTINUAR
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+
+      <p class="terms-footer">
+        OPERATTO · GESTÃO COM RESPONSABILIDADE
+      </p>
+    </div>
+  </div>
+</div>
 
 <div class="app">
 <div class="scrim" id="scrim"></div>
@@ -4551,6 +4665,49 @@
   renderizarSetores();
 })();
 </script>
+<script>
+// Termos de uso: aparece na primeira abertura (e quando a versão dos termos mudar)
+(function () {
+  const VERSION = "1.0";
+  const STORAGE_KEY = "operatto_terms_acceptance";
+  const overlay = document.getElementById("operatto-terms");
+  const checkbox = document.getElementById("terms-check");
+  const button = document.getElementById("terms-accept");
+  const app = document.querySelector(".app");
+  if (!overlay || !checkbox || !button) return;
+
+  try {
+    const accepted = localStorage.getItem(STORAGE_KEY);
+    if (accepted) {
+      const data = JSON.parse(accepted);
+      if (data && data.version === VERSION) {
+        overlay.remove();
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn("Registro de aceite inválido.");
+  }
+
+  // Enquanto os termos estão abertos, o resto do app fica inacessível
+  if (app) app.inert = true;
+  button.focus({ preventScroll: true });
+
+  checkbox.addEventListener("change", function () {
+    button.disabled = !checkbox.checked;
+  });
+
+  button.addEventListener("click", function () {
+    if (!checkbox.checked) return;
+    const acceptance = { version: VERSION, acceptedAt: new Date().toISOString(), accepted: true };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(acceptance)); } catch (error) {}
+    overlay.remove();
+    if (app) app.inert = false;
+    window.dispatchEvent(new CustomEvent("operatto:terms-accepted", { detail: acceptance }));
+  });
+})();
+</script>
+
 
 
 </body>
