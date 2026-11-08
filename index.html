@@ -531,6 +531,9 @@
     #operatto-limpeza .lc-opcoes .lc-nc.ativo { --tint: 220 85 85; --alpha: .2; border-color: #dc5555 !important; color: #ff8585; }
     #operatto-limpeza .lc-legenda { color: var(--lc-muted); font-size: 12px; margin-top: 16px; line-height: 1.5; }
     #operatto-limpeza .lc-acoes { display: flex; justify-content: flex-end; margin-top: 20px; }
+    #operatto-limpeza .lc-geral { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+    #operatto-limpeza .lc-geral button { flex: 1 1 180px; }
+    #operatto-limpeza .lc-topo-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
     #operatto-limpeza button.lc-salvar { --tint: 77 152 113; --alpha: .9; border: 1px solid #65b98b !important; color: #fff; border-radius: 9px; padding: 12px 22px; font-weight: 700; cursor: pointer; }
     @media (max-width: 700px) {
       #operatto-limpeza .lc-setores { grid-template-columns: 1fr; }
@@ -1038,13 +1041,22 @@
       <button type="button" class="lc-setor" data-setor="copa"><strong>Copa</strong><small>Limpeza e organização</small><span class="lc-status"></span></button>
     </div>
 
+    <div class="lc-geral" id="lcGeral">
+      <button type="button" class="lc-salvar" id="lcSalvarTudo">💾 Salvar checklist</button>
+      <button type="button" class="lc-voltar" id="lcPdfHoje">📄 Gerar PDF</button>
+    </div>
+    <div class="lc-legenda" id="lcGeralInfo">Salve o checklist e, na sequência, escolha gerar o PDF preenchido com a aferição anterior.</div>
+
     <div class="lc-painel" id="lcPainel">
       <div class="lc-topo">
         <div>
           <h3 id="lcTitulo"></h3>
           <div class="lc-progresso" id="lcProgresso"></div>
         </div>
-        <button type="button" class="lc-voltar" id="lcVoltar">← Voltar</button>
+        <div class="lc-topo-botoes">
+          <button type="button" class="lc-voltar" id="lcVoltar">← Voltar</button>
+          <button type="button" class="lc-salvar" id="lcSalvarTopo">💾 Salvar setor</button>
+        </div>
       </div>
       <div class="lc-lista" id="lcLista"></div>
       <div class="lc-legenda">
@@ -4662,6 +4674,8 @@
 
   const setoresEl = root.querySelector("#lcSetores");
   const painel = root.querySelector("#lcPainel");
+  const geralEl = root.querySelector("#lcGeral");
+  const geralInfo = root.querySelector("#lcGeralInfo");
   const lista = root.querySelector("#lcLista");
   const titulo = root.querySelector("#lcTitulo");
   const progresso = root.querySelector("#lcProgresso");
@@ -4730,6 +4744,8 @@
   function mostrarSetores() {
     painel.style.display = "none";
     setoresEl.style.display = "grid";
+    geralEl.style.display = "flex";
+    geralInfo.style.display = "block";
     atual = null;
     renderizarSetores();
   }
@@ -4738,6 +4754,8 @@
     atual = k;
     titulo.textContent = setores[k].nome;
     setoresEl.style.display = "none";
+    geralEl.style.display = "none";
+    geralInfo.style.display = "none";
     painel.style.display = "block";
     lista.replaceChildren();
 
@@ -4782,7 +4800,17 @@
   setoresEl.querySelectorAll("[data-setor]").forEach(b => b.addEventListener("click", () => abrirSetor(b.dataset.setor)));
   root.querySelector("#lcVoltar").addEventListener("click", mostrarSetores);
 
-  root.querySelector("#lcSalvar").addEventListener("click", () => {
+  // Pergunta se quer o PDF (preenchido, com a aferição anterior) da quinzena de hoje
+  function oferecerPdf(mensagem) {
+    const dia = hoje();
+    if (confirm(mensagem + "\n\nDeseja gerar o PDF agora? Ele sairá preenchido e com a aferição anterior.")) {
+      if (typeof window.exportLimpezaPdf === "function") {
+        window.exportLimpezaPdf(dia.slice(0, 7), Number(dia.slice(8, 10)) <= 15 ? 1 : 2);
+      }
+    }
+  }
+
+  function salvarSetorAtual() {
     const total = setores[atual].itens.length;
     const preenchidos = respostas().filter(Boolean).length;
     if (preenchidos !== total) {
@@ -4794,9 +4822,44 @@
     r.dataSalvamento = new Date().toISOString();
     persistir();
     mostrarSetores();
+    oferecerPdf("Setor salvo com sucesso!");
+  }
+  root.querySelector("#lcSalvar").addEventListener("click", salvarSetorAtual);
+  root.querySelector("#lcSalvarTopo").addEventListener("click", salvarSetorAtual);
+
+  // Salva o checklist inteiro (todos os setores que já têm marcações hoje)
+  root.querySelector("#lcSalvarTudo").addEventListener("click", () => {
+    let algum = false;
+    const faltando = [];
+    Object.keys(setores).forEach(k => {
+      const r = registro(k, false);
+      const n = ((r && r.itens) || []).filter(Boolean).length;
+      if (!n) return;
+      algum = true;
+      const total = setores[k].itens.length;
+      if (n === total) {
+        r.salvo = true;
+        r.dataSalvamento = new Date().toISOString();
+      } else {
+        r.salvo = false;
+        faltando.push(setores[k].nome + " (" + n + "/" + total + ")");
+      }
+    });
+    if (!algum) {
+      alert("Marque pelo menos um item (C ou NC) antes de salvar o checklist.");
+      return;
+    }
+    persistir();
+    renderizarSetores();
+    oferecerPdf(faltando.length
+      ? "Checklist salvo! Setores ainda incompletos: " + faltando.join(", ") + "."
+      : "Checklist salvo com sucesso!");
+  });
+
+  // Gerar o PDF direto da tela do checklist (usa o que já está marcado hoje)
+  root.querySelector("#lcPdfHoje").addEventListener("click", () => {
     const dia = hoje();
-    const querPdf = confirm("Setor salvo com sucesso!\n\nDeseja gerar o PDF agora? Ele sairá com a aferição anterior.");
-    if (querPdf && typeof window.exportLimpezaPdf === "function") {
+    if (typeof window.exportLimpezaPdf === "function") {
       window.exportLimpezaPdf(dia.slice(0, 7), Number(dia.slice(8, 10)) <= 15 ? 1 : 2);
     }
   });
