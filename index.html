@@ -531,9 +531,6 @@
     #operatto-limpeza .lc-opcoes .lc-nc.ativo { --tint: 220 85 85; --alpha: .2; border-color: #dc5555 !important; color: #ff8585; }
     #operatto-limpeza .lc-legenda { color: var(--lc-muted); font-size: 12px; margin-top: 16px; line-height: 1.5; }
     #operatto-limpeza .lc-acoes { display: flex; justify-content: flex-end; margin-top: 20px; }
-    #operatto-limpeza .lc-geral { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
-    #operatto-limpeza .lc-geral button { flex: 1 1 180px; }
-    #operatto-limpeza .lc-topo-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
     #operatto-limpeza button.lc-salvar { --tint: 77 152 113; --alpha: .9; border: 1px solid #65b98b !important; color: #fff; border-radius: 9px; padding: 12px 22px; font-weight: 700; cursor: pointer; }
     @media (max-width: 700px) {
       #operatto-limpeza .lc-setores { grid-template-columns: 1fr; }
@@ -1041,22 +1038,13 @@
       <button type="button" class="lc-setor" data-setor="copa"><strong>Copa</strong><small>Limpeza e organização</small><span class="lc-status"></span></button>
     </div>
 
-    <div class="lc-geral" id="lcGeral">
-      <button type="button" class="lc-salvar" id="lcSalvarTudo">💾 Salvar checklist</button>
-      <button type="button" class="lc-voltar" id="lcPdfHoje">📄 Gerar PDF</button>
-    </div>
-    <div class="lc-legenda" id="lcGeralInfo">Salve o checklist e, na sequência, escolha gerar o PDF preenchido com a aferição anterior.</div>
-
     <div class="lc-painel" id="lcPainel">
       <div class="lc-topo">
         <div>
           <h3 id="lcTitulo"></h3>
           <div class="lc-progresso" id="lcProgresso"></div>
         </div>
-        <div class="lc-topo-botoes">
-          <button type="button" class="lc-voltar" id="lcVoltar">← Voltar</button>
-          <button type="button" class="lc-salvar" id="lcSalvarTopo">💾 Salvar setor</button>
-        </div>
+        <button type="button" class="lc-voltar" id="lcVoltar">← Voltar</button>
       </div>
       <div class="lc-lista" id="lcLista"></div>
       <div class="lc-legenda">
@@ -3412,7 +3400,6 @@
   /* ---------------- Dashboard: checklist de limpeza (tabela do mês) ---------------- */
 
   let dashLimpezaMonth = "";
-  let dashLimpezaQuinz = 0; // 1 = dias 1 a 15 | 2 = dia 16 ao fim do mês (0 = quinzena de hoje)
   const MESES_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
   function limpezaMonthInfo(mes) {
@@ -3457,29 +3444,10 @@
       renderDashboard();
     });
     w1.appendChild(monthInput);
-
-    const w2 = mk("div");
-    w2.appendChild(mk("label", "", "Quinzena do PDF"));
-    const quinzSel = document.createElement("select");
-    quinzSel.style.marginBottom = "0";
-    [{ value: "1", label: "Dias 1 a 15" }, { value: "2", label: "Dia 16 ao fim do mês" }].forEach(o => {
-      const opt = document.createElement("option");
-      opt.value = o.value;
-      opt.textContent = o.label;
-      quinzSel.appendChild(opt);
-    });
-    if (!dashLimpezaQuinz) dashLimpezaQuinz = Number(hoje.slice(8, 10)) <= 15 ? 1 : 2;
-    quinzSel.value = String(dashLimpezaQuinz);
-    quinzSel.addEventListener("change", () => { dashLimpezaQuinz = Number(quinzSel.value); });
-    w2.appendChild(quinzSel);
-
-    row.append(w1, w2);
+    const pdfBtn = actionBtn("📄 Gerar PDF", "", exportLimpezaPdf);
+    pdfBtn.style.cssText = "width:auto;flex:none;align-self:flex-end;margin:0";
+    row.append(w1, pdfBtn);
     controls.appendChild(row);
-
-    const pdfBtn = actionBtn("📄 Gerar PDF", "", () => exportLimpezaPdf(dashLimpezaMonth, dashLimpezaQuinz));
-    pdfBtn.style.cssText = "width:auto;margin-top:10px";
-    controls.appendChild(pdfBtn);
-    controls.appendChild(mk("div", "hint", "O PDF sai no modelo A3 com a quinzena escolhida e, em seguida, a aferição anterior."));
     box.appendChild(controls);
 
     const wrap = mk("section", "section cleaning-checklist");
@@ -3580,118 +3548,7 @@
     box.appendChild(wrap);
   }
 
-  // Quinzena: 1 = dias 1 a 15 | 2 = dia 16 até o último dia do mês
-  function limpezaQuinzena(mes, quinz) {
-    const info = limpezaMonthInfo(mes);
-    const ini = quinz === 1 ? 1 : 16;
-    const fim = quinz === 1 ? 15 : info.dias;
-    const dias = [];
-    for (let d = ini; d <= fim; d++) dias.push(d);
-    return { mes: mes, info: info, quinz: quinz, dias: dias };
-  }
-
-  // Quinzena imediatamente anterior (a 2ª olha a 1ª do mesmo mês; a 1ª olha a 2ª do mês passado)
-  function limpezaQuinzenaAnterior(q) {
-    if (q.quinz === 2) return limpezaQuinzena(q.mes, 1);
-    let ano = q.info.ano;
-    let m = q.info.mes - 1;
-    if (m === 0) { m = 12; ano--; }
-    return limpezaQuinzena(ano + "-" + String(m).padStart(2, "0"), 2);
-  }
-
-  // Há algum C ou NC salvo nessa quinzena?
-  function limpezaTemRegistro(api, registros, q) {
-    return Object.keys(api.setores).some(key =>
-      api.setores[key].itens.some((t, index) =>
-        q.dias.some(d => limpezaCell(registros, q.mes, d, key, index))
-      )
-    );
-  }
-
-  function limpezaCelulaPdf(v) {
-    if (v === "C") return "C (X) NC ( )";
-    if (v === "NC") return "C ( ) NC (X)";
-    return "C ( ) NC ( )";
-  }
-
-  function limpezaCabecalhoPdf(doc, titulo, q, resp) {
-    const linha = "__________________________";
-    doc.setTextColor(35, 35, 35);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(19);
-    doc.text(titulo, 210, 15, { align: "center" });
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text("MÊS: " + MESES_PT[q.info.mes - 1].toUpperCase(), 12, 26);
-    doc.text("CHEFE DE COZINHA: " + (resp.chefe || linha), 105, 26);
-    doc.text("GERENTE: " + (resp.gerente || linha), 270, 26);
-
-    doc.setFontSize(8);
-    doc.setTextColor(90, 90, 90);
-    doc.text("Período: dias " + q.dias[0] + " a " + q.dias[q.dias.length - 1] + " de " +
-      MESES_PT[q.info.mes - 1].toLowerCase() + " de " + q.info.ano, 12, 30);
-    doc.setTextColor(35, 35, 35);
-  }
-
-  function limpezaTabelaPdf(doc, api, registros, q) {
-    const cabecalho = ["SETOR", "ATIVIDADE"].concat(q.dias.map(String));
-    const corpo = [];
-    Object.keys(api.setores).forEach(key => {
-      const setor = api.setores[key];
-      setor.itens.forEach((tarefa, index) => {
-        const linha = [index === 0 ? setor.nome.toUpperCase() : "", tarefa];
-        q.dias.forEach(d => linha.push(limpezaCelulaPdf(limpezaCell(registros, q.mes, d, key, index))));
-        corpo.push(linha);
-      });
-    });
-
-    doc.autoTable({
-      startY: 34,
-      head: [cabecalho],
-      body: corpo,
-      theme: "grid",
-      margin: { left: 10, right: 10, bottom: 20 },
-      styles: {
-        font: "helvetica", fontSize: 6, cellPadding: 1.5, halign: "center", valign: "middle",
-        lineColor: [170, 170, 170], lineWidth: 0.2, textColor: [35, 35, 35]
-      },
-      headStyles: { fillColor: [35, 45, 60], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 7 },
-      columnStyles: {
-        0: { cellWidth: 25, fontStyle: "bold" },
-        1: { cellWidth: 65, halign: "left", fontSize: 7 }
-      },
-      didParseCell: function (data) {
-        if (data.section !== "body") return;
-        if (data.column.index === 0 && data.cell.raw) {
-          data.cell.styles.fillColor = [225, 230, 237];
-          data.cell.styles.fontStyle = "bold";
-        }
-        if (data.column.index >= 2) {
-          const raw = String(data.cell.raw);
-          if (raw.indexOf("NC (X)") !== -1) {
-            data.cell.styles.fillColor = [255, 240, 237];
-            data.cell.styles.textColor = [197, 76, 56];
-            data.cell.styles.fontStyle = "bold";
-          } else if (raw.indexOf("C (X)") === 0) {
-            data.cell.styles.fillColor = [231, 245, 238];
-            data.cell.styles.textColor = [24, 128, 75];
-            data.cell.styles.fontStyle = "bold";
-          }
-        }
-      },
-      didDrawPage: function () {
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(35, 35, 35);
-        doc.text("C = Conforme     |     NC = Não Conforme", 12, doc.internal.pageSize.height - 12);
-      }
-    });
-  }
-
-  // PDF no modelo A3 (paisagem): tabela da quinzena + página com a aferição anterior.
-  // mes = "AAAA-MM"; quinz = 1 ou 2. Sem argumentos, usa o que está escolhido no Dashboard.
-  function exportLimpezaPdf(mesArg, quinzArg) {
+  function exportLimpezaPdf() {
     const api = window.operattoLimpeza;
     if (!api) return;
 
@@ -3701,66 +3558,100 @@
       return;
     }
 
-    const mes = typeof mesArg === "string" && /^\d{4}-\d{2}$/.test(mesArg)
-      ? mesArg
-      : (dashLimpezaMonth || localStamp().slice(0, 7));
-    const quinz = Number(quinzArg) === 1 || Number(quinzArg) === 2
-      ? Number(quinzArg)
-      : (dashLimpezaQuinz || (Number(localStamp().slice(8, 10)) <= 15 ? 1 : 2));
-
+    const mes = dashLimpezaMonth || localStamp().slice(0, 7);
+    const info = limpezaMonthInfo(mes);
     const registros = api.registros();
-    const atual = limpezaQuinzena(mes, quinz);
-    const anterior = limpezaQuinzenaAnterior(atual);
+    const resp = api.responsaveis(mes);
 
     try {
-      const doc = new JsPDF({ unit: "mm", format: "a3", orientation: "landscape" });
+      const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
       if (typeof doc.autoTable !== "function") {
         alert("Biblioteca de tabelas do PDF indisponível (sem internet). Conecte-se e tente novamente.");
         return;
       }
 
-      /* ---------- Aferição atual ---------- */
-      limpezaCabecalhoPdf(doc, "CHECKLIST DE LIMPEZA", atual, api.responsaveis(atual.mes));
-      limpezaTabelaPdf(doc, api, registros, atual);
+      const margin = 28;
+      const gridLine = { lineWidth: 0.4, lineColor: [156, 163, 175] };
 
-      let y = doc.lastAutoTable.finalY + 15;
-      if (y > doc.internal.pageSize.height - 35) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(17, 24, 39);
+      doc.text("Operatto - Checklist de Limpeza", margin, 36);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(107, 114, 128);
+      doc.text(info.nome + "   |   Chefe de cozinha: " + (resp.chefe || "____________________") +
+        "   |   Gerente: " + (resp.gerente || "____________________"), margin, 50);
+      doc.text("Gerado em " + new Date().toLocaleString("pt-BR") + (currentUser ? " por " + currentUser : ""), margin, 62);
+
+      const head = ["Setor", "Atividades"];
+      for (let d = 1; d <= info.dias; d++) head.push(String(d));
+
+      const body = [];
+      Object.keys(api.setores).forEach(key => {
+        const setor = api.setores[key];
+        setor.itens.forEach((tarefa, index) => {
+          const line = [];
+          if (index === 0) line.push({ content: setor.nome, rowSpan: setor.itens.length, styles: { fontStyle: "bold", valign: "middle", halign: "center" } });
+          line.push(tarefa);
+          for (let d = 1; d <= info.dias; d++) line.push(limpezaCell(registros, mes, d, key, index));
+          body.push(line);
+        });
+      });
+
+      const dayStyles = {};
+      for (let i = 2; i < head.length; i++) dayStyles[i] = { halign: "center", cellWidth: 16 };
+
+      doc.autoTable({
+        startY: 72,
+        theme: "grid",
+        margin: { left: margin, right: margin, bottom: 55 },
+        head: [head],
+        body: body,
+        styles: Object.assign({ font: "helvetica", fontSize: 6, cellPadding: 1.5, overflow: "linebreak" }, gridLine),
+        headStyles: { fillColor: [17, 24, 39], textColor: 255, halign: "center" },
+        columnStyles: Object.assign({ 0: { cellWidth: 46 }, 1: { cellWidth: 120, halign: "left" } }, dayStyles),
+        didParseCell: function (data) {
+          if (data.section !== "body" || data.column.index < 2) return;
+          const t = data.cell.text && data.cell.text[0];
+          if (t === "C") {
+            data.cell.styles.textColor = [24, 128, 75];
+            data.cell.styles.fillColor = [231, 245, 238];
+            data.cell.styles.fontStyle = "bold";
+          } else if (t === "NC") {
+            data.cell.styles.textColor = [197, 76, 56];
+            data.cell.styles.fillColor = [255, 240, 237];
+            data.cell.styles.fontStyle = "bold";
+          }
+        }
+      });
+
+      const h0 = doc.internal.pageSize.getHeight();
+      let y = doc.lastAutoTable.finalY + 30;
+      if (y > h0 - 60) {
         doc.addPage();
-        y = 25;
+        y = 70;
       }
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(35, 35, 35);
-      doc.text("ASSINATURA DO CHEFE DE COZINHA:", 15, y);
-      doc.line(75, y + 2, 165, y + 2);
-      doc.text("ASSINATURA DO GERENTE:", 220, y);
-      doc.line(270, y + 2, 390, y + 2);
-
-      /* ---------- Aferição anterior ---------- */
-      if (limpezaTemRegistro(api, registros, anterior)) {
-        doc.addPage();
-        limpezaCabecalhoPdf(doc, "AFERIÇÃO ANTERIOR", anterior, api.responsaveis(anterior.mes));
-        limpezaTabelaPdf(doc, api, registros, anterior);
-      } else {
-        doc.setFontSize(9);
-        doc.setTextColor(90, 90, 90);
-        doc.text("Aferição anterior: sem registros salvos (dias " + anterior.dias[0] + " a " +
-          anterior.dias[anterior.dias.length - 1] + " de " + MESES_PT[anterior.info.mes - 1].toLowerCase() + ").", 15, y + 16);
-      }
+      doc.setFontSize(9);
+      doc.setTextColor(17, 24, 39);
+      doc.text("Assinatura do Gerente: ______________________________", margin, y);
+      doc.text("Assinatura do Chefe de Cozinha: ______________________________", margin + 380, y);
+      doc.setFontSize(7);
+      doc.setTextColor(107, 114, 128);
+      doc.text("C = Conforme   |   NC = Não conforme (solicitar que a tarefa seja refeita)   |   Em branco = não preenchido.", margin, y + 16);
 
       const pages = doc.internal.getNumberOfPages();
       const w = doc.internal.pageSize.getWidth();
       const h = doc.internal.pageSize.getHeight();
-      doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      doc.setTextColor(35, 35, 35);
       for (let i = 1; i <= pages; i++) {
         doc.setPage(i);
-        doc.text("Página " + i + " de " + pages, w - 25, h - 12, { align: "right" });
+        doc.text("Operatto", margin, h - 18);
+        doc.text("Página " + i + " de " + pages, w - margin, h - 18, { align: "right" });
       }
 
-      doc.save("Checklist_de_Limpeza_" + MESES_PT[atual.info.mes - 1] + "_" +
-        atual.dias[0] + "-" + atual.dias[atual.dias.length - 1] + ".pdf");
+      doc.save("operatto_limpeza_" + mes + ".pdf");
     } catch (error) {
       alert("Não foi possível gerar o PDF.");
     }
@@ -4674,8 +4565,6 @@
 
   const setoresEl = root.querySelector("#lcSetores");
   const painel = root.querySelector("#lcPainel");
-  const geralEl = root.querySelector("#lcGeral");
-  const geralInfo = root.querySelector("#lcGeralInfo");
   const lista = root.querySelector("#lcLista");
   const titulo = root.querySelector("#lcTitulo");
   const progresso = root.querySelector("#lcProgresso");
@@ -4744,8 +4633,6 @@
   function mostrarSetores() {
     painel.style.display = "none";
     setoresEl.style.display = "grid";
-    geralEl.style.display = "flex";
-    geralInfo.style.display = "block";
     atual = null;
     renderizarSetores();
   }
@@ -4754,8 +4641,6 @@
     atual = k;
     titulo.textContent = setores[k].nome;
     setoresEl.style.display = "none";
-    geralEl.style.display = "none";
-    geralInfo.style.display = "none";
     painel.style.display = "block";
     lista.replaceChildren();
 
@@ -4800,17 +4685,7 @@
   setoresEl.querySelectorAll("[data-setor]").forEach(b => b.addEventListener("click", () => abrirSetor(b.dataset.setor)));
   root.querySelector("#lcVoltar").addEventListener("click", mostrarSetores);
 
-  // Pergunta se quer o PDF (preenchido, com a aferição anterior) da quinzena de hoje
-  function oferecerPdf(mensagem) {
-    const dia = hoje();
-    if (confirm(mensagem + "\n\nDeseja gerar o PDF agora? Ele sairá preenchido e com a aferição anterior.")) {
-      if (typeof window.exportLimpezaPdf === "function") {
-        window.exportLimpezaPdf(dia.slice(0, 7), Number(dia.slice(8, 10)) <= 15 ? 1 : 2);
-      }
-    }
-  }
-
-  function salvarSetorAtual() {
+  root.querySelector("#lcSalvar").addEventListener("click", () => {
     const total = setores[atual].itens.length;
     const preenchidos = respostas().filter(Boolean).length;
     if (preenchidos !== total) {
@@ -4821,47 +4696,8 @@
     r.salvo = true;
     r.dataSalvamento = new Date().toISOString();
     persistir();
+    alert("Setor salvo com sucesso!");
     mostrarSetores();
-    oferecerPdf("Setor salvo com sucesso!");
-  }
-  root.querySelector("#lcSalvar").addEventListener("click", salvarSetorAtual);
-  root.querySelector("#lcSalvarTopo").addEventListener("click", salvarSetorAtual);
-
-  // Salva o checklist inteiro (todos os setores que já têm marcações hoje)
-  root.querySelector("#lcSalvarTudo").addEventListener("click", () => {
-    let algum = false;
-    const faltando = [];
-    Object.keys(setores).forEach(k => {
-      const r = registro(k, false);
-      const n = ((r && r.itens) || []).filter(Boolean).length;
-      if (!n) return;
-      algum = true;
-      const total = setores[k].itens.length;
-      if (n === total) {
-        r.salvo = true;
-        r.dataSalvamento = new Date().toISOString();
-      } else {
-        r.salvo = false;
-        faltando.push(setores[k].nome + " (" + n + "/" + total + ")");
-      }
-    });
-    if (!algum) {
-      alert("Marque pelo menos um item (C ou NC) antes de salvar o checklist.");
-      return;
-    }
-    persistir();
-    renderizarSetores();
-    oferecerPdf(faltando.length
-      ? "Checklist salvo! Setores ainda incompletos: " + faltando.join(", ") + "."
-      : "Checklist salvo com sucesso!");
-  });
-
-  // Gerar o PDF direto da tela do checklist (usa o que já está marcado hoje)
-  root.querySelector("#lcPdfHoje").addEventListener("click", () => {
-    const dia = hoje();
-    if (typeof window.exportLimpezaPdf === "function") {
-      window.exportLimpezaPdf(dia.slice(0, 7), Number(dia.slice(8, 10)) <= 15 ? 1 : 2);
-    }
   });
 
   // Ao abrir o checklist de limpeza, relê os dados da conta atual
