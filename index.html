@@ -255,6 +255,71 @@
     #operatto-limpeza .lc-acoes { display: flex; justify-content: flex-end; margin-top: 20px; }
     #operatto-limpeza button.lc-salvar { padding: 12px 22px; font-weight: 700; }
 
+    /* ----- Controle de cozimento ----- */
+    #ckRoot { color: var(--text); width: 100%; }
+    #ckRoot .ck-missing, #ckRoot .ck-notice { border: 1px solid var(--border); background: var(--surface); border-radius: 7px; padding: 13px 15px; font-size: 13px; line-height: 1.5; margin-bottom: 14px; }
+    #ckRoot .ck-missing { border-color: var(--warn); color: var(--warn); }
+    #ckRoot .ck-notice { border-color: var(--accent); color: var(--text); }
+    #ckRoot .ck-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+    #ckRoot .ck-datebox label, #ckRoot .ck-field label { display: block; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    #ckRoot .ck-daterow { display: flex; gap: 8px; align-items: center; }
+    #ckRoot .ck-daterow input { margin: 0; width: auto; }
+    #ckRoot .ck-state { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    #ckRoot .ck-meta { color: var(--muted); font-size: 12px; }
+    #ckRoot .ck-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid var(--border); background: var(--surface); }
+    #ckRoot .ck-chip.open { color: var(--warn); border-color: var(--warn); }
+    #ckRoot .ck-chip.done { color: var(--ok); border-color: var(--ok); }
+    #ckRoot .ck-form { display: grid; grid-template-columns: 132px minmax(0, 1.6fr) 130px minmax(0, 1.2fr) 150px; gap: 12px; align-items: end; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 16px; }
+    #ckRoot .ck-field input, #ckRoot .ck-field select { margin: 0; width: 100%; }
+    #ckRoot .ck-f-notes { grid-column: 1 / 5; }
+    #ckRoot .ck-f-add { grid-column: 5; align-self: end; }
+    #ckRoot .ck-f-add button { width: 100%; padding: 11px 14px; font-weight: 700; }
+    #ckRoot .ck-savebar { min-height: 22px; margin: 8px 2px 10px; font-size: 12px; }
+    #ckRoot .ck-save.positive { color: var(--ok); }
+    #ckRoot .ck-save.negative { color: var(--bad); }
+    #ckRoot .ck-save.warning { color: var(--warn); }
+    #ckRoot .ck-save.hint { color: var(--muted); }
+    .ck-tablewrap { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); }
+    .ck-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .ck-table .btn-edit, .ck-table .btn-remove { padding: 5px 8px; font-size: 12px; white-space: nowrap; }
+    .ck-table .ck-actcell { width: 1%; }
+    .ck-table th { text-align: left; font-size: 10.5px; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 11px 9px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .ck-table td { padding: 10px 9px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .ck-table tbody tr:last-child td { border-bottom: 0; }
+    .ck-table tbody tr:hover { background: var(--hover); }
+    .ck-table .ck-num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .ck-table .ck-prod { font-weight: 600; }
+    .ck-table .ck-notes { color: var(--muted); max-width: 120px; overflow-wrap: anywhere; }
+    .ck-table .ck-dash { opacity: .6; }
+    .ck-status { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; border: 1px solid var(--border); white-space: nowrap; }
+    .ck-status.ok { background: #1F3329; border-color: var(--ok); color: #9BE0BD; }
+    .ck-status.bad { background: #3A2528; border-color: #C0626A; color: #FF9B9B; }
+    .ck-rowact { display: flex; flex-direction: column; gap: 5px; }
+    @media (max-width: 820px) { .ck-rowact { flex-direction: row; justify-content: flex-end; } }
+    .ck-empty { padding: 26px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+    .ck-detail { margin: 8px 0 14px; }
+    #ckRoot .ck-actions { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+    #ckRoot .ck-actions-l { display: flex; gap: 8px; flex-wrap: wrap; }
+    #ckRoot button.ck-ghost { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 10px 15px; }
+    #ckRoot button.ck-ghost:hover:not(:disabled) { border-color: var(--accent); background: var(--hover); }
+    #ckRoot button.ck-final { padding: 11px 20px; font-weight: 700; }
+    #ckRoot button:disabled { opacity: .5; cursor: not-allowed; }
+    #ckRoot .ck-legend { color: var(--muted); font-size: 12px; margin-top: 14px; line-height: 1.5; }
+    @media (max-width: 820px) {
+      #ckRoot .ck-form { grid-template-columns: 1fr 1fr; }
+      #ckRoot .ck-f-prod, #ckRoot .ck-f-resp, #ckRoot .ck-f-notes, #ckRoot .ck-f-add { grid-column: 1 / -1; }
+      #ckRoot .ck-head, #ckRoot .ck-actions { flex-direction: column; align-items: stretch; }
+      #ckRoot .ck-actions-l button, #ckRoot .ck-actions-r button { flex: 1; width: 100%; }
+      #ckRoot .ck-actions-l { display: grid; grid-template-columns: 1fr 1fr; }
+      .ck-table thead { display: none; }
+      .ck-table, .ck-table tbody, .ck-table tr, .ck-table td { display: block; width: 100%; }
+      .ck-table tr { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+      .ck-table tbody tr:last-child { border-bottom: 0; }
+      .ck-table td { border: 0; padding: 4px 0; display: flex; justify-content: space-between; gap: 14px; text-align: right; }
+      .ck-table td::before { content: attr(data-label); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; text-align: left; flex-shrink: 0; }
+      .ck-table .ck-notes { max-width: none; }
+    }
+
     /* ----- Dashboard: tabela mensal de limpeza ----- */
     .cleaning-checklist { color: var(--text); }
     .cleaning-checklist .cc-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
@@ -801,6 +866,11 @@
       <strong>Limpeza</strong>
       <span>Cozinha, salão e copa</span>
     </button>
+    <button type="button" class="module" data-check="cozimento">
+      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/></svg></div>
+      <strong>Cozimento</strong>
+      <span>Registro diário de temperatura</span>
+    </button>
     <button type="button" class="module" data-check="gerencial">
       <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></svg></div>
       <strong>Gerencial</strong>
@@ -914,6 +984,51 @@
   </div>
   </section>
 
+  <section class="tab-panel" id="tab-cozimento" role="tabpanel" hidden>
+  <div id="ckRoot">
+    <div class="ck-missing" id="ckMissing" hidden></div>
+    <div id="ckMain">
+      <div class="ck-head">
+        <div class="ck-datebox">
+          <label for="ckDate">Data do controle</label>
+          <div class="ck-daterow">
+            <input id="ckDate" type="date">
+            <button type="button" class="ck-ghost" id="ckToday">Hoje</button>
+          </div>
+        </div>
+        <div class="ck-state" id="ckState"></div>
+      </div>
+      <div class="ck-notice" id="ckNotice" hidden></div>
+
+      <form class="ck-form" id="ckForm" autocomplete="off">
+        <div class="ck-field ck-f-time"><label for="ckTime">Horário</label><input id="ckTime" type="time" required></div>
+        <div class="ck-field ck-f-prod"><label for="ckProduct">Produto / Alimento</label><input id="ckProduct" type="text" maxlength="120" required></div>
+        <div class="ck-field ck-f-temp"><label for="ckTemp">Temperatura (°C)</label><input id="ckTemp" type="number" step="0.1" min="-50" max="400" inputmode="decimal" required></div>
+        <div class="ck-field ck-f-resp"><label for="ckResp">Responsável pelo controle</label><input id="ckResp" type="text" maxlength="80" required></div>
+        <div class="ck-field ck-f-status"><label for="ckStatus">Status</label>
+          <select id="ckStatus" required><option value="">Selecione</option><option value="C">Conforme</option><option value="NC">Não conforme</option></select>
+        </div>
+        <div class="ck-field ck-f-notes"><label for="ckNotes">Observações</label><input id="ckNotes" type="text" maxlength="500"></div>
+        <div class="ck-f-add"><button type="submit" id="ckAdd">Adicionar registro</button></div>
+      </form>
+
+      <div class="ck-savebar"><span class="ck-save" id="ckSaveStatus" aria-live="polite"></span></div>
+      <div id="ckTableBox"></div>
+
+      <div class="ck-actions">
+        <div class="ck-actions-l">
+          <button type="button" class="ck-ghost" id="ckPdf">Gerar PDF</button>
+          <button type="button" class="ck-ghost" id="ckPrint">Imprimir</button>
+        </div>
+        <div class="ck-actions-r" id="ckFoot">
+          <button type="button" class="ck-final" id="ckFinalize">Finalizar controle do dia</button>
+        </div>
+      </div>
+      <div class="ck-legend">C = Conforme &nbsp;|&nbsp; NC = Não conforme. Os registros são salvos automaticamente. Depois de finalizado, o dia fica bloqueado.</div>
+    </div>
+  </div>
+  </section>
+
   <section class="section tab-panel" id="tab-gerencial" role="tabpanel" hidden>
     <h2><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></svg> Checklist gerencial</h2>
     <div class="hint">Em configuração. Aqui ficará o checklist de gestão e conferência da operação.</div>
@@ -933,6 +1048,7 @@
     <button type="button" class="tab" role="tab" data-dtab="estoque"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 7 9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/></svg> Estoque</button>
     <button type="button" class="tab" role="tab" data-dtab="temperatura"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14V5a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z"/><circle cx="12" cy="17" r="1.2"/></svg> Temperatura</button>
     <button type="button" class="tab" role="tab" data-dtab="limpeza"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14l3-8h11l3 8-3 5H7z"/><path d="M7 6l2-3h6l3 3"/><path d="M8 14h8"/></svg> Limpeza</button>
+    <button type="button" class="tab" role="tab" data-dtab="cozimento"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/></svg> Cozimento</button>
     <button type="button" class="tab" role="tab" data-dtab="historico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></svg> Histórico</button>
   </div>
 
@@ -986,7 +1102,9 @@
     snow: '<path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"/>',
     fridge: '<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M6 10h12M9 6v2M9 13v3"/>',
     counter: '<path d="M3 11h18v3H3zM5 14v6M19 14v6M6 11V8h12v3"/>',
-    note: '<path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h4"/>'
+    note: '<path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h4"/>',
+    flame: '<path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/>',
+    print: '<path d="M7 9V3h10v6M7 17H4v-7h16v7h-3"/><path d="M7 14h10v7H7z"/>'
   };
   function ico(name) {
     const el = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -1114,6 +1232,12 @@
     if (msg.includes("not authorized")) return "O Supabase só envia e-mail para membros da sua equipe enquanto não houver um SMTP próprio. Configure em Authentication > SMTP.";
     if (msg.includes("error sending") || msg.includes("sending recovery") || msg.includes("sending confirmation")) return "O Supabase não conseguiu enviar o e-mail. Confira a configuração de e-mail (SMTP) no painel do Supabase.";
     if (msg.includes("session missing") || msg.includes("session_not_found")) return "O link de recuperação expirou ou já foi usado. Peça um novo.";
+    if (msg.includes("cozimento_dia_finalizado")) return "Este dia já foi finalizado e não pode mais ser alterado.";
+    if (msg.includes("cozimento_data_futura")) return "Não é possível usar uma data futura.";
+    if (msg.includes("cozimento_sem_registros")) return "Adicione pelo menos um registro antes de finalizar o dia.";
+    if (msg.includes("cozimento_sem_responsavel")) return "Informe quem está finalizando o dia.";
+    if (msg.includes("cozimento_campo_fixo")) return "A data de um registro não pode ser trocada.";
+    if (msg.includes("cozimento_nao_autenticado")) return "Entre na sua conta para continuar.";
     return "Erro: " + ((error && error.message) || "tente novamente.");
   }
 
@@ -3593,7 +3717,7 @@
 
   /* ---------------- Checklist: escolher qual fazer ---------------- */
 
-  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", gerencial: "{list} Gerencial" };
+  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento", gerencial: "{list} Gerencial" };
 
   function resetChecklistScreen() {
     document.getElementById("checklistHome").hidden = false;
@@ -3601,7 +3725,8 @@
   }
 
   function openChecklist(name) {
-    document.getElementById("checklistOpenTitle").textContent = CHECKLIST_TITLES[name] || "Checklist";
+    rich(document.getElementById("checklistOpenTitle"), CHECKLIST_TITLES[name] || "Checklist");
+    if (name === "cozimento" && typeof ckOpen === "function") ckOpen();
     document.querySelectorAll("#checklistOpenView .tab-panel").forEach(p => {
       const show = p.id === "tab-" + name;
       p.hidden = !show;
@@ -4044,6 +4169,7 @@
     else if (dashTab === "estoque") renderDashStock(box);
     else if (dashTab === "temperatura") renderDashTemp(box);
     else if (dashTab === "limpeza") renderDashLimpeza(box);
+    else if (dashTab === "cozimento") renderDashCozimento(box);
     else renderDashHistory(box);
   }
 
@@ -4663,6 +4789,607 @@
 
   ler();
   renderizarSetores();
+})();
+</script>
+<script>
+/* ---------------- Controle de cozimento ----------------
+   Mesma base do Checklist de Limpeza: abre dentro de Checklists, registra por dia,
+   salva sozinho e bloqueia o dia ao finalizar. Os dados ficam no Supabase
+   (tabelas cooking_records e cooking_days, com RLS por conta). */
+
+// Sugestão automática do status (a pessoa sempre pode trocar): conforme a partir desta temperatura.
+const COOK_SUGGEST_MIN = 74;
+
+let cookReady = null;     // null = ainda não sabe | true | false = tabelas não criadas no Supabase
+let cookError = "";
+let cookDate = "";        // data selecionada (AAAA-MM-DD)
+let cookRecords = [];     // registros da data selecionada
+let cookDay = null;       // { date, finalizedAt, finalizedBy } ou null (dia aberto)
+let cookReq = 0;          // evita que uma resposta antiga sobrescreva a data atual
+let cookBusy = false;
+let cookStatusTouched = false;
+let cookLastResp = "";
+const cookDash = { month: "", loadedMonth: "", loading: false, byDate: {}, open: "" };
+
+const ckEl = id => document.getElementById(id);
+
+function cookMissing(e) {
+  const m = String((e && e.message) || "").toLowerCase();
+  return !!(e && (e.code === "42P01" || e.code === "PGRST205")) ||
+    (m.includes("cooking_") && (m.includes("does not exist") || m.includes("could not find")));
+}
+
+function dbToCook(r) {
+  return {
+    id: r.id,
+    date: r.log_date,
+    time: String(r.record_time || "").slice(0, 5),
+    product: r.product,
+    temp: Number(r.temperature),
+    responsible: r.responsible,
+    notes: r.notes || "",
+    status: r.status,
+    createdAt: r.created_at
+  };
+}
+
+function dbToCookDay(r) {
+  return { date: r.log_date, finalizedAt: r.finalized_at, finalizedBy: r.finalized_by };
+}
+
+function cookSort(list) {
+  return list.slice().sort((a, b) => (a.time + a.createdAt).localeCompare(b.time + b.createdAt));
+}
+
+function cookLabel(s) { return s === "C" ? "Conforme" : "Não conforme"; }
+function cookIsFinal(day) { return !!(day && day.finalizedAt); }
+function cookNowHM() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+function cookWhen(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? "" : d.toLocaleDateString("pt-BR") + " às " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+function cookWeekday(date) {
+  const p = date.split("-");
+  const d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  return d.toLocaleDateString("pt-BR", { weekday: "long" });
+}
+function cookCounts(list) {
+  return { total: list.length, c: list.filter(r => r.status === "C").length, nc: list.filter(r => r.status === "NC").length };
+}
+
+function ckStatus(text, cls) {
+  const el = ckEl("ckSaveStatus");
+  if (!el) return;
+  rich(el, text || "");
+  el.className = "ck-save " + (cls || "");
+}
+
+/* ----- Tabela (usada na tela do checklist e no histórico do Dashboard) ----- */
+
+function cookTable(list, editable) {
+  const wrap = mk("div", "ck-tablewrap");
+  if (list.length === 0) {
+    wrap.appendChild(mk("div", "ck-empty", "Nenhum registro neste dia."));
+    return wrap;
+  }
+  const table = mk("table", "ck-table");
+  const thead = document.createElement("thead");
+  const hr = document.createElement("tr");
+  ["Data", "Horário", "Produto / Alimento", "Temperatura", "Responsável", "Observações", "Status"].concat(editable ? [""] : []).forEach(h => hr.appendChild(mk("th", "", h)));
+  thead.appendChild(hr);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  list.forEach(r => {
+    const tr = document.createElement("tr");
+    const cell = (label, content, cls) => {
+      const td = document.createElement("td");
+      td.dataset.label = label;
+      if (cls) td.className = cls;
+      if (content instanceof Node) td.appendChild(content);
+      else td.textContent = content;
+      tr.appendChild(td);
+    };
+    cell("Data", fmtDate(r.date));
+    cell("Horário", r.time, "ck-num");
+    cell("Produto / Alimento", r.product, "ck-prod");
+    cell("Temperatura", fmtTemp(r.temp), "ck-num");
+    cell("Responsável", r.responsible);
+    cell("Observações", r.notes || "-", r.notes ? "ck-notes" : "ck-notes ck-dash");
+    cell("Status", mk("span", "ck-status " + (r.status === "C" ? "ok" : "bad"), cookLabel(r.status)));
+    if (editable) {
+      const act = mk("div", "ck-rowact");
+      act.append(
+        actionBtn("{edit} Editar", "btn-edit", () => cookEditModal(r)),
+        actionBtn("{trash} Excluir", "btn-remove", () => cookDelete(r))
+      );
+      cell("Ações", act, "ck-actcell");
+    }
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  return wrap;
+}
+
+/* ----- Tela do checklist ----- */
+
+function ckRender() {
+  const root = ckEl("ckRoot");
+  if (!root) return;
+
+  const missing = cookReady === false;
+  ckEl("ckMissing").hidden = !missing;
+  ckEl("ckMain").hidden = missing;
+  if (missing) {
+    rich(ckEl("ckMissing"), "{warn} O Controle de Cozimento ainda não foi ativado no Supabase" + (cookError ? " (" + cookError + ")" : "") +
+      ". Rode o arquivo supabase_cozimento.sql no SQL Editor do Supabase e recarregue a página.");
+    return;
+  }
+
+  const final = cookIsFinal(cookDay);
+  const today = localStamp();
+  ckEl("ckDate").max = today;
+  if (ckEl("ckDate").value !== cookDate) ckEl("ckDate").value = cookDate;
+
+  // Situação do dia
+  const state = ckEl("ckState");
+  state.replaceChildren();
+  const cnt = cookCounts(cookRecords);
+  const chip = mk("span", "ck-chip " + (final ? "done" : "open"), final ? "{lock} Dia finalizado" : "{clock} Dia em aberto");
+  state.appendChild(chip);
+  state.appendChild(mk("span", "ck-meta", cnt.total + (cnt.total === 1 ? " registro" : " registros") + "  |  " + cnt.c + " conformes  |  " + cnt.nc + " não conformes"));
+
+  // Aviso de bloqueio
+  const notice = ckEl("ckNotice");
+  notice.hidden = !final;
+  if (final) {
+    rich(notice, "{lock} Controle finalizado em " + cookWhen(cookDay.finalizedAt) + (cookDay.finalizedBy ? " por " + cookDay.finalizedBy : "") +
+      ". Este dia está bloqueado: não é possível adicionar, editar ou excluir registros.");
+  }
+
+  // Formulário só com o dia aberto
+  ckEl("ckForm").hidden = final;
+  ckEl("ckFoot").hidden = final;
+  ckEl("ckFinalize").disabled = cookBusy || cookRecords.length === 0;
+  ckEl("ckPdf").disabled = cookRecords.length === 0;
+  ckEl("ckPrint").disabled = cookRecords.length === 0;
+
+  // Tabela
+  const box = ckEl("ckTableBox");
+  box.replaceChildren(cookTable(cookRecords, !final));
+}
+
+async function cookLoadDate(date) {
+  const req = ++cookReq;
+  cookDate = date;
+  ckEl("ckTableBox").replaceChildren(mk("div", "ck-empty", "Carregando..."));
+  try {
+    const [rec, day] = await Promise.all([
+      supabaseClient.from("cooking_records").select("*").eq("log_date", date).order("record_time").order("created_at"),
+      supabaseClient.from("cooking_days").select("*").eq("log_date", date).maybeSingle()
+    ]);
+    if (rec.error) throw rec.error;
+    if (day.error) throw day.error;
+    if (req !== cookReq) return;
+    cookRecords = cookSort((rec.data || []).map(dbToCook));
+    cookDay = day.data ? dbToCookDay(day.data) : null;
+    cookReady = true;
+    cookError = "";
+  } catch (error) {
+    if (req !== cookReq) return;
+    cookRecords = [];
+    cookDay = null;
+    if (cookMissing(error)) { cookReady = false; cookError = ""; }
+    else { cookReady = true; ckStatus("{x} " + friendlyError(error), "negative"); }
+  }
+  ckRender();
+  ckFormDefaults();
+}
+
+function ckFormDefaults() {
+  const f = ckEl("ckForm");
+  f.ckTime.value = cookDate === localStamp() ? cookNowHM() : "";
+  if (!f.ckResp.value) f.ckResp.value = cookLastResp || currentUser || "";
+}
+
+// Chamada ao abrir o Controle de Cozimento dentro de Checklists
+function ckOpen() {
+  ckStatus("");
+  const today = localStamp();
+  cookLoadDate(cookDate && cookDate <= today ? cookDate : today);
+}
+
+function cookTouchedByError(error) {
+  // Se o banco recusou porque o dia foi finalizado (ex.: em outro aparelho), recarrega a tela
+  if (/cozimento_dia_finalizado|cozimento_dia_ja_finalizado/i.test(String((error && error.message) || ""))) cookLoadDate(cookDate);
+}
+
+function cookSuggest() {
+  const f = ckEl("ckForm");
+  if (cookStatusTouched) return;
+  const t = parseFloat(String(f.ckTemp.value).replace(",", "."));
+  f.ckStatus.value = Number.isFinite(t) ? (t >= COOK_SUGGEST_MIN ? "C" : "NC") : "";
+}
+
+async function cookAdd(e) {
+  e.preventDefault();
+  if (cookBusy || cookIsFinal(cookDay)) return;
+  const f = ckEl("ckForm");
+  const temp = parseFloat(String(f.ckTemp.value).replace(",", "."));
+  const row = {
+    log_date: cookDate,
+    record_time: f.ckTime.value,
+    product: f.ckProduct.value.trim(),
+    temperature: temp,
+    responsible: f.ckResp.value.trim(),
+    notes: f.ckNotes.value.trim(),
+    status: f.ckStatus.value
+  };
+  if (!row.record_time || !row.product || !row.responsible || !Number.isFinite(temp) || !row.status) {
+    ckStatus("{warn} Preencha horário, produto, temperatura, responsável e status.", "warning");
+    return;
+  }
+  if (temp < -50 || temp > 400) {
+    ckStatus("{warn} Temperatura fora do intervalo aceito (-50 a 400 °C).", "warning");
+    return;
+  }
+
+  cookBusy = true;
+  ckEl("ckAdd").disabled = true;
+  ckStatus("Salvando...", "hint");
+  try {
+    const { data, error } = await supabaseClient.from("cooking_records").insert(row).select().single();
+    if (error) throw error;
+    cookRecords = cookSort(cookRecords.concat(dbToCook(data)));
+    cookLastResp = row.responsible;
+    cookDash.loadedMonth = "";
+    f.ckProduct.value = "";
+    f.ckTemp.value = "";
+    f.ckNotes.value = "";
+    f.ckStatus.value = "";
+    cookStatusTouched = false;
+    f.ckTime.value = cookDate === localStamp() ? cookNowHM() : row.record_time;
+    ckStatus("{check} Registro salvo automaticamente às " + cookNowHM() + ".", "positive");
+    f.ckProduct.focus();
+  } catch (error) {
+    ckStatus("{x} " + friendlyError(error), "negative");
+    cookTouchedByError(error);
+  }
+  cookBusy = false;
+  ckEl("ckAdd").disabled = false;
+  ckRender();
+}
+
+function cookEditModal(r) {
+  if (cookIsFinal(cookDay)) return;
+  openModal("Editar registro de cozimento", [
+    { key: "time", label: "Horário", type: "time", value: r.time, required: true },
+    { key: "product", label: "Produto / Alimento", value: r.product, maxLength: 120, required: true },
+    { key: "temp", label: "Temperatura de cozimento (°C)", type: "number", step: "0.1", value: r.temp, required: true },
+    { key: "responsible", label: "Responsável pelo controle", value: r.responsible, maxLength: 80, required: true },
+    { key: "notes", label: "Observações", value: r.notes, maxLength: 500 },
+    { key: "status", label: "Status de conformidade", type: "select", value: r.status, options: [{ value: "C", label: "Conforme" }, { value: "NC", label: "Não conforme" }] }
+  ], async v => {
+    const temp = parseFloat(String(v.temp).replace(",", "."));
+    const product = v.product.trim();
+    const responsible = v.responsible.trim();
+    if (!v.time || !product || !responsible || !Number.isFinite(temp)) return "Preencha horário, produto, temperatura e responsável.";
+    if (temp < -50 || temp > 400) return "Temperatura fora do intervalo aceito (-50 a 400 °C).";
+    const { data, error } = await supabaseClient.from("cooking_records")
+      .update({ record_time: v.time, product: product, temperature: temp, responsible: responsible, notes: v.notes.trim(), status: v.status })
+      .eq("id", r.id).select().single();
+    if (error) { cookTouchedByError(error); return friendlyError(error); }
+    const i = cookRecords.findIndex(x => x.id === r.id);
+    if (i >= 0) cookRecords[i] = dbToCook(data);
+    cookRecords = cookSort(cookRecords);
+    cookDash.loadedMonth = "";
+    ckRender();
+    ckStatus("{check} Alteração salva automaticamente às " + cookNowHM() + ".", "positive");
+  }, "Salvar alterações");
+}
+
+async function cookDelete(r) {
+  if (cookIsFinal(cookDay)) return;
+  if (!confirm("Excluir o registro de \"" + r.product + "\" (" + r.time + ")?")) return;
+  try {
+    const { error } = await supabaseClient.from("cooking_records").delete().eq("id", r.id);
+    if (error) throw error;
+    cookRecords = cookRecords.filter(x => x.id !== r.id);
+    cookDash.loadedMonth = "";
+    ckStatus("{check} Registro excluído.", "positive");
+  } catch (error) {
+    ckStatus("{x} " + friendlyError(error), "negative");
+    cookTouchedByError(error);
+  }
+  ckRender();
+}
+
+async function cookFinalize() {
+  if (cookBusy || cookIsFinal(cookDay) || cookRecords.length === 0) return;
+  const msg = "Finalizar o controle de cozimento de " + fmtDate(cookDate) + "?\n\nDepois de finalizado, nenhum registro deste dia poderá ser adicionado, editado ou excluído.";
+  if (!confirm(msg)) return;
+
+  cookBusy = true;
+  ckRender();
+  ckStatus("Finalizando...", "hint");
+  try {
+    const { data, error } = await supabaseClient.rpc("finalize_cooking_day", { p_date: cookDate, p_by: currentUser || currentEmail || "Usuário" });
+    if (error) throw error;
+    cookDay = dbToCookDay(data);
+    cookDash.loadedMonth = "";
+    ckStatus("{check} Controle finalizado. Você pode gerar o PDF ou imprimir.", "positive");
+  } catch (error) {
+    ckStatus("{x} " + friendlyError(error), "negative");
+    cookTouchedByError(error);
+  }
+  cookBusy = false;
+  ckRender();
+}
+
+/* ----- PDF e impressão ----- */
+
+function cookPdfLogo(doc, x, y, size) {
+  const s = size / 48;
+  const poly = (pts, color, lw) => {
+    doc.setDrawColor(color[0], color[1], color[2]);
+    doc.setLineWidth(lw);
+    const vec = [];
+    for (let i = 1; i < pts.length; i++) vec.push([(pts[i][0] - pts[i - 1][0]) * s, (pts[i][1] - pts[i - 1][1]) * s]);
+    doc.lines(vec, x + pts[0][0] * s, y + pts[0][1] * s, [1, 1], "S", true);
+  };
+  poly([[8, 34], [8, 14], [24, 5], [40, 14], [40, 34], [24, 43]], [86, 137, 154], 1.3);
+  poly([[17, 30], [17, 18], [24, 14], [31, 18], [31, 30], [24, 34]], [240, 241, 243], 1.1);
+}
+
+function cookBuildPdf(date, list, day) {
+  const JsPDF = window.jspdf && window.jspdf.jsPDF;
+  if (!JsPDF) {
+    alert("Biblioteca de PDF indisponível (sem internet). Conecte-se e tente novamente.");
+    return null;
+  }
+  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+  if (typeof doc.autoTable !== "function") {
+    alert("Biblioteca de tabelas do PDF indisponível (sem internet). Conecte-se e tente novamente.");
+    return null;
+  }
+
+  const margin = 36;
+  const w = doc.internal.pageSize.getWidth();
+  const h = doc.internal.pageSize.getHeight();
+  const cnt = cookCounts(list);
+  const final = cookIsFinal(day);
+
+  // Faixa do topo com a identidade do Operatto
+  doc.setFillColor(23, 25, 29);
+  doc.rect(0, 0, w, 74, "F");
+  doc.setFillColor(86, 137, 154);
+  doc.rect(0, 74, w, 2, "F");
+  cookPdfLogo(doc, margin, 16, 42);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(240, 241, 243);
+  doc.text("OPERATTO", margin + 54, 38, { charSpace: 2.5 });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(181, 209, 218);
+  doc.text("CONTROLE DE COZIMENTO", margin + 54, 54, { charSpace: 1.4 });
+  doc.setFontSize(9);
+  doc.setTextColor(146, 152, 162);
+  doc.text("DATA DO CONTROLE", w - margin, 32, { align: "right", charSpace: 1 });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(240, 241, 243);
+  doc.text(fmtDate(date), w - margin, 54, { align: "right" });
+
+  // Resumo
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.setTextColor(60, 66, 75);
+  const situacao = final
+    ? "Finalizado em " + cookWhen(day.finalizedAt) + (day.finalizedBy ? " por " + day.finalizedBy : "")
+    : "Em aberto (não finalizado)";
+  doc.text("Situação: " + situacao, margin, 98);
+  doc.text(cnt.total + " registro(s)   |   Conformes: " + cnt.c + "   |   Não conformes: " + cnt.nc, margin, 113);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Emitido em " + new Date().toLocaleString("pt-BR") + (currentUser ? " por " + currentUser : ""), w - margin, 98, { align: "right" });
+
+  doc.autoTable({
+    startY: 126,
+    theme: "grid",
+    margin: { left: margin, right: margin, top: 40, bottom: 62 },
+    head: [["Data", "Horário", "Produto / Alimento", "Temp. (°C)", "Responsável", "Observações", "Status"]],
+    body: list.map(r => [fmtDate(r.date), r.time, r.product, fmtNum1(r.temp), r.responsible, r.notes || "-", cookLabel(r.status)]),
+    styles: { font: "helvetica", fontSize: 9, cellPadding: 6, lineColor: [200, 205, 212], lineWidth: 0.5, textColor: [30, 34, 40], valign: "middle" },
+    headStyles: { fillColor: [38, 42, 48], textColor: [240, 241, 243], fontStyle: "bold", fontSize: 8.5 },
+    alternateRowStyles: { fillColor: [246, 248, 250] },
+    columnStyles: { 0: { cellWidth: 62 }, 1: { cellWidth: 52, halign: "center" }, 3: { cellWidth: 64, halign: "center" }, 6: { cellWidth: 82, halign: "center" } },
+    didParseCell: function (data) {
+      if (data.section !== "body") return;
+      const r = list[data.row.index];
+      if (data.column.index === 6) {
+        data.cell.styles.fontStyle = "bold";
+        data.cell.styles.textColor = r.status === "C" ? [24, 110, 70] : [168, 52, 60];
+      }
+      if (data.column.index === 3 && r.status === "NC") data.cell.styles.textColor = [168, 52, 60];
+    }
+  });
+
+  let y = doc.lastAutoTable.finalY + 38;
+  if (y > h - 90) { doc.addPage(); y = 70; }
+  doc.setDrawColor(120, 126, 136);
+  doc.setLineWidth(0.6);
+  doc.line(margin, y, margin + 250, y);
+  doc.line(margin + 300, y, margin + 550, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Responsável", margin, y + 12);
+  doc.text("Visto do gerente", margin + 300, y + 12);
+  doc.text("C = Conforme   |   NC = Não conforme (solicitar que o cozimento seja refeito).", margin, y + 34);
+
+  const pages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(220, 224, 230);
+    doc.setLineWidth(0.5);
+    doc.line(margin, h - 32, w - margin, h - 32);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(120, 126, 136);
+    doc.text("Operatto  -  Gestão com responsabilidade", margin, h - 18);
+    doc.text("Página " + i + " de " + pages, w - margin, h - 18, { align: "right" });
+  }
+  return doc;
+}
+
+function cookPdf(date, list, day, mode) {
+  if (!list.length) {
+    alert("Não há registros neste dia.");
+    return;
+  }
+  try {
+    const doc = cookBuildPdf(date, list, day);
+    if (!doc) return;
+    if (mode === "print") {
+      const url = URL.createObjectURL(doc.output("blob"));
+      const frame = document.createElement("iframe");
+      frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+      frame.src = url;
+      frame.onload = () => {
+        try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+        catch (e) { window.open(url, "_blank"); }
+      };
+      document.body.appendChild(frame);
+      setTimeout(() => { URL.revokeObjectURL(url); frame.remove(); }, 180000);
+    } else {
+      doc.save("operatto_cozimento_" + date + ".pdf");
+    }
+  } catch (error) {
+    alert("Não foi possível gerar o PDF.");
+  }
+}
+
+/* ----- Dashboard: histórico do Controle de Cozimento ----- */
+
+async function cookLoadMonth(month) {
+  cookDash.loading = true;
+  const p = month.split("-");
+  const last = new Date(Number(p[0]), Number(p[1]), 0).getDate();
+  const from = month + "-01";
+  const to = month + "-" + String(last).padStart(2, "0");
+  try {
+    const [rec, days] = await Promise.all([
+      supabaseClient.from("cooking_records").select("*").gte("log_date", from).lte("log_date", to).order("record_time").order("created_at"),
+      supabaseClient.from("cooking_days").select("*").gte("log_date", from).lte("log_date", to)
+    ]);
+    if (rec.error) throw rec.error;
+    if (days.error) throw days.error;
+    const by = {};
+    (rec.data || []).map(dbToCook).forEach(r => { (by[r.date] = by[r.date] || { list: [], day: null }).list.push(r); });
+    (days.data || []).map(dbToCookDay).forEach(d => { (by[d.date] = by[d.date] || { list: [], day: null }).day = d; });
+    cookDash.byDate = by;
+    cookDash.loadedMonth = month;
+    cookReady = true;
+  } catch (error) {
+    cookDash.byDate = {};
+    cookDash.loadedMonth = month;
+    if (cookMissing(error)) cookReady = false;
+  }
+  cookDash.loading = false;
+  if (dashTab === "cozimento" && !document.getElementById("dashboardView").hidden) renderDashboard();
+}
+
+function renderDashCozimento(box) {
+  if (cookReady === false) {
+    box.appendChild(mk("section", "section hint", "{warn} O Controle de Cozimento ainda não foi ativado no Supabase. Rode o arquivo supabase_cozimento.sql no SQL Editor e recarregue."));
+    return;
+  }
+  const today = localStamp();
+  if (!cookDash.month) cookDash.month = today.slice(0, 7);
+
+  const controls = mk("div", "settings");
+  const row = mk("div", "row");
+  const w1 = mk("div");
+  w1.appendChild(mk("label", "", "Mês"));
+  const monthInput = document.createElement("input");
+  monthInput.type = "month";
+  monthInput.max = today.slice(0, 7);
+  monthInput.value = cookDash.month;
+  monthInput.style.marginBottom = "0";
+  monthInput.addEventListener("change", () => {
+    cookDash.month = monthInput.value || today.slice(0, 7);
+    cookDash.open = "";
+    renderDashboard();
+  });
+  w1.appendChild(monthInput);
+  row.append(w1, mk("div", "hint", "Controles de cozimento por dia. Abra um dia para ver os registros, gerar o PDF ou imprimir."));
+  controls.appendChild(row);
+  box.appendChild(controls);
+
+  if (cookDash.loadedMonth !== cookDash.month) {
+    if (!cookDash.loading) cookLoadMonth(cookDash.month);
+    box.appendChild(mk("div", "loading", "Carregando controles..."));
+    return;
+  }
+
+  const dates = Object.keys(cookDash.byDate).sort().reverse();
+  const sec = dashSection("{flame} Controle de cozimento");
+  if (dates.length === 0) sec.appendChild(mk("div", "hint", "Nenhum controle registrado neste mês."));
+
+  dates.forEach(date => {
+    const entry = cookDash.byDate[date];
+    const list = cookSort(entry.list);
+    const cnt = cookCounts(list);
+    const final = cookIsFinal(entry.day);
+
+    const item = mk("div", "stock-item");
+    const info = mk("div", "stock-info");
+    info.appendChild(mk("strong", "", fmtDate(date) + "  -  " + cookWeekday(date)));
+    info.appendChild(mk("div", "hint", cnt.total + (cnt.total === 1 ? " registro" : " registros") + "  |  " + cnt.c + " conformes  |  " + cnt.nc + " não conformes"));
+    info.appendChild(mk("div", final ? "positive" : "warning",
+      final ? "{lock} Finalizado em " + cookWhen(entry.day.finalizedAt) + (entry.day.finalizedBy ? " por " + entry.day.finalizedBy : "") : "{clock} Em aberto"));
+    item.appendChild(info);
+
+    const act = mk("div", "item-actions");
+    act.append(
+      actionBtn(cookDash.open === date ? "{list} Ocultar" : "{list} Ver registros", "btn-edit", () => { cookDash.open = cookDash.open === date ? "" : date; renderDashboard(); }),
+      actionBtn("{file} PDF", "btn-edit", () => cookPdf(date, list, entry.day, "download")),
+      actionBtn("{print} Imprimir", "btn-edit", () => cookPdf(date, list, entry.day, "print"))
+    );
+    item.appendChild(act);
+    sec.appendChild(item);
+
+    if (cookDash.open === date) {
+      const detail = mk("div", "ck-detail");
+      detail.appendChild(cookTable(list, false));
+      sec.appendChild(detail);
+    }
+  });
+  box.appendChild(sec);
+}
+
+/* ----- Ligações da tela ----- */
+
+(function () {
+  const f = ckEl("ckForm");
+  if (!f) return;
+  f.addEventListener("submit", cookAdd);
+  f.ckTemp.addEventListener("input", cookSuggest);
+  f.ckStatus.addEventListener("change", () => { cookStatusTouched = f.ckStatus.value !== ""; });
+  ckEl("ckDate").addEventListener("change", () => {
+    const v = ckEl("ckDate").value;
+    if (!v || v > localStamp()) { ckEl("ckDate").value = cookDate; return; }
+    ckStatus("");
+    cookLoadDate(v);
+  });
+  ckEl("ckToday").addEventListener("click", () => { ckStatus(""); cookLoadDate(localStamp()); });
+  ckEl("ckFinalize").addEventListener("click", cookFinalize);
+  ckEl("ckPdf").addEventListener("click", () => cookPdf(cookDate, cookRecords, cookDay, "download"));
+  ckEl("ckPrint").addEventListener("click", () => cookPdf(cookDate, cookRecords, cookDay, "print"));
 })();
 </script>
 <script>
