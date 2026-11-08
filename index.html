@@ -527,6 +527,7 @@
       --tint: 20 28 34; --alpha: .6; flex: 1; border: 1px solid #39464d !important; color: var(--lc-muted);
       border-radius: 8px; padding: 9px; cursor: pointer; font-weight: 700; box-shadow: none;
     }
+    #operatto-limpeza .lc-opcoes button:disabled { cursor: not-allowed; opacity: .75; }
     #operatto-limpeza .lc-opcoes .lc-c.ativo { --tint: 101 185 139; --alpha: .22; border-color: #65b98b !important; color: #8be0b3; }
     #operatto-limpeza .lc-opcoes .lc-nc.ativo { --tint: 220 85 85; --alpha: .2; border-color: #dc5555 !important; color: #ff8585; }
     #operatto-limpeza .lc-legenda { color: var(--lc-muted); font-size: 12px; margin-top: 16px; line-height: 1.5; }
@@ -4610,11 +4611,17 @@
     return d[k] || null;
   }
   function respostas() { const r = registro(atual, false); return (r && r.itens) || []; }
+  // Setor já salvo hoje: fica só para consulta e libera de novo no dia seguinte
+  function bloqueado(k) { const r = registro(k, false); return !!(r && r.salvo); }
 
   function atualizarProgresso() {
     const total = setores[atual].itens.length;
     const preenchidos = respostas().filter(Boolean).length;
-    progresso.textContent = "Hoje: " + preenchidos + " de " + total + " itens conferidos";
+    progresso.textContent = bloqueado(atual)
+      ? "🔒 Checklist de hoje concluído — disponível novamente amanhã."
+      : "Hoje: " + preenchidos + " de " + total + " itens conferidos";
+    const salvar = root.querySelector("#lcSalvar");
+    if (salvar) salvar.hidden = bloqueado(atual);
   }
 
   function renderizarSetores() {
@@ -4624,7 +4631,7 @@
       const r = registro(k, false);
       const preenchidos = ((r && r.itens) || []).filter(Boolean).length;
       const status = botao.querySelector(".lc-status");
-      if (r && r.salvo) status.textContent = "✓ Setor salvo hoje";
+      if (r && r.salvo) status.textContent = "🔒 Concluído hoje — libera amanhã";
       else if (preenchidos) status.textContent = preenchidos + "/" + total + " preenchidos hoje";
       else status.textContent = "";
     });
@@ -4662,6 +4669,7 @@
       btnNC.type = "button";
       btnNC.textContent = "NC";
       btnNC.className = "lc-nc" + (valor === "NC" ? " ativo" : "");
+      if (bloqueado(k)) { btnC.disabled = true; btnNC.disabled = true; }
       btnC.addEventListener("click", () => marcar(index, "C"));
       btnNC.addEventListener("click", () => marcar(index, "NC"));
 
@@ -4673,6 +4681,7 @@
   }
 
   function marcar(index, valor) {
+    if (bloqueado(atual)) return;
     const r = registro(atual, true);
     r.itens[index] = valor;
     r.salvo = false;
@@ -4686,6 +4695,7 @@
   root.querySelector("#lcVoltar").addEventListener("click", mostrarSetores);
 
   root.querySelector("#lcSalvar").addEventListener("click", () => {
+    if (bloqueado(atual)) return;
     const total = setores[atual].itens.length;
     const preenchidos = respostas().filter(Boolean).length;
     if (preenchidos !== total) {
