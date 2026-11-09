@@ -255,6 +255,27 @@
     #operatto-limpeza .lc-acoes { display: flex; justify-content: flex-end; margin-top: 20px; }
     #operatto-limpeza button.lc-salvar { padding: 12px 22px; font-weight: 700; }
 
+    /* ----- Contagem de molhos ----- */
+    #sauceRoot { width: 100%; }
+    #sauceRoot .sauce-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    #sauceRoot .sauce-date { width: 190px; }
+    #sauceRoot .sauce-date input { margin-top: 5px; }
+    #sauceRoot .sauce-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 7px; }
+    #sauceRoot .sauce-table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 12px; }
+    #sauceRoot .sauce-table th { background: #262A30; color: var(--muted); text-align: left; font-size: 10px; letter-spacing: .5px; padding: 11px 10px; }
+    #sauceRoot .sauce-table td { border-top: 1px solid var(--border); padding: 8px 10px; vertical-align: middle; }
+    #sauceRoot .sauce-code { width: 70px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    #sauceRoot .sauce-qty { width: 195px; }
+    #sauceRoot .sauce-count-control { display: flex; justify-content: center; align-items: center; gap: 6px; }
+    #sauceRoot .sauce-count-control input { width: 76px; min-width: 0; margin: 0; text-align: center; }
+    #sauceRoot .sauce-count-control button { width: 34px; height: 36px; padding: 0; background: var(--field); border: 1px solid var(--field-border); color: var(--text); }
+    #sauceRoot .sauce-order { width: 125px; margin: 0; text-align: center; }
+    #sauceRoot .sauce-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin: 16px 0 24px; }
+    #sauceRoot .sauce-history-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px; border-top: 1px solid var(--border); }
+    #sauceRoot .sauce-history-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    #sauceRoot .sauce-history-actions button { width: auto; padding: 8px 11px; }
+    #sauceRoot .sauce-status { min-height: 20px; }
+
     /* ----- Controle de cozimento ----- */
     #ckRoot { color: var(--text); width: 100%; }
     #ckRoot .ck-missing, #ckRoot .ck-notice { border: 1px solid var(--border); background: var(--surface); border-radius: 7px; padding: 13px 15px; font-size: 13px; line-height: 1.5; margin-bottom: 14px; }
@@ -871,6 +892,11 @@
       <strong>Cozimento</strong>
       <span>Registro diário de temperatura</span>
     </button>
+    <button type="button" class="module" data-check="molhos">
+      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v3l2 2v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V8l2-2z"/><path d="M8 6h8M9 13h6M9 17h6"/></svg></div>
+      <strong>Molhos</strong>
+      <span>Contagem e pedido dos produtos</span>
+    </button>
     <button type="button" class="module" data-check="gerencial">
       <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></svg></div>
       <strong>Gerencial</strong>
@@ -1027,6 +1053,34 @@
       <div class="ck-legend">C = Conforme &nbsp;|&nbsp; NC = Não conforme. Os registros são salvos automaticamente. Depois de finalizado, o dia fica bloqueado.</div>
     </div>
   </div>
+  </section>
+
+  <section class="tab-panel" id="tab-molhos" role="tabpanel" hidden>
+    <div id="sauceRoot">
+      <div class="sauce-head">
+        <div>
+          <h2 class="section-heading">Contagem de molhos</h2>
+          <div class="hint">Catálogo da planilha versão 10.2026. Use +1 ou edite a contagem; preencha o pedido quando necessário.</div>
+        </div>
+        <div class="sauce-date"><label for="sauceDate">Data da contagem</label><input id="sauceDate" type="date"></div>
+      </div>
+      <div class="sauce-table-wrap">
+        <table class="sauce-table">
+          <thead><tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr></thead>
+          <tbody id="sauceItems"><tr><td colspan="4" class="loading">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="sauce-actions">
+        <button type="button" id="sauceSaveBtn">Salvar contagem</button>
+        <button type="button" class="btn-edit" id="saucePdfBtn">Gerar PDF</button>
+      </div>
+      <div class="sauce-status sim" id="sauceStatus" role="status" aria-live="polite"></div>
+      <section class="section" style="margin-top:14px">
+        <h2>Histórico de contagens</h2>
+        <div class="hint" style="margin-bottom:8px">Abra um registro para conferir ou editar os valores. O PDF pode ser gerado novamente.</div>
+        <div id="sauceHistory"><div class="hint">Carregando histórico...</div></div>
+      </section>
+    </div>
   </section>
 
   <section class="section tab-panel" id="tab-gerencial" role="tabpanel" hidden>
@@ -3717,7 +3771,7 @@
 
   /* ---------------- Checklist: escolher qual fazer ---------------- */
 
-  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento", gerencial: "{list} Gerencial" };
+  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento", molhos: "Molhos", gerencial: "{list} Gerencial" };
 
   function resetChecklistScreen() {
     document.getElementById("checklistHome").hidden = false;
@@ -3727,6 +3781,7 @@
   function openChecklist(name) {
     rich(document.getElementById("checklistOpenTitle"), CHECKLIST_TITLES[name] || "Checklist");
     if (name === "cozimento" && typeof ckOpen === "function") ckOpen();
+    if (name === "molhos" && typeof sauceOpen === "function") sauceOpen();
     document.querySelectorAll("#checklistOpenView .tab-panel").forEach(p => {
       const show = p.id === "tab-" + name;
       p.hidden = !show;
@@ -5435,7 +5490,356 @@ function renderDashCozimento(box) {
 })();
 </script>
 
+<script>
+/* ---------------- Contagem de molhos ----------------
+   Catálogo e nomes copiados da aba PLANILHA NOVA, versão 10.2026.
+   Cada registro fica no Supabase, com RLS por usuário autenticado. */
+const SAUCE_CATALOG = [
+  { row: 4, code: 17, name: "SAQ. CAM. CREMOSO" },
+  { row: 5, code: 16, name: "SAQ. CAMARÃO" },
+  { row: 6, code: null, name: "SAQ. GORGONZOLA " },
+  { row: 7, code: 24, name: "SAQ. LIMÃO" },
+  { row: 8, code: 60, name: "SAQ. MARACUJÁ COM SEMENTES" },
+  { row: 9, code: 61, name: "SAQ. ESTROGONOFE DE FRANGO" },
+  { row: 10, code: 28, name: "SAQ. MOQ. CAJU" },
+  { row: 11, code: 27, name: "SAQ. MOQ. CAPIXABA" },
+  { row: 12, code: 29, name: "SAQ. MOQ. DE COCO" },
+  { row: 13, code: 30, name: "SAQ. MOQ. PESCADA" },
+  { row: 14, code: 48, name: "SAQ. MOQUEQUINHA" },
+  { row: 15, code: 53, name: "SAQ. MOSTARDA E MEL" },
+  { row: 16, code: 54, name: "SAQ. PIRÃO" },
+  { row: 17, code: 218, name: "SAQ. PROMO MOLHO BRANCO COM ESPEC." },
+  { row: 18, code: null, name: "SAQ. PROMO MOLHO POMODORO" },
+  { row: 19, code: null, name: "SAQ. PURÊ DE ABÓBORA" },
+  { row: 20, code: 31, name: "SAQ. PURÊ DE BANANA" },
+  { row: 21, code: 32, name: "SAQ. PURÊ DE MAÇÃ" },
+  { row: 22, code: 197, name: "SAQ. REQ. BANANA" },
+  { row: 23, code: 189, name: "SAQ. SHITAKE" },
+  { row: 24, code: 199, name: "SAQ. TOMATE P/PARMEGIANA " },
+  { row: 25, code: 63, name: "SAQ. PROMO MISTURA PANKO" },
+  { row: 26, code: null, name: "SAQ. FARINHA DE ROSCA 1KG" },
+  { row: 27, code: 208, name: "SAQ. MISTURA TILÁPIA CROCANTE" },
+  { row: 28, code: null, name: "SAQ. TERIYAKI 900gr" },
+  { row: 29, code: null, name: "SAQ. TORRADA PARA CALDO" },
+  { row: 30, code: null, name: "GELEIA DE PIMENTA 300G " }
+];
+let sauceValues = {};
+let sauceSession = null;
+let sauceRecords = [];
+let sauceBusy = false;
+let sauceDirty = false;
 
+function sauceEl(id) { return document.getElementById(id); }
+function sauceSetStatus(text, cls) {
+  const el = sauceEl("sauceStatus");
+  if (!el) return;
+  el.textContent = text || "";
+  el.className = "sauce-status sim " + (cls || "");
+}
+function sauceDateLabel(date) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(date || "")) ? date.slice(8, 10) + "/" + date.slice(5, 7) + "/" + date.slice(0, 4) : String(date || "");
+}
+function sauceDateTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleString("pt-BR");
+}
+function sauceDefaultValues(items) {
+  const result = {};
+  (Array.isArray(items) ? items : []).forEach(item => {
+    if (!item || !Number.isInteger(Number(item.source_row))) return;
+    result[item.source_row] = {
+      count: item.count_quantity == null ? "" : String(item.count_quantity),
+      order: item.order_quantity == null ? "" : String(item.order_quantity)
+    };
+  });
+  return result;
+}
+function sauceRenderItems() {
+  const body = sauceEl("sauceItems");
+  if (!body) return;
+  body.replaceChildren();
+  SAUCE_CATALOG.forEach(product => {
+    const values = sauceValues[product.row] || { count: "", order: "" };
+    const row = document.createElement("tr");
+    const code = document.createElement("td");
+    code.className = "sauce-code";
+    code.textContent = product.code == null ? "—" : String(product.code);
+    const name = document.createElement("td");
+    name.textContent = product.name;
 
-</body>
-</html>
+    const countCell = document.createElement("td");
+    countCell.className = "sauce-qty";
+    const countControl = document.createElement("div");
+    countControl.className = "sauce-count-control";
+    const minus = document.createElement("button");
+    minus.type = "button";
+    minus.textContent = "−";
+    minus.setAttribute("aria-label", "Diminuir contagem de " + product.name);
+    const countInput = document.createElement("input");
+    countInput.type = "number";
+    countInput.min = "0";
+    countInput.step = "1";
+    countInput.inputMode = "numeric";
+    countInput.placeholder = "0";
+    countInput.value = values.count;
+    countInput.setAttribute("aria-label", "Contagem de " + product.name);
+    const plus = document.createElement("button");
+    plus.type = "button";
+    plus.textContent = "+1";
+    plus.setAttribute("aria-label", "Adicionar um à contagem de " + product.name);
+    const updateCount = () => {
+      if (!sauceValues[product.row]) sauceValues[product.row] = { count: "", order: "" };
+      sauceValues[product.row].count = countInput.value;
+      sauceDirty = true;
+      sauceSetStatus("Há alterações sem salvar.", "warning");
+    };
+    countInput.addEventListener("input", updateCount);
+    minus.addEventListener("click", () => {
+      const value = Math.max(0, (Number(countInput.value) || 0) - 1);
+      countInput.value = String(value);
+      updateCount();
+    });
+    plus.addEventListener("click", () => {
+      const value = (Number(countInput.value) || 0) + 1;
+      countInput.value = String(value);
+      updateCount();
+    });
+    countControl.append(minus, countInput, plus);
+    countCell.appendChild(countControl);
+
+    const orderCell = document.createElement("td");
+    const orderInput = document.createElement("input");
+    orderInput.className = "sauce-order";
+    orderInput.type = "number";
+    orderInput.min = "0";
+    orderInput.step = "1";
+    orderInput.inputMode = "numeric";
+    orderInput.placeholder = "—";
+    orderInput.value = values.order;
+    orderInput.setAttribute("aria-label", "Pedido de " + product.name);
+    orderInput.addEventListener("input", () => {
+      if (!sauceValues[product.row]) sauceValues[product.row] = { count: "", order: "" };
+      sauceValues[product.row].order = orderInput.value;
+      sauceDirty = true;
+      sauceSetStatus("Há alterações sem salvar.", "warning");
+    });
+    orderCell.appendChild(orderInput);
+    row.append(code, name, countCell, orderCell);
+    body.appendChild(row);
+  });
+}
+function sauceCollectItems() {
+  const items = [];
+  for (const product of SAUCE_CATALOG) {
+    const values = sauceValues[product.row] || { count: "", order: "" };
+    const item = { source_row: product.row, category: "MOLHO", product_code: product.code, product_name: product.name };
+    for (const [key, raw] of [["count_quantity", values.count], ["order_quantity", values.order]]) {
+      if (raw == null || String(raw).trim() === "") { item[key] = null; continue; }
+      const value = Number(raw);
+      if (!Number.isSafeInteger(value) || value < 0) {
+        alert("Use apenas números inteiros iguais ou maiores que zero em " + product.name + ".");
+        return null;
+      }
+      item[key] = value;
+    }
+    items.push(item);
+  }
+  if (!items.some(item => item.count_quantity != null || item.order_quantity != null)) {
+    alert("Preencha ao menos uma contagem ou pedido antes de salvar.");
+    return null;
+  }
+  return items;
+}
+function sauceRenderHistory() {
+  const box = sauceEl("sauceHistory");
+  if (!box) return;
+  box.replaceChildren();
+  if (!sauceRecords.length) {
+    box.appendChild(mk("div", "hint", "Nenhuma contagem salva ainda."));
+    return;
+  }
+  sauceRecords.forEach(record => {
+    const item = mk("div", "sauce-history-item");
+    const info = mk("div", "stock-info");
+    const title = mk("strong", "", sauceDateLabel(record.count_date) + " · " + (record.employee || "Funcionário"));
+    const filled = Array.isArray(record.items) ? record.items.filter(x => x && (x.count_quantity != null || x.order_quantity != null)).length : 0;
+    const detail = mk("div", "hint", filled + " de " + SAUCE_CATALOG.length + " molhos preenchidos · salvo " + sauceDateTime(record.created_at));
+    info.append(title, detail);
+    const actions = mk("div", "sauce-history-actions");
+    const open = actionBtn("{edit} Abrir / editar", "btn-edit", () => sauceOpenRecord(record));
+    const pdf = actionBtn("{file} PDF", "btn-edit", () => sauceGeneratePdf(record));
+    actions.append(open, pdf);
+    item.append(info, actions);
+    box.appendChild(item);
+  });
+}
+async function sauceLoadHistory(dateToOpen) {
+  if (!currentUserId) {
+    sauceSetStatus("Entre na sua conta para carregar o histórico.", "warning");
+    return;
+  }
+  const box = sauceEl("sauceHistory");
+  if (box) box.replaceChildren(mk("div", "hint", "Carregando histórico..."));
+  try {
+    const { data, error } = await supabaseClient.from("sauce_count_sessions").select("*")
+      .eq("user_id", currentUserId).order("count_date", { ascending: false })
+      .order("created_at", { ascending: false }).limit(100);
+    if (error) throw error;
+    sauceRecords = data || [];
+    sauceRenderHistory();
+    if (dateToOpen) {
+      const latest = sauceRecords.find(record => record.count_date === dateToOpen);
+      sauceSession = latest || null;
+      sauceValues = sauceDefaultValues(latest && latest.items);
+      sauceDirty = false;
+      sauceRenderItems();
+      if (latest) sauceSetStatus("Contagem salva por " + (latest.employee || "funcionário") + " em " + sauceDateTime(latest.created_at) + ".", "hint");
+      else sauceSetStatus("Nenhuma contagem salva nesta data. Preencha os campos.", "hint");
+    }
+  } catch (error) {
+    sauceRecords = [];
+    sauceRenderHistory();
+    sauceRenderItems();
+    const msg = String((error && error.message) || error || "");
+    if (/sauce_count_sessions|does not exist|schema cache/i.test(msg)) {
+      sauceSetStatus("A tabela da contagem ainda não existe. Execute supabase_setup_molhos.sql no SQL Editor do Supabase e recarregue.", "warning");
+    } else {
+      sauceSetStatus("Não foi possível carregar o histórico: " + friendlyError(error), "negative");
+    }
+  }
+}
+function sauceOpenRecord(record) {
+  if (sauceDirty && !confirm("Há alterações sem salvar. Descartar e abrir esta contagem?")) return;
+  sauceSession = record;
+  sauceEl("sauceDate").value = record.count_date;
+  sauceValues = sauceDefaultValues(record.items);
+  sauceDirty = false;
+  sauceRenderItems();
+  sauceSetStatus("Registro de " + sauceDateLabel(record.count_date) + " aberto. Você pode editar e salvar.", "hint");
+  window.scrollTo(0, 0);
+}
+async function sauceOpen() {
+  const dateInput = sauceEl("sauceDate");
+  if (!dateInput) return;
+  const today = localStamp();
+  dateInput.max = today;
+  if (!dateInput.value || dateInput.value > today) dateInput.value = today;
+  await sauceLoadHistory(dateInput.value);
+}
+async function sauceSave() {
+  if (sauceBusy) return;
+  if (!currentUserId || !currentUser) {
+    sauceSetStatus("Entre na sua conta antes de salvar.", "warning");
+    return;
+  }
+  const date = sauceEl("sauceDate").value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > localStamp()) {
+    alert("Escolha uma data válida, igual ou anterior a hoje.");
+    return;
+  }
+  const items = sauceCollectItems();
+  if (!items) return;
+  const payload = { user_id: currentUserId, employee: currentUser, count_date: date, items: items };
+  const button = sauceEl("sauceSaveBtn");
+  sauceBusy = true;
+  button.disabled = true;
+  sauceSetStatus("Salvando no Supabase...", "hint");
+  try {
+    let result;
+    if (sauceSession && sauceSession.user_id === currentUserId) {
+      result = await supabaseClient.from("sauce_count_sessions").update(payload).eq("id", sauceSession.id)
+        .eq("user_id", currentUserId).select("*").single();
+    } else {
+      result = await supabaseClient.from("sauce_count_sessions").insert(payload).select("*").single();
+    }
+    if (result.error) throw result.error;
+    const saved = result.data;
+    sauceSession = saved;
+    sauceDirty = false;
+    await sauceLoadHistory(date);
+    sauceSession = saved;
+    sauceValues = sauceDefaultValues(saved.items);
+    sauceRenderItems();
+    sauceSetStatus("Contagem salva no Supabase por " + currentUser + " às " + new Date().toLocaleTimeString("pt-BR") + ".", "positive");
+  } catch (error) {
+    sauceSetStatus("Não foi possível salvar: " + friendlyError(error) + ". Confira a migration e as políticas RLS.", "negative");
+  } finally {
+    sauceBusy = false;
+    button.disabled = false;
+  }
+}
+function sauceGeneratePdf(record) {
+  const JsPDF = window.jspdf && window.jspdf.jsPDF;
+  if (!JsPDF) {
+    alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente.");
+    return;
+  }
+  const items = record ? record.items : sauceCollectItems();
+  if (!items) return;
+  if (!window.jspdf.jsPDF.API.autoTable) {
+    alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo e tente novamente.");
+    return;
+  }
+  const date = record ? record.count_date : sauceEl("sauceDate").value;
+  const employee = record ? record.employee : currentUser;
+  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+  const width = doc.internal.pageSize.getWidth();
+  const margin = 38;
+  doc.setTextColor(25, 28, 32);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("PEIXE NA REDE SUDOESTE", width / 2, 38, { align: "center" });
+  doc.setFontSize(12);
+  doc.text("MOLHO", width / 2, 58, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("Data: " + sauceDateLabel(date), margin, 82);
+  doc.text("Funcionário: " + (employee || ""), margin, 98);
+  doc.text("Emitido em: " + new Date().toLocaleString("pt-BR"), width - margin, 98, { align: "right" });
+  doc.text("Versão da planilha: 10.2026", width - margin, 82, { align: "right" });
+  const byRow = new Map(items.map(item => [Number(item.source_row), item]));
+  doc.autoTable({
+    startY: 112,
+    theme: "grid",
+    margin: { left: margin, right: margin, bottom: 40 },
+    head: [["COD.", "MOLHO", "CONTAGEM", "PEDIDO"]],
+    body: SAUCE_CATALOG.map(product => {
+      const item = byRow.get(product.row) || {};
+      return [product.code == null ? "" : String(product.code), product.name,
+        item.count_quantity == null ? "" : String(item.count_quantity),
+        item.order_quantity == null ? "" : String(item.order_quantity)];
+    }),
+    styles: { font: "helvetica", fontSize: 8.5, cellPadding: 5, lineColor: [190, 195, 202], lineWidth: 0.5, textColor: [35, 39, 45], valign: "middle" },
+    headStyles: { fillColor: [150, 150, 150], textColor: [25, 28, 32], fontStyle: "bold", fontSize: 8 },
+    columnStyles: { 0: { cellWidth: 48, halign: "center" }, 1: { cellWidth: "auto", fontStyle: "bold" }, 2: { cellWidth: 74, halign: "center" }, 3: { cellWidth: 68, halign: "center" } }
+  });
+  const fileDate = String(date || localStamp()).replace(/[^0-9-]/g, "");
+  const url = URL.createObjectURL(doc.output("blob"));
+  const preview = window.open(url, "_blank");
+  if (!preview) doc.save("operatto_contagem_molhos_" + fileDate + ".pdf");
+  else setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+sauceEl("sauceDate").addEventListener("change", async event => {
+  const input = event.currentTarget;
+  const today = localStamp();
+  if (!input.value || input.value > today) {
+    input.value = sauceSession ? sauceSession.count_date : today;
+    alert("A data da contagem não pode ser futura.");
+    return;
+  }
+  if (sauceDirty && !confirm("Há alterações sem salvar. Descartar e abrir outra data?")) {
+    input.value = sauceSession ? sauceSession.count_date : today;
+    return;
+  }
+  sauceSession = null;
+  sauceValues = {};
+  sauceDirty = false;
+  sauceRenderItems();
+  await sauceLoadHistory(input.value);
+});
+sauceEl("sauceSaveBtn").addEventListener("click", sauceSave);
+sauceEl("saucePdfBtn").addEventListener("click", () => sauceGeneratePdf(null));
+</script>
+
