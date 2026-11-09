@@ -225,8 +225,7 @@
     .login-error.ok { color: var(--ok); }
 
     /* ----- Visão geral ----- */
-    #ovRecent .ov-empty { color: var(--muted); font-size: 12px; padding: 18px 20px; }
-
+  
     /* ----- Checklist de limpeza (setores e itens) ----- */
     #operatto-limpeza { color: var(--text); width: 100%; }
     #operatto-limpeza .lc-header { margin-bottom: 18px; }
@@ -666,7 +665,7 @@
   <div class="view" id="stockGroupView" hidden>
   <button type="button" class="back-btn" id="stockBackBtn"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg> Voltar ao Estoque</button>
   <h2 id="stockGroupTitle"></h2>
-  <p>Cadastre os produtos desta lacuna e faça a contagem.</p>
+  <p>Confira os produtos desta categoria e faça a contagem.</p>
 
   <div id="stockSauceView" hidden>
     <div id="sauceRoot">
@@ -696,7 +695,7 @@
     </div>
   </div>
 
-  <section class="section">
+  <section class="section" hidden>
     <h2><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h4"/></svg> Cadastrar produto</h2>
     <form id="productForm">
       <label>Nome do produto</label>
@@ -832,13 +831,9 @@
 
     <div class="two-col">
       <div>
-        <h2 class="section-heading">Movimentações recentes</h2>
-        <div class="panel" id="ovRecent"></div>
-      </div>
-      <div>
         <h2 class="section-heading">Acesso rápido</h2>
         <div class="panel quick">
-          <button type="button" data-go="stock"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Novo produto</button>
+          <button type="button" data-go="stock"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Abrir estoque</button>
           <button type="button" data-go="stock"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 12h14"/></svg>Registrar entrada</button>
           <button type="button" data-go="stock"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Contar estoque</button>
           <button type="button" data-go="dashboard"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Consultar relatórios</button>
@@ -1565,13 +1560,8 @@
     const nm = currentUser || "Administrador";
     set("ovUserName", nm);
     set("ovAvatar", nm.trim().charAt(0).toUpperCase() || "A");
-
-    const recent = document.getElementById("ovRecent");
-    if (!recent) return;
-    recent.replaceChildren();
     if (!dataReady) {
       ["ovProducts", "ovIn", "ovOut", "ovOrder"].forEach(id => set(id, "–"));
-      recent.appendChild(mk("div", "ov-empty", "Carregando dados da nuvem..."));
       return;
     }
 
@@ -1586,21 +1576,6 @@
     set("ovOut", movements.filter(m => m.type === "ajuste" && Number(m.delta) < 0 && inMonth(m)).length);
     set("ovOrder", rows.filter(r => r.pedido > 0).length);
 
-    const last = movements.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
-    if (last.length === 0) {
-      recent.appendChild(mk("div", "ov-empty", "Nenhuma movimentação ainda."));
-      return;
-    }
-    last.forEach(m => {
-      const row = mk("div", "panel-row");
-      const info = mk("div");
-      info.appendChild(mk("strong", "", m.product));
-      const when = new Date(m.date).toLocaleDateString("pt-BR");
-      info.appendChild(mk("small", "", (m.employee ? m.employee + " • " : "") + when));
-      const label = m.type === "entrada" ? "Entrada" : (Number(m.delta) < 0 ? "Saída" : "Contagem");
-      row.append(info, mk("span", "status", label));
-      recent.appendChild(row);
-    });
   }
 
   document.querySelectorAll("#overviewView [data-go]").forEach(el => {
@@ -5839,3 +5814,6 @@ sauceEl("sauceDate").addEventListener("change", async event => {
 sauceEl("sauceSaveBtn").addEventListener("click", sauceSave);
 sauceEl("saucePdfBtn").addEventListener("click", () => sauceGeneratePdf(null));
 </script>
+
+
+
