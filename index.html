@@ -666,6 +666,7 @@
   <div class="view" id="stockGroupView" hidden>
   <button type="button" class="back-btn" id="stockBackBtn"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg> Voltar ao Estoque</button>
   <h2 id="stockGroupTitle"></h2>
+  <div id="standardStockGroup">
   <p>Cadastre os produtos desta lacuna e faça a contagem.</p>
 
   <section class="section">
@@ -785,6 +786,34 @@
   </section>
 
   </div>
+
+  <div id="stockSauceView" hidden>
+    <div id="sauceRoot">
+      <div class="sauce-head">
+        <div>
+          <h2 class="section-heading">Contagem de molhos</h2>
+          <div class="hint">Catálogo da planilha versão 10.2026. Use +1 ou edite a contagem; preencha o pedido quando necessário.</div>
+        </div>
+        <div class="sauce-date"><label for="sauceDate">Data da contagem</label><input id="sauceDate" type="date"></div>
+      </div>
+      <div class="sauce-table-wrap">
+        <table class="sauce-table">
+          <thead><tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr></thead>
+          <tbody id="sauceItems"><tr><td colspan="4" class="loading">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="sauce-actions">
+        <button type="button" id="sauceSaveBtn">Salvar contagem</button>
+        <button type="button" class="btn-edit" id="saucePdfBtn">Gerar PDF</button>
+      </div>
+      <div class="sauce-status sim" id="sauceStatus" role="status" aria-live="polite"></div>
+      <section class="section" style="margin-top:14px">
+        <h2>Histórico de contagens</h2>
+        <div class="hint" style="margin-bottom:8px">Abra um registro para conferir ou editar os valores. O PDF pode ser gerado novamente.</div>
+        <div id="sauceHistory"><div class="hint">Carregando histórico...</div></div>
+      </section>
+    </div>
+  </div>
   <!-- Fim: lacuna aberta -->
 
   </div>
@@ -891,11 +920,6 @@
       <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/></svg></div>
       <strong>Cozimento</strong>
       <span>Registro diário de temperatura</span>
-    </button>
-    <button type="button" class="module" data-check="molhos">
-      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v3l2 2v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V8l2-2z"/><path d="M8 6h8M9 13h6M9 17h6"/></svg></div>
-      <strong>Molhos</strong>
-      <span>Contagem e pedido dos produtos</span>
     </button>
     <button type="button" class="module" data-check="gerencial">
       <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></svg></div>
@@ -1053,34 +1077,6 @@
       <div class="ck-legend">C = Conforme &nbsp;|&nbsp; NC = Não conforme. Os registros são salvos automaticamente. Depois de finalizado, o dia fica bloqueado.</div>
     </div>
   </div>
-  </section>
-
-  <section class="tab-panel" id="tab-molhos" role="tabpanel" hidden>
-    <div id="sauceRoot">
-      <div class="sauce-head">
-        <div>
-          <h2 class="section-heading">Contagem de molhos</h2>
-          <div class="hint">Catálogo da planilha versão 10.2026. Use +1 ou edite a contagem; preencha o pedido quando necessário.</div>
-        </div>
-        <div class="sauce-date"><label for="sauceDate">Data da contagem</label><input id="sauceDate" type="date"></div>
-      </div>
-      <div class="sauce-table-wrap">
-        <table class="sauce-table">
-          <thead><tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr></thead>
-          <tbody id="sauceItems"><tr><td colspan="4" class="loading">Carregando...</td></tr></tbody>
-        </table>
-      </div>
-      <div class="sauce-actions">
-        <button type="button" id="sauceSaveBtn">Salvar contagem</button>
-        <button type="button" class="btn-edit" id="saucePdfBtn">Gerar PDF</button>
-      </div>
-      <div class="sauce-status sim" id="sauceStatus" role="status" aria-live="polite"></div>
-      <section class="section" style="margin-top:14px">
-        <h2>Histórico de contagens</h2>
-        <div class="hint" style="margin-bottom:8px">Abra um registro para conferir ou editar os valores. O PDF pode ser gerado novamente.</div>
-        <div id="sauceHistory"><div class="hint">Carregando histórico...</div></div>
-      </section>
-    </div>
   </section>
 
   <section class="section tab-panel" id="tab-gerencial" role="tabpanel" hidden>
@@ -2364,13 +2360,15 @@
       title.textContent = g;
 
       const desc = document.createElement("p");
-      desc.textContent = totalBy[g] === 0
-        ? "Nenhum produto"
-        : totalBy[g] + (totalBy[g] === 1 ? " produto" : " produtos");
+      desc.textContent = g === "Molhos"
+        ? "Contagem diária de 27 molhos"
+        : totalBy[g] === 0
+          ? "Nenhum produto"
+          : totalBy[g] + (totalBy[g] === 1 ? " produto" : " produtos");
 
       btn.append(icon, title, desc);
 
-      if (lowBy[g] > 0) {
+      if (g !== "Molhos" && lowBy[g] > 0) {
         const badge = document.createElement("span");
         badge.className = "op-low-stock";
         badge.textContent = lowBy[g] + " com estoque baixo";
@@ -2384,6 +2382,7 @@
 
   // Há contagens digitadas na lacuna aberta que ainda não foram salvas?
   function stockGroupDirty() {
+    if (activeStockTab === "Molhos" && sauceDirty) return true;
     return countInputs.some(entry => {
       if (entry.group !== activeStockTab) return false;
       const typed = entry.input.value;
@@ -2403,6 +2402,9 @@
 
     rich(document.getElementById("stockGroupTitle"), gIcon(name) + " " + name);
     document.getElementById("categoryShown").value = name;
+    const sauceMode = name === "Molhos";
+    document.getElementById("standardStockGroup").hidden = sauceMode;
+    document.getElementById("stockSauceView").hidden = !sauceMode;
     document.querySelectorAll("#stockList .stock-group").forEach(p => {
       const show = p.dataset.group === name;
       p.hidden = !show;
@@ -2421,6 +2423,7 @@
     view.classList.remove("enter");
     void view.offsetWidth;
     view.classList.add("enter");
+    if (sauceMode && typeof sauceOpen === "function") sauceOpen();
     window.scrollTo(0, 0);
   }
 
@@ -3771,7 +3774,7 @@
 
   /* ---------------- Checklist: escolher qual fazer ---------------- */
 
-  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento", molhos: "Molhos", gerencial: "{list} Gerencial" };
+  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento", gerencial: "{list} Gerencial" };
 
   function resetChecklistScreen() {
     document.getElementById("checklistHome").hidden = false;
@@ -3781,7 +3784,6 @@
   function openChecklist(name) {
     rich(document.getElementById("checklistOpenTitle"), CHECKLIST_TITLES[name] || "Checklist");
     if (name === "cozimento" && typeof ckOpen === "function") ckOpen();
-    if (name === "molhos" && typeof sauceOpen === "function") sauceOpen();
     document.querySelectorAll("#checklistOpenView .tab-panel").forEach(p => {
       const show = p.id === "tab-" + name;
       p.hidden = !show;
