@@ -695,63 +695,6 @@
     </div>
   </div>
 
-  <section class="section" hidden>
-    <h2><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h4"/></svg> Cadastrar produto</h2>
-    <form id="productForm">
-      <label>Nome do produto</label>
-      <input id="productName" placeholder="Ex.: Arroz" required>
-
-      <div class="row">
-        <div>
-          <label for="categoryShown">Categoria</label>
-          <input id="categoryShown" disabled>
-        </div>
-        <div>
-          <label>Unidade</label>
-          <select id="unit" required>
-            <option value="unidades">Unidades</option>
-            <option value="kg">Quilogramas (kg)</option>
-            <option value="g">Gramas (g)</option>
-            <option value="litros">Litros</option>
-            <option value="ml">Mililitros (ml)</option>
-            <option value="caixas">Caixas</option>
-            <option value="pacotes">Pacotes</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>Estoque atual <span class="hint" id="currentUnitHint"></span></label>
-          <input id="initialStock" type="number" min="0" step="any" value="0" required>
-        </div>
-        <div>
-          <label>Estoque mínimo <span class="hint" id="minUnitHint"></span></label>
-          <input id="minimum" type="number" min="0" step="any" required>
-        </div>
-      </div>
-
-      <label>Estoque ideal (meta de reposição) <span class="hint" id="targetUnitHint"></span> <span class="hint">(opcional — vazio = mínimo × fator padrão)</span></label>
-      <input id="target" type="number" min="0" step="any" placeholder="Quanto você quer ter após o pedido">
-
-      <div class="row">
-        <div>
-          <label>Custo unitário (R$)</label>
-          <input id="cost" type="number" min="0" step="0.01" placeholder="Ex.: 6,50" required>
-        </div>
-        <div>
-          <label>Validade <span class="hint">(opcional)</span></label>
-          <input id="expiry" type="date">
-        </div>
-      </div>
-
-      <label>Fornecedor <span class="hint">(opcional)</span></label>
-      <input id="supplier" placeholder="Ex.: Distribuidora X">
-
-      <button type="submit" id="productSubmitBtn">Cadastrar produto</button>
-    </form>
-  </section>
-
   <section class="section">
     <h2><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg> Contagem do estoque</h2>
     <div class="hint" style="margin-bottom:8px"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg> Digite a contagem de cada produto para ver o pedido possível na hora. Use "Salvar contagem" em um produto ou "Salvar tudo" para registrar todas as contagens de uma vez.</div>
@@ -1191,6 +1134,14 @@
   const RESEND_SECONDS = 60;
   const PAGE_SIZE = 1000;
 
+  // Meses e título dos PDFs de checklist: "TABELA ANVISA - MÊS DE ANO"
+  const MESES_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  function anvisaTitle(ref) { // aceita "AAAA-MM" ou "AAAA-MM-DD"
+    const m = /^(\d{4})-(\d{2})/.exec(ref || "");
+    const nome = m ? MESES_PT[Number(m[2]) - 1] + " de " + m[1] : "";
+    return ("TABELA ANVISA - " + nome).toUpperCase();
+  }
+
   // Dados em memória (espelho do que está no Supabase)
   let movements = [];
   let catalog = [];
@@ -1210,7 +1161,6 @@
   let tempError = "";
   let tempInputs = [];         // campos de temperatura exibidos na lista
 
-  const productForm = document.getElementById("productForm");
   const factorInput = document.getElementById("targetFactor");
 
   const loginOverlay = document.getElementById("loginOverlay");
@@ -1975,13 +1925,6 @@
     return Math.max(round(qty), 0);
   }
 
-  function updateFormUnitHints() {
-    const text = "(" + document.getElementById("unit").value + ")";
-    document.getElementById("currentUnitHint").textContent = text;
-    document.getElementById("minUnitHint").textContent = text;
-    document.getElementById("targetUnitHint").textContent = text;
-  }
-
   async function saveCount(product, rawValue, saveBtn) {
     if (!currentUser) return;
     if (!dataReady) {
@@ -2293,7 +2236,7 @@
     groupNames.forEach(g => {
       if (totalBy[g] === 0) {
         groupEls[g].className = "stock-group hint";
-        groupEls[g].textContent = "Nenhum produto em " + g + ". Cadastre um produto com essa categoria.";
+        groupEls[g].textContent = "Nenhum produto em " + g + ".";
       }
     });
 
@@ -2373,7 +2316,6 @@
     activeStockTab = name;
 
     rich(document.getElementById("stockGroupTitle"), gIcon(name) + " " + name);
-    document.getElementById("categoryShown").value = name;
     document.getElementById("stockSauceView").hidden = name !== "Molhos";
     document.querySelectorAll("#stockList .stock-group").forEach(p => {
       const show = p.dataset.group === name;
@@ -2847,9 +2789,7 @@
   document.getElementById("exportBtn").addEventListener("click", exportExcel);
   document.getElementById("pdfBtn").addEventListener("click", exportPdf);
 
-  document.getElementById("unit").addEventListener("change", updateFormUnitHints);
-
-  /* ---------------- Configuração e cadastro ---------------- */
+  /* ---------------- Configuração ---------------- */
 
   factorInput.value = settings.targetFactor;
   factorInput.addEventListener("change", async function () {
@@ -2880,119 +2820,6 @@
 
     settings = { targetFactor: value };
     render();
-  });
-
-  productForm.addEventListener("submit", async function (event) {
-    event.preventDefault();
-    if (!currentUser) return;
-    if (!dataReady) {
-      alert("Os dados ainda não foram carregados da nuvem.");
-      return;
-    }
-
-    const name = document.getElementById("productName").value.trim();
-    const category = activeStockTab;
-    const unit = document.getElementById("unit").value;
-    const initialStock = round(Number(document.getElementById("initialStock").value));
-    const minimum = Number(document.getElementById("minimum").value);
-    const targetText = document.getElementById("target").value;
-    const target = targetText === "" ? null : Number(targetText);
-    const costText = document.getElementById("cost").value;
-    const cost = Number(costText);
-    const supplier = document.getElementById("supplier").value.trim();
-    const expiry = document.getElementById("expiry").value;
-
-    if (
-      !name ||
-      !Number.isFinite(minimum) || minimum < 0 ||
-      !Number.isFinite(initialStock) || initialStock < 0 ||
-      costText === "" || !Number.isFinite(cost) || cost < 0
-    ) {
-      alert("Preencha os dados corretamente.");
-      return;
-    }
-
-    if (target !== null && (!Number.isFinite(target) || target <= minimum)) {
-      alert("O estoque ideal precisa ser maior que o estoque mínimo (ou deixe em branco).");
-      return;
-    }
-
-    if (findProduct(name)) {
-      alert("Esse produto já está cadastrado!");
-      return;
-    }
-
-    if (DISCRETE_UNITS.includes(unit) && !Number.isInteger(initialStock)) {
-      alert("Para " + unit + ", o estoque atual deve ser um número inteiro.");
-      return;
-    }
-
-    const product = {
-      name: name,
-      category: category,
-      unit: unit,
-      minimum: minimum,
-      target: target,
-      cost: roundMoney(cost),
-      supplier: supplier,
-      expiry: expiry
-    };
-
-    const submitBtn = document.getElementById("productSubmitBtn");
-    submitBtn.disabled = true;
-
-    let savedProduct = null;
-    try {
-      const inserted = await supabaseClient
-        .from("products")
-        .insert(productToDb(product))
-        .select()
-        .single();
-      if (inserted.error) throw inserted.error;
-      savedProduct = dbToProduct(inserted.data);
-
-      let savedMovement = null;
-      if (initialStock > 0) {
-        const mv = await supabaseClient
-          .from("movements")
-          .insert(movementToDb({
-            product: name,
-            unit: unit,
-            type: "entrada",
-            quantity: initialStock,
-            employee: currentUser,
-            date: new Date().toISOString()
-          }))
-          .select()
-          .single();
-
-        if (mv.error) {
-          // desfaz o produto para não ficar cadastrado sem o estoque inicial
-          await supabaseClient.from("products").delete().eq("id", savedProduct.id);
-          throw mv.error;
-        }
-        savedMovement = dbToMovement(mv.data);
-      }
-
-      catalog.push(savedProduct);
-      if (savedMovement) movements.push(savedMovement);
-      activeStockTab = stockGroupOf(savedProduct); // abre a aba do produto recém-cadastrado
-    } catch (error) {
-      if (error && error.code === "23505") {
-        alert("Esse produto já está cadastrado!");
-      } else {
-        alert("Não foi possível salvar o produto: " + friendlyError(error));
-      }
-      submitBtn.disabled = false;
-      return;
-    }
-
-    submitBtn.disabled = false;
-    render();
-    this.reset();
-    document.getElementById("categoryShown").value = activeStockTab;
-    updateFormUnitHints();
-    alert("Produto cadastrado com sucesso!");
   });
 
   /* ---------------- Temperatura: equipamentos e aferições ---------------- */
@@ -3390,12 +3217,12 @@
       doc.setFont("helvetica", "bold");
       doc.setFontSize(18);
       doc.setTextColor(17, 24, 39);
-      doc.text("Operatto - Aferição de temperatura", margin, 48);
+      doc.text(anvisaTitle(date), margin, 48);
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       doc.setTextColor(107, 114, 128);
-      doc.text("Data da aferição: " + fmtDate(date) + "   |   Gerado em " + new Date().toLocaleString("pt-BR") + " por " + currentUser, margin, 66);
+      doc.text("Aferição de temperatura   |   Data da aferição: " + fmtDate(date) + "   |   Gerado em " + new Date().toLocaleString("pt-BR") + " por " + currentUser, margin, 66);
       doc.text(
         rows.length + " equipamento(s)   |   1ª aferição: " + count1 + "/" + rows.length +
         "   |   2ª aferição: " + count2 + "/" + rows.length + "   |   Fora da faixa: " + outCount,
@@ -3485,7 +3312,6 @@
   /* ---------------- Dashboard: checklist de limpeza (tabela do mês) ---------------- */
 
   let dashLimpezaMonth = "";
-  const MESES_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
   function limpezaMonthInfo(mes) {
     const parts = mes.split("-");
@@ -3661,11 +3487,11 @@
       doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
       doc.setTextColor(17, 24, 39);
-      doc.text("Operatto - Checklist de Limpeza", margin, 36);
+      doc.text(anvisaTitle(mes), margin, 36);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(107, 114, 128);
-      doc.text(info.nome + "   |   Chefe de cozinha: " + (resp.chefe || "____________________") +
+      doc.text("Checklist de Limpeza   |   " + info.nome + "   |   Chefe de cozinha: " + (resp.chefe || "____________________") +
         "   |   Gerente: " + (resp.gerente || "____________________"), margin, 50);
       doc.text("Gerado em " + new Date().toLocaleString("pt-BR") + (currentUser ? " por " + currentUser : ""), margin, 62);
 
@@ -4608,8 +4434,6 @@
 
   /* ---------------- Início ---------------- */
 
-  updateFormUnitHints();
-
   supabaseClient.auth.onAuthStateChange(function (event) {
     if (event === "PASSWORD_RECOVERY") showRecoveryFromLink();
   });
@@ -5203,7 +5027,7 @@ function cookBuildPdf(date, list, day) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(181, 209, 218);
-  doc.text("CONTROLE DE COZIMENTO", margin + 54, 54, { charSpace: 1.4 });
+  doc.text(anvisaTitle(date), margin + 54, 54, { charSpace: 1.4 });
   doc.setFontSize(9);
   doc.setTextColor(146, 152, 162);
   doc.text("DATA DO CONTROLE", w - margin, 32, { align: "right", charSpace: 1 });
@@ -5219,7 +5043,7 @@ function cookBuildPdf(date, list, day) {
   const situacao = final
     ? "Finalizado em " + cookWhen(day.finalizedAt) + (day.finalizedBy ? " por " + day.finalizedBy : "")
     : "Em aberto (não finalizado)";
-  doc.text("Situação: " + situacao, margin, 98);
+  doc.text("Controle de cozimento   |   Situação: " + situacao, margin, 98);
   doc.text(cnt.total + " registro(s)   |   Conformes: " + cnt.c + "   |   Não conformes: " + cnt.nc, margin, 113);
   doc.setTextColor(107, 114, 128);
   doc.text("Emitido em " + new Date().toLocaleString("pt-BR") + (currentUser ? " por " + currentUser : ""), w - margin, 98, { align: "right" });
@@ -5814,6 +5638,3 @@ sauceEl("sauceDate").addEventListener("change", async event => {
 sauceEl("sauceSaveBtn").addEventListener("click", sauceSave);
 sauceEl("saucePdfBtn").addEventListener("click", () => sauceGeneratePdf(null));
 </script>
-
-
-
