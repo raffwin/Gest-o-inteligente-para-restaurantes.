@@ -6754,27 +6754,55 @@ async function greaseOpen() {
   greaseSetStatus(""); await Promise.all([greaseLoadDate(today), greaseLoadMonth(greaseMonth)]);
 }
 function greaseBuildPdf() {
-  if (!greaseMonthRows.length) { alert("Não há limpezas registradas neste mês."); return; }
   const JsPDF = window.jspdf && window.jspdf.jsPDF;
   if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
   const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
-  if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo e tente novamente."); return; }
-  const p = greaseMonth.split("-"), days = new Date(Number(p[0]), Number(p[1]), 0).getDate(), margin = 30, w = doc.internal.pageSize.getWidth();
-  doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text("REGISTRO DE LIMPEZA DA CAIXA DE GORDURA", w / 2, 30, { align: "center" });
-  doc.setFontSize(10); doc.text("UNIDADE: " + (greaseEl("greaseUnit").value.trim() || "SUDOESTE"), w / 2, 46, { align: "center" });
-  doc.setFont("helvetica", "normal"); doc.text("MÊS: " + MESES_PT[Number(p[1]) - 1] + " de " + p[0] + "  |  Frequência prevista: Semanal", margin, 64);
-  const head = ["CAIXA"].concat(Array.from({length: days}, (_, i) => String(i + 1).padStart(2, "0")));
-  const body = [1, 2].map(n => ["Caixa " + n].concat(Array.from({length: days}, (_, i) => {
-    const date = greaseMonth + "-" + String(i + 1).padStart(2, "0");
-    return greaseMonthRows.some(r => r.cleaning_date === date && Number(r.grease_trap) === n) ? "X" : "";
-  })));
-  const colStyles = { 0: { cellWidth: 48, fontStyle: "bold" } }; for (let i = 1; i <= days; i++) colStyles[i] = { cellWidth: 17, halign: "center" };
-  doc.autoTable({ startY: 75, theme: "grid", margin: { left: margin, right: margin, bottom: 35 }, head: [head], body, styles: { font: "helvetica", fontSize: 7, cellPadding: 2, minCellHeight: 18, halign: "center" }, headStyles: { fillColor: [38,42,48], textColor: 255 }, columnStyles: colStyles });
-  let y = doc.lastAutoTable.finalY + 22;
-  doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.text("REGISTROS E RESPONSÁVEIS", margin, y); y += 8;
-  doc.autoTable({ startY: y, theme: "grid", margin: { left: margin, right: margin, bottom: 35 }, head: [["Data", "Caixa", "Frequência", "Responsável", "Conformes", "Não conformes"]], body: greaseMonthRows.map(r => [fmtDate(r.cleaning_date), "Caixa " + r.grease_trap, r.frequency, r.responsible, String(r.checks.filter(x => x === "C").length), String(r.checks.filter(x => x === "NC").length)]), styles: { font: "helvetica", fontSize: 8, cellPadding: 4 }, headStyles: { fillColor: [38,42,48], textColor: 255 } });
-  const pages = doc.internal.getNumberOfPages(), h = doc.internal.pageSize.getHeight();
-  for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setFontSize(8); doc.text("X = limpeza registrada  |  (!) detalhes das etapas conferidos no sistema", margin, h - 16); doc.text("Página " + i + " de " + pages, w - margin, h - 16, { align: "right" }); }
+  const p = greaseMonth.split("-"), margin = 30, w = doc.internal.pageSize.getWidth();
+  const monthName = MESES_PT[Number(p[1]) - 1];
+  const frequencies = ["Diária", "Semanal", "Quinzenal", "Mensal"];
+  const frequencyCounts = {};
+  greaseMonthRows.forEach(r => { frequencyCounts[r.frequency] = (frequencyCounts[r.frequency] || 0) + 1; });
+  const frequency = Object.keys(frequencyCounts).sort((a, b) => frequencyCounts[b] - frequencyCounts[a])[0] || "Semanal";
+  const responsibleNames = Array.from(new Set(greaseMonthRows.map(r => String(r.responsible || "").trim()).filter(Boolean)));
+  const responsible = responsibleNames.join(", ") || "____________________________________________________________";
+  doc.setTextColor(35, 31, 27);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(15);
+  doc.text("REGISTRO DE LIMPEZA DA CAIXA DE GORDURA", w / 2, 27, { align: "center" });
+  doc.setFontSize(13); doc.text("UNIDADE: " + (greaseEl("greaseUnit").value.trim() || "SUDOESTE"), w / 2, 44, { align: "center" });
+  const gridW = w - margin * 2;
+  doc.setDrawColor(90, 84, 77); doc.setLineWidth(0.7);
+  doc.rect(margin, 55, gridW, 19);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("Responsável:", margin + 6, 68);
+  doc.setFont("helvetica", "normal"); doc.text(responsible, margin + 67, 68, { maxWidth: gridW - 74 });
+  doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); doc.text("Frequência da Higienização:", margin, 88);
+  let fx = margin + 145;
+  frequencies.forEach(f => { doc.setFont("helvetica", frequency === f ? "bold" : "normal"); doc.text("( " + (frequency === f ? "X" : " ") + " ) " + f, fx, 88); fx += f === "Quinzenal" ? 92 : 76; });
+  const gx = margin, gy = 101, labelW = 63, headH = 20, rowH = 21, dayW = (gridW - labelW) / 31;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+  doc.rect(gx, gy, labelW, headH); doc.text("Mês", gx + 4, gy + 8); doc.text(monthName, gx + 4, gy + 17);
+  for (let d = 1; d <= 31; d++) { const x = gx + labelW + (d - 1) * dayW; doc.rect(x, gy, dayW, headH); doc.setFontSize(7); doc.text(String(d).padStart(2, "0"), x + dayW / 2, gy + 13, { align: "center" }); }
+  [1, 2].forEach((boxNo, idx) => {
+    const y = gy + headH + idx * rowH; doc.rect(gx, y, labelW, rowH); doc.setFontSize(8); doc.text("CAIXA " + boxNo, gx + 5, y + 13);
+    for (let d = 1; d <= 31; d++) { const x = gx + labelW + (d - 1) * dayW; doc.rect(x, y, dayW, rowH); const date = greaseMonth + "-" + String(d).padStart(2, "0"); if (greaseMonthRows.some(r => r.cleaning_date === date && Number(r.grease_trap) === boxNo)) { doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.text("X", x + dayW / 2, y + 14, { align: "center" }); } }
+  });
+  let y = gy + headH + rowH * 2 + 38;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("A LIMPEZA DA CAIXA DE GORDURA DEVE SER REALIZADA TODA SEMANA", margin, y);
+  y += 17; doc.setFontSize(9.5); doc.text("Instruções:", margin, y); y += 14;
+  const instructions = [
+    "Para a limpeza da caixa de gordura a pia deve estar com a torneira desligada;",
+    "O colaborador deve usar luvas de borracha azul, avental plástico, botas e óculos de proteção;",
+    "Abre-se a caixa de gordura;",
+    "Retiram-se os dejetos com o auxílio de uma pá que deve ser reservada somente para isso;",
+    "Colocam-se os dejetos em um saco de lixo reforçado, que deve estar dentro de um balde (que deve ser reservado para esse uso);",
+    "Desmontam-se as partes desmontáveis;",
+    "Lavam-se as partes desmontáveis com detergente neutro e uma escova;",
+    "Enxáguam-se as partes desmontáveis;",
+    "Lavam-se as laterais e o fundo com uma escova e detergente neutro, enxaguando com água corrente;",
+    "Monta-se a caixa de gordura;",
+    "Descartam-se os dejetos."
+  ];
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
+  instructions.forEach(line => { doc.text("•  " + line, margin + 8, y, { maxWidth: gridW - 12 }); y += 12; });
   doc.save("operatto_limpeza_caixa_gordura_" + greaseMonth + ".pdf");
 }
 greaseEl("greaseDate").addEventListener("change", async () => {
