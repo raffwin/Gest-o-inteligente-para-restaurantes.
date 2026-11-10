@@ -5003,8 +5003,8 @@ function ckRender() {
   ckEl("ckForm").hidden = final;
   ckEl("ckFoot").hidden = final;
   ckEl("ckFinalize").disabled = cookBusy || cookRecords.length === 0;
-  ckEl("ckPdf").disabled = cookRecords.length === 0;
-  ckEl("ckPrint").disabled = cookRecords.length === 0;
+  ckEl("ckPdf").disabled = cookBusy;
+  ckEl("ckPrint").disabled = cookBusy;
 
   // Tabela
   const box = ckEl("ckTableBox");
@@ -5210,101 +5210,41 @@ function cookBuildPdf(date, list, day) {
     alert("Biblioteca de tabelas do PDF indisponível (sem internet). Conecte-se e tente novamente.");
     return null;
   }
-
-  const margin = 36;
+  const margin = 56;
   const w = doc.internal.pageSize.getWidth();
-  const h = doc.internal.pageSize.getHeight();
-  const cnt = cookCounts(list);
-  const final = cookIsFinal(day);
+  const rows = list.map(r => [
+    fmtDate(r.date),
+    r.product,
+    (r.condition === "Cozimento" ? "(X) Cozimento   ( ) Reaquecimento" : "( ) Cozimento   (X) Reaquecimento"),
+    fmtNum1(r.temp) + " °C",
+    r.responsible
+  ]);
+  const blankRows = Math.max(0, 24 - rows.length);
+  for (let i = 0; i < blankRows; i++) rows.push(["", "", "( ) Cozimento   ( ) Reaquecimento", "", ""]);
 
-  // Faixa do topo com a identidade do Operatto
-  doc.setFillColor(23, 25, 29);
-  doc.rect(0, 0, w, 74, "F");
-  doc.setFillColor(86, 137, 154);
-  doc.rect(0, 74, w, 2, "F");
-  cookPdfLogo(doc, margin, 16, 42);
+  doc.setTextColor(25, 25, 25);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(240, 241, 243);
-  doc.text("OPERATTO", margin + 54, 38, { charSpace: 2.5 });
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(181, 209, 218);
-  doc.text(anvisaTitle(date), margin + 54, 54, { charSpace: 1.4 });
-  doc.setFontSize(9);
-  doc.setTextColor(146, 152, 162);
-  doc.text("DATA DO CONTROLE", w - margin, 32, { align: "right", charSpace: 1 });
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(240, 241, 243);
-  doc.text(fmtDate(date), w - margin, 54, { align: "right" });
-
-  // Resumo
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(60, 66, 75);
-  const situacao = final
-    ? "Finalizado em " + cookWhen(day.finalizedAt) + (day.finalizedBy ? " por " + day.finalizedBy : "")
-    : "Em aberto (não finalizado)";
-  doc.text("Controle de Cozimento e Reaquecimento   |   Situação do dia: " + situacao, margin, 98);
-  doc.text(cnt.total + " registro(s)   |   Conforme: " + cnt.c + "   |   Não conforme: " + cnt.nc + "   |   Mínimos: Cozimento 70 °C, Reaquecimento 74 °C", margin, 113);
-  doc.setTextColor(107, 114, 128);
-  doc.text("Emitido em " + new Date().toLocaleString("pt-BR") + (currentUser ? " por " + currentUser : ""), w - margin, 98, { align: "right" });
-
+  doc.setFontSize(15);
+  doc.text("CONTROLE DE COZIMENTO E REAQUECIMENTO", w / 2, 27, { align: "center" });
   doc.autoTable({
-    startY: 126,
+    startY: 49,
     theme: "grid",
-    margin: { left: margin, right: margin, top: 40, bottom: 62 },
-    head: [["Data", "Produto", "Condição", "Temperatura atingida (°C)", "Responsável", "Situação"]],
-    body: list.map(r => [fmtDate(r.date), r.product, r.condition, fmtNum1(r.temp), r.responsible, cookLabel(r.status)]),
-    styles: { font: "helvetica", fontSize: 9, cellPadding: 6, lineColor: [200, 205, 212], lineWidth: 0.5, textColor: [30, 34, 40], valign: "middle" },
-    headStyles: { fillColor: [38, 42, 48], textColor: [240, 241, 243], fontStyle: "bold", fontSize: 8.5 },
-    alternateRowStyles: { fillColor: [246, 248, 250] },
-    columnStyles: { 0: { cellWidth: 66 }, 2: { cellWidth: 90, halign: "center" }, 3: { cellWidth: 110, halign: "center" }, 5: { cellWidth: 90, halign: "center" } },
-    didParseCell: function (data) {
-      if (data.section !== "body") return;
-      const r = list[data.row.index];
-      if (data.column.index === 5) {
-        data.cell.styles.fontStyle = "bold";
-        data.cell.styles.textColor = r.status === "C" ? [24, 110, 70] : [168, 52, 60];
-      }
-      if (data.column.index === 3 && r.status === "NC") data.cell.styles.textColor = [168, 52, 60];
-    }
+    margin: { left: margin, right: margin, bottom: 52 },
+    head: [["Data", "Produto", "Condição", "Temperatura Atingida", "Responsável"]],
+    body: rows,
+    styles: { font: "helvetica", fontSize: 8.5, cellPadding: { top: 3, bottom: 3, left: 4, right: 4 }, minCellHeight: 15.5, lineColor: [65, 65, 65], lineWidth: 0.55, textColor: [25, 25, 25], valign: "middle" },
+    headStyles: { fillColor: [255, 255, 255], textColor: [25, 25, 25], fontStyle: "bold", fontSize: 9, halign: "center", minCellHeight: 16 },
+    columnStyles: { 0: { cellWidth: 72, halign: "center" }, 1: { cellWidth: 185 }, 2: { cellWidth: 212, halign: "center", fontSize: 7.5 }, 3: { cellWidth: 128, halign: "center" }, 4: { cellWidth: "auto" } }
   });
-
-  let y = doc.lastAutoTable.finalY + 38;
-  if (y > h - 90) { doc.addPage(); y = 70; }
-  doc.setDrawColor(120, 126, 136);
-  doc.setLineWidth(0.6);
-  doc.line(margin, y, margin + 250, y);
-  doc.line(margin + 300, y, margin + 550, y);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.setTextColor(107, 114, 128);
-  doc.text("Responsável", margin, y + 12);
-  doc.text("Visto do gerente", margin + 300, y + 12);
-  doc.text("Conforme: Cozimento a partir de 70 °C e Reaquecimento a partir de 74 °C.   Não Conforme: abaixo do mínimo (refazer o processo).", margin, y + 34);
-
-  const pages = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pages; i++) {
-    doc.setPage(i);
-    doc.setDrawColor(220, 224, 230);
-    doc.setLineWidth(0.5);
-    doc.line(margin, h - 32, w - margin, h - 32);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(120, 126, 136);
-    doc.text("Operatto  -  Gestão com responsabilidade", margin, h - 18);
-    doc.text("Página " + i + " de " + pages, w - margin, h - 18, { align: "right" });
-  }
+  const y = doc.lastAutoTable.finalY + 20;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9.5);
+  doc.text("Temperatura mínima de segurança no centro geométrico: 70°C para cozimento.", margin, y);
+  doc.text("Temperatura mínima de segurança no centro geométrico: 74°C para reaquecimento.", margin, y + 16);
   return doc;
 }
 
 function cookPdf(date, list, day, mode) {
-  if (!list.length) {
-    alert("Não há registros neste dia.");
-    return;
-  }
   try {
     const doc = cookBuildPdf(date, list, day);
     if (!doc) return;
