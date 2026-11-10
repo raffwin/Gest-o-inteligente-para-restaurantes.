@@ -2397,18 +2397,25 @@
       btn.addEventListener("click", () => openStockGroup(g));
       box.appendChild(btn);
     });
-
-    const sheetBtn = document.createElement("button");
-    sheetBtn.type = "button";
-    sheetBtn.className = "module op-category";
-    sheetBtn.innerHTML = '<div class="op-category-icon"><svg viewBox="0 0 24 24">' + STOCK_SVG.Outros + '</svg></div><h3>Planilha de estoque</h3><p>Contagem e pedido por subgrupo</p>';
-    sheetBtn.addEventListener("click", () => openStockGroup("Planilha de estoque"));
-    box.appendChild(sheetBtn);
+    box.replaceChildren();
+    const sauceBtn = document.createElement("button");
+    sauceBtn.type = "button"; sauceBtn.className = "module op-category";
+    sauceBtn.innerHTML = '<div class="op-category-icon"><svg viewBox="0 0 24 24">' + STOCK_SVG.Molhos + '</svg></div><h3>Molhos</h3><p>' + SAUCE_CATALOG.length + ' produtos</p>';
+    sauceBtn.addEventListener("click", () => openStockGroup("Molhos"));
+    box.appendChild(sauceBtn);
+    Object.keys(SHEET_STOCK).forEach(g => {
+      const card = document.createElement("button"); card.type = "button"; card.className = "module op-category";
+      card.innerHTML = '<div class="op-category-icon"><svg viewBox="0 0 24 24">' + STOCK_SVG.Outros + '</svg></div><h3></h3><p></p>';
+      card.querySelector("h3").textContent = g;
+      card.querySelector("p").textContent = SHEET_STOCK[g].length + " produtos";
+      card.addEventListener("click", () => openStockGroup(g));
+      box.appendChild(card);
+    });
   }
 
   // Há contagens digitadas na lacuna aberta que ainda não foram salvas?
   function stockGroupDirty() {
-    if (activeStockTab === "Planilha de estoque" && typeof sheetStockDirty !== "undefined" && sheetStockDirty) return true;
+    if (typeof SHEET_STOCK !== "undefined" && SHEET_STOCK[activeStockTab] && typeof sheetStockDirty !== "undefined" && sheetStockDirty) return true;
     if (activeStockTab === "Molhos" && sauceDirty) return true;
     return countInputs.some(entry => {
       if (entry.group !== activeStockTab) return false;
@@ -2427,7 +2434,7 @@
   function openStockGroup(name) {
     activeStockTab = name;
 
-    const sheetMode = name === "Planilha de estoque";
+    const sheetMode = Object.prototype.hasOwnProperty.call(SHEET_STOCK, name);
     document.getElementById("sheetStockView").hidden = !sheetMode;
     document.getElementById("stockSauceView").hidden = sheetMode || name !== "Molhos";
     const sauceMode = name === "Molhos";
@@ -2436,11 +2443,12 @@
     document.getElementById("stockGroupTitle").hidden = sheetMode;
     document.querySelector("#stockGroupView > p").hidden = sheetMode;
     if (sheetMode) {
+      document.getElementById("stockGroupTitle").textContent = name;
       document.getElementById("stockHome").hidden = true;
       document.getElementById("stockGroupView").hidden = false;
-      document.getElementById("sheetStockGroups").hidden = false;
+      document.getElementById("sheetStockGroups").hidden = true;
       document.getElementById("sheetStockTable").hidden = true;
-      sheetStockOpen();
+      sheetStockOpen(name);
       window.scrollTo(0, 0);
       return;
     }
@@ -6532,11 +6540,12 @@ function sheetStockDrawGroups() {
     b.append(icon, title, desc); b.addEventListener("click", () => sheetStockOpenCategory(name)); box.appendChild(b);
   });
 }
-function sheetStockOpen() {
+function sheetStockOpen(name) {
   const date = document.getElementById("sheetStockDate");
   date.max = localStamp(); if (!date.value || date.value > date.max) date.value = date.max;
   sheetStockDrawGroups(); sheetStockCategory = ""; sheetStockValues = {}; sheetStockDirty = false;
   sheetStockStatus("");
+  sheetStockOpenCategory(name);
 }
 async function sheetStockOpenCategory(name) {
   if (sheetStockDirty && !confirm("Há alterações sem salvar. Descartar e abrir este subgrupo?")) return;
@@ -6553,7 +6562,7 @@ async function sheetStockOpenCategory(name) {
   } catch (error) { sheetStockStatus("Falha ao carregar: " + friendlyError(error), "negative"); return; }
   const box = document.getElementById("sheetStockTable"); box.hidden = false; box.replaceChildren();
   const back = document.createElement("button"); back.type = "button"; back.className = "back-btn"; back.textContent = "← Subgrupos";
-  back.addEventListener("click", () => { if (!sheetStockDirty || confirm("Descartar alterações sem salvar?")) { box.hidden = true; document.getElementById("sheetStockGroups").hidden = false; sheetStockStatus(""); } });
+  back.addEventListener("click", () => closeStockGroup());
   const title = document.createElement("h3"); title.className = "section-heading"; title.textContent = name;
   const wrap = document.createElement("div"); wrap.className = "sauce-table-wrap";
   const table = document.createElement("table"); table.className = "sauce-table";
@@ -6607,7 +6616,7 @@ function sheetStockPdf() {
 }
 document.getElementById("sheetStockDate").addEventListener("change", () => {
   if (sheetStockDirty && !confirm("Descartar alterações sem salvar e carregar outra data?")) return;
-  if (sheetStockCategory) sheetStockOpenCategory(sheetStockCategory);
+  if (sheetStockCategory) { sheetStockDirty = false; sheetStockOpenCategory(sheetStockCategory); }
 });
 document.getElementById("sheetStockSave").addEventListener("click", sheetStockSave);
 document.getElementById("sheetStockPdf").addEventListener("click", sheetStockPdf);
