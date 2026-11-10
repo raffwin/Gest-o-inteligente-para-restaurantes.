@@ -753,7 +753,7 @@
     </div>
     <div id="sheetStockGroups" class="modules"></div>
     <div id="sheetStockTable" hidden></div>
-    <div class="sauce-actions"><button type="button" id="sheetStockSave">Salvar contagem</button></div>
+    <div class="sauce-actions"><button type="button" id="sheetStockSave">Salvar contagem</button><button type="button" class="btn-edit" id="sheetStockPdf">Salvar em PDF</button></div>
     <div class="sauce-status sim" id="sheetStockStatus" role="status" aria-live="polite"></div>
   </div>
 
@@ -2367,7 +2367,7 @@
     const box = document.getElementById("stockGroups");
     box.replaceChildren();
 
-    names.forEach(g => {
+    names.filter(g => g === "Molhos").forEach(g => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "module op-category";
@@ -2430,8 +2430,9 @@
     const sheetMode = name === "Planilha de estoque";
     document.getElementById("sheetStockView").hidden = !sheetMode;
     document.getElementById("stockSauceView").hidden = sheetMode || name !== "Molhos";
-    document.querySelectorAll("#stockGroupView > section").forEach(s => { s.hidden = sheetMode; });
-    document.getElementById("stockList").hidden = sheetMode;
+    const sauceMode = name === "Molhos";
+    document.querySelectorAll("#stockGroupView > section").forEach(s => { s.hidden = sheetMode || sauceMode; });
+    document.getElementById("stockList").hidden = sheetMode || sauceMode;
     document.getElementById("stockGroupTitle").hidden = sheetMode;
     document.querySelector("#stockGroupView > p").hidden = sheetMode;
     if (sheetMode) {
@@ -2443,10 +2444,10 @@
       window.scrollTo(0, 0);
       return;
     }
-    document.getElementById("stockList").hidden = false;
+    document.getElementById("stockList").hidden = sauceMode;
     document.getElementById("stockGroupTitle").hidden = false;
     document.querySelector("#stockGroupView > p").hidden = false;
-    document.querySelectorAll("#stockGroupView > section").forEach(s => { s.hidden = false; });
+    document.querySelectorAll("#stockGroupView > section").forEach(s => { s.hidden = sauceMode; });
 
     rich(document.getElementById("stockGroupTitle"), gIcon(name) + " " + name);
     document.getElementById("stockSauceView").hidden = name !== "Molhos";
@@ -6580,11 +6581,36 @@ async function sheetStockSave() {
   } catch (error) { sheetStockStatus("Não foi possível salvar: " + friendlyError(error), "negative"); }
   btn.disabled = false;
 }
+function sheetStockPdf() {
+  if (!sheetStockCategory) { sheetStockStatus("Abra um subgrupo antes de gerar o PDF.", "warning"); return; }
+  const JsPDF = window.jspdf && window.jspdf.jsPDF;
+  if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
+  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+  if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo e tente novamente."); return; }
+  const date = document.getElementById("sheetStockDate").value;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.text("CONTAGEM DE ESTOQUE", 40, 42);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+  doc.text("Subgrupo: " + sheetStockCategory, 40, 62);
+  doc.text("Data: " + fmtDate(date) + "   |   Responsável: " + (currentUser || ""), 40, 78);
+  doc.autoTable({
+    startY: 94, theme: "grid", margin: { left: 40, right: 40, bottom: 40 },
+    head: [["PRODUTO", "ESTOQUE", "PEDIR"]],
+    body: SHEET_STOCK[sheetStockCategory].map(product => {
+      const v = sheetStockValues[product] || {};
+      return [product, v.stock == null ? "" : String(v.stock), v.order == null ? "" : String(v.order)];
+    }),
+    styles: { font: "helvetica", fontSize: 9, cellPadding: 5, lineColor: [190, 195, 202], lineWidth: 0.5, textColor: [35, 39, 45], valign: "middle" },
+    headStyles: { fillColor: [38, 42, 48], textColor: [255, 255, 255], fontStyle: "bold" },
+    columnStyles: { 0: { cellWidth: "auto" }, 1: { cellWidth: 90, halign: "center" }, 2: { cellWidth: 90, halign: "center" } }
+  });
+  doc.save("operatto_estoque_" + sheetStockCategory.toLowerCase().replace(/[^a-z0-9]+/g, "_") + "_" + date + ".pdf");
+}
 document.getElementById("sheetStockDate").addEventListener("change", () => {
   if (sheetStockDirty && !confirm("Descartar alterações sem salvar e carregar outra data?")) return;
   if (sheetStockCategory) sheetStockOpenCategory(sheetStockCategory);
 });
 document.getElementById("sheetStockSave").addEventListener("click", sheetStockSave);
+document.getElementById("sheetStockPdf").addEventListener("click", sheetStockPdf);
 </script>
 
 </body>
