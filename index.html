@@ -925,6 +925,11 @@
       <strong>Controle de Qualidade do Óleo</strong>
       <span>Fritadeira 1 e Fritadeira 2</span>
     </button>
+    <button type="button" class="module" data-check="gordura">
+      <div class="module-icon"><svg viewBox="0 0 24 24"><path d="M4 8h16l-2 12H6L4 8Z"/><path d="M3 5h18M8 5V3h8v2M8 12h8"/></svg></div>
+      <strong>Limpeza da Caixa de Gordura</strong>
+      <span>Registro semanal das Caixas 1 e 2</span>
+    </button>
     <button type="button" class="module" data-check="gerencial">
       <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></svg></div>
       <strong>Gerencial</strong>
@@ -1116,6 +1121,35 @@
       <div class="ol-legend">Cada fritadeira tem o seu próprio registro por dia. Salvar de novo na mesma data e fritadeira atualiza o registro. Os dados ficam na sua conta e aparecem em qualquer aparelho.</div>
     </div>
   </div>
+  </section>
+
+  <section class="tab-panel" id="tab-gordura" role="tabpanel" hidden>
+    <div class="section" id="greaseRoot">
+      <h2>Registro de limpeza da caixa de gordura</h2>
+      <div class="hint" style="margin-bottom:16px">A limpeza deve ser realizada toda semana. Registre cada caixa separadamente.</div>
+      <div class="row">
+        <div><label for="greaseDate">Data da limpeza</label><input id="greaseDate" type="date"></div>
+        <div><label for="greaseMonth">Mês de referência</label><input id="greaseMonth" type="month"></div>
+      </div>
+      <div class="row">
+        <div><label for="greaseTrap">Caixa de gordura</label><select id="greaseTrap"><option value="1">Caixa 1</option><option value="2">Caixa 2</option></select></div>
+        <div><label for="greaseFrequency">Frequência da higienização</label><select id="greaseFrequency"><option value="Semanal">Semanal</option><option value="Diária">Diária</option><option value="Quinzenal">Quinzenal</option><option value="Mensal">Mensal</option></select></div>
+      </div>
+      <label for="greaseResponsible">Responsável</label><input id="greaseResponsible" type="text" maxlength="80" placeholder="Nome do responsável">
+      <h3 class="section-heading">Etapas da higienização</h3>
+      <div id="greaseSteps"></div>
+      <div class="actions"><button type="button" id="greaseSave">Salvar limpeza</button></div>
+      <div class="sim" id="greaseStatus" role="status" aria-live="polite"></div>
+      <div class="section" style="margin-top:18px">
+        <div class="row">
+          <div><label for="greaseHistoryMonth">Mês do histórico</label><input id="greaseHistoryMonth" type="month"></div>
+          <div><label for="greaseUnit">Unidade</label><input id="greaseUnit" type="text" maxlength="80" value="SUDOESTE"></div>
+        </div>
+        <div class="actions"><button type="button" class="btn-edit" id="greasePdf">Gerar PDF mensal</button></div>
+        <div class="table-wrap" id="greaseHistory"></div>
+      </div>
+      <div class="hint"><strong>Orientações:</strong> desligue a torneira da pia; use luvas de borracha azul, avental plástico, botas e óculos de proteção; abra a caixa; retire os dejetos com pá reservada para esse uso e coloque-os em saco reforçado dentro do balde reservado; desmonte as partes removíveis; lave-as com detergente neutro e escova e enxágue; lave laterais e fundo com escova e detergente neutro e enxágue com água corrente; monte novamente a caixa e descarte os dejetos.</div>
+    </div>
   </section>
 
   <section class="section tab-panel" id="tab-gerencial" role="tabpanel" hidden>
@@ -3712,7 +3746,7 @@
 
   /* ---------------- Checklist: escolher qual fazer ---------------- */
 
-  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento e Reaquecimento", oleo: "{drop} Controle de Qualidade do Óleo", gerencial: "{list} Gerencial" };
+  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento e Reaquecimento", oleo: "{drop} Controle de Qualidade do Óleo", gordura: "{clean} Limpeza da Caixa de Gordura", gerencial: "{list} Gerencial" };
 
   function resetChecklistScreen() {
     document.getElementById("checklistHome").hidden = false;
@@ -3723,6 +3757,7 @@
     rich(document.getElementById("checklistOpenTitle"), CHECKLIST_TITLES[name] || "Checklist");
     if (name === "cozimento" && typeof ckOpen === "function") ckOpen();
     if (name === "oleo" && typeof olOpen === "function") olOpen();
+    if (name === "gordura" && typeof greaseOpen === "function") greaseOpen();
     document.querySelectorAll("#checklistOpenView .tab-panel").forEach(p => {
       const show = p.id === "tab-" + name;
       p.hidden = !show;
@@ -6620,6 +6655,140 @@ document.getElementById("sheetStockDate").addEventListener("change", () => {
 });
 document.getElementById("sheetStockSave").addEventListener("click", sheetStockSave);
 document.getElementById("sheetStockPdf").addEventListener("click", sheetStockPdf);
+</script>
+
+<script>
+/* Registro mensal de limpeza das caixas de gordura, seguindo o formulário enviado. */
+const GREASE_STEPS = [
+  "Desligar a torneira da pia.",
+  "Vestir luvas de borracha azul, avental plástico, botas e óculos de proteção.",
+  "Abrir a caixa de gordura.",
+  "Retirar os dejetos com uma pá reservada somente para esse uso.",
+  "Colocar os dejetos em saco de lixo reforçado dentro do balde reservado para esse uso.",
+  "Desmontar as partes removíveis.",
+  "Lavar as partes removíveis com detergente neutro e escova e enxaguá-las.",
+  "Lavar laterais e fundo com escova e detergente neutro e enxaguar com água corrente.",
+  "Montar novamente a caixa de gordura.",
+  "Descartar os dejetos."
+];
+let greaseDate = "", greaseMonth = "", greaseTrap = 1, greaseDayRows = [], greaseMonthRows = [], greaseChecks = [], greaseDirty = false, greaseBusy = false;
+const greaseEl = id => document.getElementById(id);
+function greaseSetStatus(text, cls) { const e = greaseEl("greaseStatus"); e.textContent = text || ""; e.className = "sim " + (cls || ""); }
+function greaseRenderSteps() {
+  const box = greaseEl("greaseSteps"); box.replaceChildren();
+  GREASE_STEPS.forEach((step, i) => {
+    const row = document.createElement("div"); row.className = "panel-row";
+    const name = document.createElement("span"); name.textContent = (i + 1) + ". " + step;
+    const select = document.createElement("select"); select.setAttribute("aria-label", "Conferência da etapa " + (i + 1));
+    select.innerHTML = '<option value="">Selecione</option><option value="C">Conforme</option><option value="NC">Não conforme</option>';
+    select.value = greaseChecks[i] || "";
+    select.addEventListener("change", () => { greaseChecks[i] = select.value; greaseDirty = true; greaseSetStatus("Há alterações sem salvar.", "warning"); });
+    row.append(name, select); box.appendChild(row);
+  });
+}
+function greaseLoadFormFromRow() {
+  const row = greaseDayRows.find(r => Number(r.grease_trap) === Number(greaseTrap));
+  greaseChecks = row && Array.isArray(row.checks) ? row.checks.slice(0, GREASE_STEPS.length) : Array(GREASE_STEPS.length).fill("");
+  while (greaseChecks.length < GREASE_STEPS.length) greaseChecks.push("");
+  greaseEl("greaseResponsible").value = row ? row.responsible : (currentUser || "");
+  greaseEl("greaseFrequency").value = row ? row.frequency : "Semanal";
+  greaseDirty = false; greaseRenderSteps();
+  greaseSetStatus(row ? "Registro carregado para Caixa " + greaseTrap + "." : "Preencha as etapas da Caixa " + greaseTrap + ".", "hint");
+}
+async function greaseLoadDate(date) {
+  greaseDate = date; greaseTrap = Number(greaseEl("greaseTrap").value || 1);
+  try {
+    const { data, error } = await supabaseClient.from("grease_trap_cleanings").select("*").eq("cleaning_date", date).order("grease_trap");
+    if (error) throw error;
+    greaseDayRows = data || []; greaseLoadFormFromRow();
+  } catch (error) { greaseSetStatus("Não foi possível carregar os registros: " + friendlyError(error), "negative"); }
+}
+async function greaseLoadMonth(month) {
+  greaseMonth = month; const p = month.split("-");
+  const last = new Date(Number(p[0]), Number(p[1]), 0).getDate();
+  try {
+    const { data, error } = await supabaseClient.from("grease_trap_cleanings").select("*").gte("cleaning_date", month + "-01").lte("cleaning_date", month + "-" + String(last).padStart(2, "0")).order("cleaning_date").order("grease_trap");
+    if (error) throw error;
+    greaseMonthRows = data || []; greaseRenderHistory();
+  } catch (error) { greaseEl("greaseHistory").textContent = "Não foi possível carregar o histórico: " + friendlyError(error); }
+}
+function greaseRenderHistory() {
+  const box = greaseEl("greaseHistory"); box.replaceChildren();
+  const p = greaseMonth.split("-"); const days = new Date(Number(p[0]), Number(p[1]), 0).getDate();
+  const table = document.createElement("table"); table.className = "dash-table";
+  const head = document.createElement("thead"), hr = document.createElement("tr");
+  ["Caixa"].concat(Array.from({length: days}, (_, i) => String(i + 1).padStart(2, "0"))).forEach(x => { const th = document.createElement("th"); th.textContent = x; hr.appendChild(th); });
+  head.appendChild(hr); table.appendChild(head);
+  const body = document.createElement("tbody");
+  [1, 2].forEach(n => { const tr = document.createElement("tr"); const label = document.createElement("td"); label.textContent = "Caixa " + n; tr.appendChild(label);
+    for (let d = 1; d <= days; d++) { const td = document.createElement("td"); const date = greaseMonth + "-" + String(d).padStart(2, "0"); const row = greaseMonthRows.find(x => x.cleaning_date === date && Number(x.grease_trap) === n); td.textContent = row ? "X" : ""; if (row && row.checks && row.checks.includes("NC")) td.className = "negative"; tr.appendChild(td); }
+    body.appendChild(tr);
+  });
+  table.appendChild(body); box.appendChild(table);
+  const details = document.createElement("div"); details.className = "hint"; details.style.marginTop = "10px";
+  details.textContent = greaseMonthRows.length ? greaseMonthRows.length + " limpeza(s) registrada(s) no mês. X marca uma limpeza; vermelho indica ao menos uma etapa não conforme." : "Nenhuma limpeza registrada neste mês.";
+  box.appendChild(details);
+}
+async function greaseSave() {
+  if (greaseBusy) return;
+  const responsible = greaseEl("greaseResponsible").value.trim();
+  if (!responsible) { greaseSetStatus("Informe o responsável.", "warning"); return; }
+  if (greaseChecks.length !== GREASE_STEPS.length || greaseChecks.some(x => !["C", "NC"].includes(x))) { greaseSetStatus("Marque C ou NC em todas as etapas antes de salvar.", "warning"); return; }
+  const payload = { user_id: currentUserId, cleaning_date: greaseDate, grease_trap: Number(greaseTrap), responsible, frequency: greaseEl("greaseFrequency").value, checks: greaseChecks, updated_at: new Date().toISOString() };
+  greaseBusy = true; const btn = greaseEl("greaseSave"); btn.disabled = true; greaseSetStatus("Salvando...", "hint");
+  try {
+    const { data, error } = await supabaseClient.from("grease_trap_cleanings").upsert(payload, { onConflict: "user_id,cleaning_date,grease_trap" }).select().single();
+    if (error) throw error;
+    greaseDayRows = greaseDayRows.filter(r => Number(r.grease_trap) !== Number(greaseTrap)).concat(data);
+    greaseDirty = false; greaseSetStatus("Limpeza da Caixa " + greaseTrap + " salva.", "positive");
+    if (greaseDate.slice(0, 7) === greaseMonth) await greaseLoadMonth(greaseMonth);
+  } catch (error) { greaseSetStatus("Não foi possível salvar: " + friendlyError(error), "negative"); }
+  greaseBusy = false; btn.disabled = false;
+}
+async function greaseOpen() {
+  const today = localStamp(); greaseEl("greaseDate").max = today;
+  const month = today.slice(0, 7); greaseEl("greaseDate").value = today;
+  greaseEl("greaseMonth").value = month; greaseEl("greaseHistoryMonth").max = month;
+  if (!greaseEl("greaseHistoryMonth").value) greaseEl("greaseHistoryMonth").value = month;
+  greaseMonth = greaseEl("greaseHistoryMonth").value;
+  greaseSetStatus(""); await Promise.all([greaseLoadDate(today), greaseLoadMonth(greaseMonth)]);
+}
+function greaseBuildPdf() {
+  if (!greaseMonthRows.length) { alert("Não há limpezas registradas neste mês."); return; }
+  const JsPDF = window.jspdf && window.jspdf.jsPDF;
+  if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
+  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+  if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo e tente novamente."); return; }
+  const p = greaseMonth.split("-"), days = new Date(Number(p[0]), Number(p[1]), 0).getDate(), margin = 30, w = doc.internal.pageSize.getWidth();
+  doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text("REGISTRO DE LIMPEZA DA CAIXA DE GORDURA", w / 2, 30, { align: "center" });
+  doc.setFontSize(10); doc.text("UNIDADE: " + (greaseEl("greaseUnit").value.trim() || "SUDOESTE"), w / 2, 46, { align: "center" });
+  doc.setFont("helvetica", "normal"); doc.text("MÊS: " + MESES_PT[Number(p[1]) - 1] + " de " + p[0] + "  |  Frequência prevista: Semanal", margin, 64);
+  const head = ["CAIXA"].concat(Array.from({length: days}, (_, i) => String(i + 1).padStart(2, "0")));
+  const body = [1, 2].map(n => ["Caixa " + n].concat(Array.from({length: days}, (_, i) => {
+    const date = greaseMonth + "-" + String(i + 1).padStart(2, "0");
+    return greaseMonthRows.some(r => r.cleaning_date === date && Number(r.grease_trap) === n) ? "X" : "";
+  })));
+  const colStyles = { 0: { cellWidth: 48, fontStyle: "bold" } }; for (let i = 1; i <= days; i++) colStyles[i] = { cellWidth: 17, halign: "center" };
+  doc.autoTable({ startY: 75, theme: "grid", margin: { left: margin, right: margin, bottom: 35 }, head: [head], body, styles: { font: "helvetica", fontSize: 7, cellPadding: 2, minCellHeight: 18, halign: "center" }, headStyles: { fillColor: [38,42,48], textColor: 255 }, columnStyles: colStyles });
+  let y = doc.lastAutoTable.finalY + 22;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.text("REGISTROS E RESPONSÁVEIS", margin, y); y += 8;
+  doc.autoTable({ startY: y, theme: "grid", margin: { left: margin, right: margin, bottom: 35 }, head: [["Data", "Caixa", "Frequência", "Responsável", "Conformes", "Não conformes"]], body: greaseMonthRows.map(r => [fmtDate(r.cleaning_date), "Caixa " + r.grease_trap, r.frequency, r.responsible, String(r.checks.filter(x => x === "C").length), String(r.checks.filter(x => x === "NC").length)]), styles: { font: "helvetica", fontSize: 8, cellPadding: 4 }, headStyles: { fillColor: [38,42,48], textColor: 255 } });
+  const pages = doc.internal.getNumberOfPages(), h = doc.internal.pageSize.getHeight();
+  for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setFontSize(8); doc.text("X = limpeza registrada  |  (!) detalhes das etapas conferidos no sistema", margin, h - 16); doc.text("Página " + i + " de " + pages, w - margin, h - 16, { align: "right" }); }
+  doc.save("operatto_limpeza_caixa_gordura_" + greaseMonth + ".pdf");
+}
+greaseEl("greaseDate").addEventListener("change", async () => {
+  if (greaseDirty && !confirm("Descartar as alterações sem salvar e abrir outra data?")) { greaseEl("greaseDate").value = greaseDate; return; }
+  const date = greaseEl("greaseDate").value; if (!date || date > localStamp()) { greaseEl("greaseDate").value = greaseDate; return; }
+  greaseDate = date; greaseEl("greaseMonth").value = date.slice(0, 7); greaseEl("greaseHistoryMonth").value = date.slice(0, 7); greaseMonth = date.slice(0, 7);
+  await Promise.all([greaseLoadDate(date), greaseLoadMonth(greaseMonth)]);
+});
+greaseEl("greaseTrap").addEventListener("change", () => { if (greaseDirty && !confirm("Descartar as alterações sem salvar?")) { greaseEl("greaseTrap").value = String(greaseTrap); return; } greaseTrap = Number(greaseEl("greaseTrap").value); greaseLoadFormFromRow(); });
+greaseEl("greaseResponsible").addEventListener("input", () => { greaseDirty = true; greaseSetStatus("Há alterações sem salvar.", "warning"); });
+greaseEl("greaseFrequency").addEventListener("change", () => { greaseDirty = true; greaseSetStatus("Há alterações sem salvar.", "warning"); });
+greaseEl("greaseHistoryMonth").addEventListener("change", () => { if (greaseEl("greaseHistoryMonth").value) greaseLoadMonth(greaseEl("greaseHistoryMonth").value); });
+greaseEl("greaseSave").addEventListener("click", greaseSave);
+greaseEl("greasePdf").addEventListener("click", greaseBuildPdf);
 </script>
 
 </body>
