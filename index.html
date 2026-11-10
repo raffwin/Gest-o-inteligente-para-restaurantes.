@@ -746,6 +746,17 @@
     </div>
   </div>
 
+  <div id="sheetStockView" hidden>
+    <div class="sauce-head">
+      <div><h2 class="section-heading">Contagem da planilha</h2><div class="hint">Informe o estoque atual e a quantidade a pedir por produto.</div></div>
+      <div class="sauce-date"><label for="sheetStockDate">Data da contagem</label><input id="sheetStockDate" type="date"></div>
+    </div>
+    <div id="sheetStockGroups" class="modules"></div>
+    <div id="sheetStockTable" hidden></div>
+    <div class="sauce-actions"><button type="button" id="sheetStockSave">Salvar contagem</button></div>
+    <div class="sauce-status sim" id="sheetStockStatus" role="status" aria-live="polite"></div>
+  </div>
+
   <section class="section">
     <h2><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg> Contagem do estoque</h2>
     <div class="hint" style="margin-bottom:8px"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg> Digite a contagem de cada produto para ver o pedido possível na hora. Use "Salvar contagem" em um produto ou "Salvar tudo" para registrar todas as contagens de uma vez.</div>
@@ -2386,10 +2397,18 @@
       btn.addEventListener("click", () => openStockGroup(g));
       box.appendChild(btn);
     });
+
+    const sheetBtn = document.createElement("button");
+    sheetBtn.type = "button";
+    sheetBtn.className = "module op-category";
+    sheetBtn.innerHTML = '<div class="op-category-icon"><svg viewBox="0 0 24 24">' + STOCK_SVG.Outros + '</svg></div><h3>Planilha de estoque</h3><p>Contagem e pedido por subgrupo</p>';
+    sheetBtn.addEventListener("click", () => openStockGroup("Planilha de estoque"));
+    box.appendChild(sheetBtn);
   }
 
   // Há contagens digitadas na lacuna aberta que ainda não foram salvas?
   function stockGroupDirty() {
+    if (activeStockTab === "Planilha de estoque" && typeof sheetStockDirty !== "undefined" && sheetStockDirty) return true;
     if (activeStockTab === "Molhos" && sauceDirty) return true;
     return countInputs.some(entry => {
       if (entry.group !== activeStockTab) return false;
@@ -2407,6 +2426,27 @@
   // Abre a lacuna escolhida: só os produtos dela aparecem
   function openStockGroup(name) {
     activeStockTab = name;
+
+    const sheetMode = name === "Planilha de estoque";
+    document.getElementById("sheetStockView").hidden = !sheetMode;
+    document.getElementById("stockSauceView").hidden = sheetMode || name !== "Molhos";
+    document.querySelectorAll("#stockGroupView > section").forEach(s => { s.hidden = sheetMode; });
+    document.getElementById("stockList").hidden = sheetMode;
+    document.getElementById("stockGroupTitle").hidden = sheetMode;
+    document.querySelector("#stockGroupView > p").hidden = sheetMode;
+    if (sheetMode) {
+      document.getElementById("stockHome").hidden = true;
+      document.getElementById("stockGroupView").hidden = false;
+      document.getElementById("sheetStockGroups").hidden = false;
+      document.getElementById("sheetStockTable").hidden = true;
+      sheetStockOpen();
+      window.scrollTo(0, 0);
+      return;
+    }
+    document.getElementById("stockList").hidden = false;
+    document.getElementById("stockGroupTitle").hidden = false;
+    document.querySelector("#stockGroupView > p").hidden = false;
+    document.querySelectorAll("#stockGroupView > section").forEach(s => { s.hidden = false; });
 
     rich(document.getElementById("stockGroupTitle"), gIcon(name) + " " + name);
     document.getElementById("stockSauceView").hidden = name !== "Molhos";
@@ -6456,3 +6496,96 @@ sauceEl("sauceDate").addEventListener("change", async event => {
 sauceEl("sauceSaveBtn").addEventListener("click", sauceSave);
 sauceEl("saucePdfBtn").addEventListener("click", () => sauceGeneratePdf(null));
 </script>
+
+<script>
+/* Contagem complementar baseada na planilha CMV Setembro 2026.
+   Molhos permanece no módulo existente, sem alteração. */
+const SHEET_STOCK = {
+  "Estoque Seco": ["Açucar Sachê 400 unid","Açucar Cristal 5 kg","Aceto Balsanico 250ML","Adoçante Linea a Grama","Alcaparras Balde kg","Azeitona Preta S Caroço","Arroz 5 Kilos camil","Azeite de Dende","Azeite 500 ml","Azeite de 250ml (Unid.) Andorinha","Azeite de 5 litros","Batata Palito Levo Alimentos","Batata Palito J.C","Catchup sache","Champion Chef e Co","Cobertura de Chocolate","Farinha de Mandioca","Farinha de Trigo Primor","Leite de Coco Ducoco","Leite Integral","Maionese","Manteiga","Margarina Primor bd 15","Mostarda Cepera","Sal Mercado","Sal Sachê kg","Pimenta Mendes","Óleo de Algodão","Óleo Assai","Vinho Branco Seco","Queijo Parmessao Ralado Pct","Massa Pastel (Pct duplo)","Oregano 15 gramas","Pimenta Rosa","Castanha Xeren (kg)"],
+  "Embalagens": ["Canudo Bio 6mm","Copo descartável 500 ml","Copo descartável 300ml","Mexedor de café","Palito de Dente","Papel Toalha Quick","Talher Descartável","Colher Descartável","Bobina termica 80x40","Saco p/ Talher 500 unid","Saco Personalizado Peixe","Lacre delivery","Forro de Mesa","Emb. Pote para Molho unid","Emb.3 Divisórias D 118","Emb.3 g330","Emb. Moqueca k 151","Emb. Guanições K 49","Emb.Isopor raza","Molho de isopor","Emb. pote retangular 350 ml","Garrafa para Suco G"],
+  "Pescados e Carnes e Frango": ["Filé de Tilápia Bem Bom","Filé de Tilápia Pescalli","Filé de Tilápia Frescatto","Filé de Pescada Amarela M","Pescada amarela","Salmao Dellys","Camarão Premium 41,50","Filé Mingnon Fort Beef","Filé Mingnon açougue","Filé Peito frango","Queijo Mussarela pedaço","Queijo Mussarela Fatiada (kg)","Quejo Parmesão (kg)"],
+  "Petiscos": ["Bolinho Bacalhau Unidade","Bolinho de Tilápia Unidade","Bolinho de Carne Seca","Caldo de Bobó de Camarão","Caldo de Tilápia Unidade","Camarão Empanado","Quibe (25 uni.)","Recheio Pastel de Camarão","Recheio Pastel de Tilápia"],
+  "Sobremesas": ["Pudim Tradicional","Petit Gateau","Sorvete de creme Mex","Café (Capsulas)","Sorvete de Queijo (Litros)","Calda de Maracujá","Goiabada Cascão","Fruta Morango KG","Fruta Acerola KG"],
+  "Hortifrut": ["Hortelã","Gengibre","Limao kgs","Laranja","Morango","Banana Prata","Abobrinha","Chuchu","Cenoura","Coentro","Pepino Japonês","Salsinha","Rúcula","Alface Americana","Alface Roxa","Alface Crespa","Tomate Cereja","Vagem Americana","Cebola","Ovo","Batata inglesa","Tomate","Alho com Casca","Repolho unid","Brocolis Comum","Brocolis Japones","Couve Flor","Polpa de Maracujá Unid","Polpa de Abacaxi Unid"],
+  "Bebidas": ["Coca Cola","Coca Cola Ks","Coca Cola Ks Zero","Coca Cola Lata","Coca Cola Zero Lata","Fanta Laranja lata","Sprite Lata","Heineken 600 ml","Heineken Long Neck","Heineken long neck zero","Schweppes Citrus Normal","Schweppes Citruz Zero","Água sem Gás lindoya","Água com Gás Lindoya","Agua Sem gás Faccol","Agua com Gás Faccol","Guaraná Lata","Guaraná Zero Lata","Corona Long neck Cero","Corona Long neck","Corona 600ml","Soda limonada","Água Tônica Lata","Água Tônica zero Lata","H2OH Limão","H2OH Limoneto","Original 600 ml","Spaten long neck","Spaten 600ml","Stella long neck Pure gold","Stella long neck","Stella 600 ml","Antartica pilsen","Chopp (Litros)"],
+  "Destilados": ["Vodka Smirnoff (Dose)","Cachaça Seleta (Dose)","Cachaça 51","Gin Beefeater","Licor 43","Red Label","Xarope Monin L Fruit Coco","Xarope Monin Abacaxi","Xarope Monin Morango","Xarope Monin Tangerina","Xarope Monin Maçã Verde"],
+  "Vinhos": ["Espumante 1913 Prosecco","Esp. 1913 Sparkling Brut Rose","Espumante 1913 Prosecco 187 ml","Esp .1913 Brut Rose 187 ml","Casal da Seara Vinho Verde Branco","Vulcanici Pinot Grigio","Bellavista Chardonnay / Casas del maipo","4 Estaciones Summer Torrontés","Bellavista Rosé","4 Estaciones Spring Rosé","Esperança Tinto","Vila Ruiva","Vulcanici Mont. Abruzzo","Vulcanici Sangiovese Puglia","Chaka Sysah","Donoso Suave Cab. Sauvignon","Casas Del Maipo Cab. Sauvignon","Bellavista Carménère","Jean Bousquet Malbec","Malacara Bornarda","4 Estaciones Malbec PremiumAutumn","La Vid blend","Vasco Viejo Blend Branco meia","Vasco Viejo Blend Tinto meia","Bellavista Cabe.Sauvignon taça"],
+  "Bacio Di Latte": ["Bombom de Sorvete Bacio","Bombom de Pistacchio","Cone Ciocchino Pistacchio","Picole Gianduia com Cobertura","Picole Doce de Leite","Picole Cioccolato Belga","Picole Pistacchio","Picole Baccio com Cobertura","Picole Caramello Salgado","Picole Fragola"]
+};
+let sheetStockCategory = "";
+let sheetStockValues = {};
+let sheetStockDirty = false;
+function sheetStockStatus(text, cls) {
+  const el = document.getElementById("sheetStockStatus");
+  el.textContent = text || "";
+  el.className = "sauce-status sim " + (cls || "");
+}
+function sheetStockDrawGroups() {
+  const box = document.getElementById("sheetStockGroups");
+  box.replaceChildren();
+  Object.keys(SHEET_STOCK).forEach(name => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "module op-category";
+    const icon = document.createElement("div"); icon.className = "op-category-icon"; icon.innerHTML = '<svg viewBox="0 0 24 24">' + STOCK_SVG.Outros + '</svg>';
+    const title = document.createElement("h3"); title.textContent = name;
+    const desc = document.createElement("p"); desc.textContent = SHEET_STOCK[name].length + " produtos";
+    b.append(icon, title, desc); b.addEventListener("click", () => sheetStockOpenCategory(name)); box.appendChild(b);
+  });
+}
+function sheetStockOpen() {
+  const date = document.getElementById("sheetStockDate");
+  date.max = localStamp(); if (!date.value || date.value > date.max) date.value = date.max;
+  sheetStockDrawGroups(); sheetStockCategory = ""; sheetStockValues = {}; sheetStockDirty = false;
+  sheetStockStatus("");
+}
+async function sheetStockOpenCategory(name) {
+  if (sheetStockDirty && !confirm("Há alterações sem salvar. Descartar e abrir este subgrupo?")) return;
+  sheetStockCategory = name;
+  const date = document.getElementById("sheetStockDate").value;
+  sheetStockStatus("Carregando contagem...", "hint");
+  try {
+    const { data, error } = await supabaseClient.from("stock_quote_sessions").select("items")
+      .eq("user_id", currentUserId).eq("count_date", date).eq("category", name).maybeSingle();
+    if (error) throw error;
+    sheetStockValues = {};
+    (data && Array.isArray(data.items) ? data.items : []).forEach(x => { sheetStockValues[x.product] = x; });
+    sheetStockDirty = false;
+  } catch (error) { sheetStockStatus("Falha ao carregar: " + friendlyError(error), "negative"); return; }
+  const box = document.getElementById("sheetStockTable"); box.hidden = false; box.replaceChildren();
+  const back = document.createElement("button"); back.type = "button"; back.className = "back-btn"; back.textContent = "← Subgrupos";
+  back.addEventListener("click", () => { if (!sheetStockDirty || confirm("Descartar alterações sem salvar?")) { box.hidden = true; document.getElementById("sheetStockGroups").hidden = false; sheetStockStatus(""); } });
+  const title = document.createElement("h3"); title.className = "section-heading"; title.textContent = name;
+  const wrap = document.createElement("div"); wrap.className = "sauce-table-wrap";
+  const table = document.createElement("table"); table.className = "sauce-table";
+  table.innerHTML = "<thead><tr><th>PRODUTO</th><th style='text-align:center'>ESTOQUE</th><th style='text-align:center'>PEDIR</th></tr></thead>";
+  const body = document.createElement("tbody");
+  SHEET_STOCK[name].forEach(product => {
+    const tr = document.createElement("tr"); const td = document.createElement("td"); td.textContent = product; tr.appendChild(td);
+    ["stock", "order"].forEach(key => { const cell = document.createElement("td"); const input = document.createElement("input"); input.type = "number"; input.min = "0"; input.step = "any"; input.value = sheetStockValues[product] && sheetStockValues[product][key] != null ? sheetStockValues[product][key] : ""; input.setAttribute("aria-label", key === "stock" ? "Estoque de " + product : "Pedir " + product); input.addEventListener("input", () => { if (!sheetStockValues[product]) sheetStockValues[product] = { product, stock: null, order: null }; sheetStockValues[product][key] = input.value === "" ? null : Number(input.value); sheetStockDirty = true; sheetStockStatus("Há alterações sem salvar.", "warning"); }); cell.appendChild(input); tr.appendChild(cell); });
+    body.appendChild(tr);
+  });
+  table.appendChild(body); wrap.appendChild(table); box.replaceChildren(back, title, wrap);
+  document.getElementById("sheetStockGroups").hidden = true;
+  sheetStockStatus("");
+}
+async function sheetStockSave() {
+  if (!sheetStockCategory) { sheetStockStatus("Escolha um subgrupo primeiro.", "warning"); return; }
+  const date = document.getElementById("sheetStockDate").value;
+  const items = SHEET_STOCK[sheetStockCategory].map(product => sheetStockValues[product] || { product, stock: null, order: null });
+  const payload = { user_id: currentUserId, count_date: date, category: sheetStockCategory, employee: currentUser || "", items, updated_at: new Date().toISOString() };
+  const btn = document.getElementById("sheetStockSave"); btn.disabled = true; sheetStockStatus("Salvando...", "hint");
+  try {
+    const { error } = await supabaseClient.from("stock_quote_sessions").upsert(payload, { onConflict: "user_id,count_date,category" });
+    if (error) throw error;
+    sheetStockDirty = false; sheetStockStatus("Contagem salva na nuvem.", "positive");
+  } catch (error) { sheetStockStatus("Não foi possível salvar: " + friendlyError(error), "negative"); }
+  btn.disabled = false;
+}
+document.getElementById("sheetStockDate").addEventListener("change", () => {
+  if (sheetStockDirty && !confirm("Descartar alterações sem salvar e carregar outra data?")) return;
+  if (sheetStockCategory) sheetStockOpenCategory(sheetStockCategory);
+});
+document.getElementById("sheetStockSave").addEventListener("click", sheetStockSave);
+</script>
+
+</body>
+</html>
