@@ -1,4 +1,4 @@
-l<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -274,6 +274,10 @@ l<!DOCTYPE html>
     #sauceRoot .sauce-history-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     #sauceRoot .sauce-history-actions button { width: auto; padding: 8px 11px; }
     #sauceRoot .sauce-status { min-height: 20px; }
+
+    .d30-checks { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 12px 0 2px; }
+    .d30-checks label { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 13.5px; color: var(--text); cursor: pointer; }
+    .d30-checks input { width: auto; margin: 0; }
 
     /* ----- Controle de qualidade do óleo ----- */
     #olRoot { color: var(--text); width: 100%; }
@@ -4108,7 +4112,7 @@ l<!DOCTYPE html>
       return;
     }
 
-    if (dashTab === "resumo") renderDashSummary(box);
+    if (dashTab === "resumo") { renderDashSummary(box); if (typeof d30Panel === "function") box.prepend(d30Panel()); }
     else if (dashTab === "estoque") renderDashStock(box);
     else if (dashTab === "temperatura") renderDashTemp(box);
     else if (dashTab === "limpeza") renderDashLimpeza(box);
@@ -5841,6 +5845,221 @@ function olPdf(mode) {
   olEl("olPdf").addEventListener("click", () => olPdf("download"));
   olEl("olPrint").addEventListener("click", () => olPdf("print"));
 })();
+</script>
+<script>
+/* ---------------- Dashboard: PDF dos checklists dos últimos 30 dias ----------------
+   Reúne, em um só PDF, os registros de Temperatura, Limpeza, Cozimento e Reaquecimento
+   e Qualidade do Óleo dos últimos 30 dias (hoje e os 29 dias anteriores). */
+
+const D30_ITEMS = [
+  ["temperatura", "Temperatura"],
+  ["limpeza", "Limpeza"],
+  ["cozimento", "Cozimento e Reaquecimento"],
+  ["oleo", "Qualidade do Óleo"]
+];
+let d30Busy = false;
+
+function d30Range() {
+  const end = new Date();
+  const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - 29);
+  const f = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  return { from: f(start), to: f(end) };
+}
+
+function d30Panel() {
+  const sec = mk("section", "section");
+  sec.appendChild(mk("h2", "", "{file} PDF dos checklists - últimos 30 dias"));
+  const range = d30Range();
+  sec.appendChild(mk("div", "hint", "Período: " + fmtDate(range.from) + " a " + fmtDate(range.to) + ". Escolha quais checklists entram no PDF."));
+
+  const checks = mk("div", "d30-checks");
+  const inputs = {};
+  D30_ITEMS.forEach(it => {
+    const label = document.createElement("label");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = true;
+    inputs[it[0]] = cb;
+    label.append(cb, document.createTextNode(it[1]));
+    checks.appendChild(label);
+  });
+  sec.appendChild(checks);
+
+  const status = mk("div", "hint");
+  const btn = actionBtn("{file} Gerar PDF dos últimos 30 dias", "", async b => {
+    const chosen = D30_ITEMS.map(i => i[0]).filter(k => inputs[k].checked);
+    if (chosen.length === 0) { status.textContent = "Marque pelo menos um checklist."; return; }
+    if (d30Busy) return;
+    d30Busy = true;
+    b.disabled = true;
+    status.textContent = "Reunindo os registros...";
+    try {
+      await d30Pdf(chosen);
+      status.textContent = "";
+    } catch (error) {
+      status.textContent = "Não foi possível gerar o PDF. " + friendlyError(error);
+    }
+    d30Busy = false;
+    b.disabled = false;
+  });
+  btn.style.cssText = "width:auto;margin:10px 0 6px";
+  sec.append(btn, status);
+  return sec;
+}
+
+async function d30Fetch(table, range, order) {
+  let q = supabaseClient.from(table).select("*").gte("log_date", range.from).lte("log_date", range.to).order("log_date");
+  order.forEach(o => { q = q.order(o); });
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+async function d30Pdf(chosen) {
+  const JsPDF = window.jspdf && window.jspdf.jsPDF;
+  if (!JsPDF) { alert("Biblioteca de PDF indisponível (sem internet). Conecte-se e tente novamente."); return; }
+  const range = d30Range();
+
+  // Dados de cada checklist (um bloco por checklist: título, colunas e linhas)
+  const blocks = [];
+  for (const key of chosen) {
+    if (key === "temperatura") {
+      const eq = {};
+      equipments.forEach(e => { eq[e.id] = e; });
+      const list = readings.filter(r => r.date >= range.from && r.date <= range.to).slice().sort((a, b) => {
+        const na = (eq[a.equipmentId] || {}).name || "", nb = (eq[b.equipmentId] || {}).name || "";
+        return a.date.localeCompare(b.date) || na.localeCompare(nb) || a.period - b.period;
+      });
+      blocks.push({
+        title: "Checklist de Temperatura",
+        head: ["Data", "Equipamento", "Aferição", "Temperatura", "Faixa aceita", "Situação", "Responsável"],
+        rows: list.map(r => {
+          const e = eq[r.equipmentId];
+          return [fmtDate(r.date), e ? e.name : "Equipamento removido", r.period + "ª", fmtTemp(r.temperature),
+            e ? fmtNum1(e.min) + " a " + fmtNum1(e.max) + " °C" : "-", e ? (tempOk(e, r.temperature) ? "Dentro da faixa" : "Fora da faixa") : "-", r.employee || "-"];
+        }),
+        badCol: 5, badText: "Fora da faixa"
+      });
+    } else if (key === "limpeza") {
+      const api = window.operattoLimpeza;
+      const reg = api ? api.registros() : {};
+      const rows = [];
+      Object.keys(reg).filter(d => d >= range.from && d <= range.to).sort().forEach(d => {
+        Object.keys(api.setores).forEach(k => {
+          const r = reg[d] && reg[d][k];
+          const itens = (r && r.itens) || [];
+          const filled = itens.filter(Boolean).length;
+          if (!filled) return;
+          const nc = [];
+          itens.forEach((v, i) => { if (v === "NC") nc.push(api.setores[k].itens[i]); });
+          rows.push([fmtDate(d), api.setores[k].nome, String(itens.filter(v => v === "C").length), String(nc.length),
+            filled + " de " + api.setores[k].itens.length, nc.join("; ") || "-"]);
+        });
+      });
+      blocks.push({ title: "Checklist de Limpeza", head: ["Data", "Setor", "Itens C", "Itens NC", "Preenchidos", "Itens não conformes"], rows: rows, badCol: 3, badNonZero: true });
+    } else if (key === "cozimento") {
+      let rows = [], note = "";
+      try {
+        rows = (await d30Fetch("cooking_records", range, ["record_time", "created_at"])).map(dbToCook)
+          .map(r => [fmtDate(r.date), r.product, r.condition, fmtNum1(r.temp), r.responsible, cookLabel(r.status)]);
+      } catch (error) {
+        if (cookMissing(error)) note = "Controle ainda não ativado no Supabase."; else throw error;
+      }
+      blocks.push({ title: "Controle de Cozimento e Reaquecimento", head: ["Data", "Produto", "Condição", "Temperatura atingida (°C)", "Responsável", "Situação"], rows: rows, note: note, badCol: 5, badText: "Não conforme" });
+    } else if (key === "oleo") {
+      let rows = [], note = "";
+      try {
+        const data = (await d30Fetch("oil_checks", range, ["machine"])).map(dbToOil);
+        rows = data.map(r => [fmtDate(r.date), "Fritadeira " + r.machine, olYN(r.smoke), olYN(r.residue), olYN(r.change), r.responsible]);
+      } catch (error) {
+        if (olMissing(error)) note = "Controle ainda não ativado no Supabase."; else throw error;
+      }
+      blocks.push({ title: "Controle de Qualidade do Óleo", head: ["Data", "Maquinário", "Presença de fumaça", "Presença de resíduos", "Troca de óleo", "Responsável"], rows: rows, note: note });
+    }
+  }
+
+  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+  if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível (sem internet). Conecte-se e tente novamente."); return; }
+  const margin = 36;
+  const w = doc.internal.pageSize.getWidth();
+  const h = doc.internal.pageSize.getHeight();
+
+  doc.setFillColor(23, 25, 29);
+  doc.rect(0, 0, w, 74, "F");
+  doc.setFillColor(86, 137, 154);
+  doc.rect(0, 74, w, 2, "F");
+  cookPdfLogo(doc, margin, 16, 42);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(240, 241, 243);
+  doc.text("OPERATTO", margin + 54, 38, { charSpace: 2.5 });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(181, 209, 218);
+  doc.text("CHECKLISTS - ÚLTIMOS 30 DIAS", margin + 54, 54, { charSpace: 1.4 });
+  doc.setTextColor(146, 152, 162);
+  doc.text("PERÍODO", w - margin, 32, { align: "right", charSpace: 1 });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.setTextColor(240, 241, 243);
+  doc.text(fmtDate(range.from) + " a " + fmtDate(range.to), w - margin, 54, { align: "right" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Emitido em " + new Date().toLocaleString("pt-BR") + (currentUser ? " por " + currentUser : ""), margin, 94);
+
+  let y = 112;
+  blocks.forEach(b => {
+    if (y > h - 120) { doc.addPage(); y = 50; }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11.5);
+    doc.setTextColor(30, 34, 40);
+    doc.text(b.title.toUpperCase(), margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(107, 114, 128);
+    doc.text(b.rows.length + (b.rows.length === 1 ? " registro" : " registros"), w - margin, y, { align: "right" });
+    if (b.rows.length === 0) {
+      doc.setFontSize(9.5);
+      doc.text(b.note || "Sem registros no período.", margin, y + 18);
+      y += 44;
+      return;
+    }
+    doc.autoTable({
+      startY: y + 8,
+      theme: "grid",
+      margin: { left: margin, right: margin, top: 40, bottom: 44 },
+      head: [b.head],
+      body: b.rows,
+      styles: { font: "helvetica", fontSize: 8.5, cellPadding: 4.5, lineColor: [200, 205, 212], lineWidth: 0.5, textColor: [30, 34, 40], valign: "middle" },
+      headStyles: { fillColor: [38, 42, 48], textColor: [240, 241, 243], fontStyle: "bold", fontSize: 8 },
+      alternateRowStyles: { fillColor: [246, 248, 250] },
+      didParseCell: function (data) {
+        if (data.section !== "body" || data.column.index !== b.badCol) return;
+        const v = String(data.cell.raw);
+        if ((b.badText && v === b.badText) || (b.badNonZero && v !== "0")) {
+          data.cell.styles.textColor = [168, 52, 60];
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+    });
+    y = doc.lastAutoTable.finalY + 30;
+  });
+
+  const pages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(220, 224, 230);
+    doc.setLineWidth(0.5);
+    doc.line(margin, h - 32, w - margin, h - 32);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(120, 126, 136);
+    doc.text("Operatto  -  Gestão com responsabilidade", margin, h - 18);
+    doc.text("Página " + i + " de " + pages, w - margin, h - 18, { align: "right" });
+  }
+  doc.save("operatto_checklists_30dias_" + range.to + ".pdf");
+}
 </script>
 <script>
 // Termos de uso: aparece na primeira abertura (e quando a versão dos termos mudar)
