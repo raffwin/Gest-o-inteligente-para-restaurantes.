@@ -289,10 +289,11 @@
     #ckRoot .ck-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid var(--border); background: var(--surface); }
     #ckRoot .ck-chip.open { color: var(--warn); border-color: var(--warn); }
     #ckRoot .ck-chip.done { color: var(--ok); border-color: var(--ok); }
-    #ckRoot .ck-form { display: grid; grid-template-columns: 132px minmax(0, 1.6fr) 130px minmax(0, 1.2fr) 150px; gap: 12px; align-items: end; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 16px; }
+    #ckRoot .ck-form { display: grid; grid-template-columns: minmax(0, 1.6fr) 150px 140px minmax(0, 1.2fr) 150px; gap: 12px; align-items: end; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 16px; }
     #ckRoot .ck-field input, #ckRoot .ck-field select { margin: 0; width: 100%; }
-    #ckRoot .ck-f-notes { grid-column: 1 / 5; }
-    #ckRoot .ck-f-add { grid-column: 5; align-self: end; }
+    #ckRoot .ck-f-add { grid-column: 1 / -1; align-self: end; }
+    #ckRoot .ck-auto { min-height: 41px; display: flex; align-items: center; }
+    #ckRoot .ck-auto .ck-hint { color: var(--muted); font-size: 12px; }
     #ckRoot .ck-f-add button { width: 100%; padding: 11px 14px; font-weight: 700; }
     #ckRoot .ck-savebar { min-height: 22px; margin: 8px 2px 10px; font-size: 12px; }
     #ckRoot .ck-save.positive { color: var(--ok); }
@@ -327,7 +328,7 @@
     #ckRoot .ck-legend { color: var(--muted); font-size: 12px; margin-top: 14px; line-height: 1.5; }
     @media (max-width: 820px) {
       #ckRoot .ck-form { grid-template-columns: 1fr 1fr; }
-      #ckRoot .ck-f-prod, #ckRoot .ck-f-resp, #ckRoot .ck-f-notes, #ckRoot .ck-f-add { grid-column: 1 / -1; }
+      #ckRoot .ck-f-prod, #ckRoot .ck-f-resp, #ckRoot .ck-f-add { grid-column: 1 / -1; }
       #ckRoot .ck-head, #ckRoot .ck-actions { flex-direction: column; align-items: stretch; }
       #ckRoot .ck-actions-l button, #ckRoot .ck-actions-r button { flex: 1; width: 100%; }
       #ckRoot .ck-actions-l { display: grid; grid-template-columns: 1fr 1fr; }
@@ -337,7 +338,6 @@
       .ck-table tbody tr:last-child { border-bottom: 0; }
       .ck-table td { border: 0; padding: 4px 0; display: flex; justify-content: space-between; gap: 14px; text-align: right; }
       .ck-table td::before { content: attr(data-label); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; text-align: left; flex-shrink: 0; }
-      .ck-table .ck-notes { max-width: none; }
     }
 
     /* ----- Dashboard: tabela mensal de limpeza ----- */
@@ -855,7 +855,7 @@
     </button>
     <button type="button" class="module" data-check="cozimento">
       <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/></svg></div>
-      <strong>Cozimento</strong>
+      <strong>Cozimento e Reaquecimento</strong>
       <span>Registro diário de temperatura</span>
     </button>
     <button type="button" class="module" data-check="gerencial">
@@ -988,14 +988,13 @@
       <div class="ck-notice" id="ckNotice" hidden></div>
 
       <form class="ck-form" id="ckForm" autocomplete="off">
-        <div class="ck-field ck-f-time"><label for="ckTime">Horário</label><input id="ckTime" type="time" required></div>
-        <div class="ck-field ck-f-prod"><label for="ckProduct">Produto / Alimento</label><input id="ckProduct" type="text" maxlength="120" required></div>
-        <div class="ck-field ck-f-temp"><label for="ckTemp">Temperatura (°C)</label><input id="ckTemp" type="number" step="0.1" min="-50" max="400" inputmode="decimal" required></div>
-        <div class="ck-field ck-f-resp"><label for="ckResp">Responsável pelo controle</label><input id="ckResp" type="text" maxlength="80" required></div>
-        <div class="ck-field ck-f-status"><label for="ckStatus">Status</label>
-          <select id="ckStatus" required><option value="">Selecione</option><option value="C">Conforme</option><option value="NC">Não conforme</option></select>
+        <div class="ck-field ck-f-prod"><label for="ckProduct">Produto</label><input id="ckProduct" type="text" maxlength="120" required></div>
+        <div class="ck-field ck-f-cond"><label for="ckCond">Condição</label>
+          <select id="ckCond" required><option value="Cozimento">Cozimento</option><option value="Reaquecimento">Reaquecimento</option></select>
         </div>
-        <div class="ck-field ck-f-notes"><label for="ckNotes">Observações</label><input id="ckNotes" type="text" maxlength="500"></div>
+        <div class="ck-field ck-f-temp"><label for="ckTemp">Temperatura atingida (°C)</label><input id="ckTemp" type="number" step="0.1" min="-50" max="400" inputmode="decimal" required></div>
+        <div class="ck-field ck-f-resp"><label for="ckResp">Responsável</label><input id="ckResp" type="text" maxlength="80" required></div>
+        <div class="ck-field ck-f-status"><label>Situação</label><div class="ck-auto" id="ckAuto" aria-live="polite"></div></div>
         <div class="ck-f-add"><button type="submit" id="ckAdd">Adicionar registro</button></div>
       </form>
 
@@ -1035,7 +1034,7 @@
     <button type="button" class="tab" role="tab" data-dtab="estoque"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 7 9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/></svg> Estoque</button>
     <button type="button" class="tab" role="tab" data-dtab="temperatura"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14V5a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z"/><circle cx="12" cy="17" r="1.2"/></svg> Temperatura</button>
     <button type="button" class="tab" role="tab" data-dtab="limpeza"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14l3-8h11l3 8-3 5H7z"/><path d="M7 6l2-3h6l3 3"/><path d="M8 14h8"/></svg> Limpeza</button>
-    <button type="button" class="tab" role="tab" data-dtab="cozimento"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/></svg> Cozimento</button>
+    <button type="button" class="tab" role="tab" data-dtab="cozimento"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/></svg> Cozimento e Reaquecimento</button>
     <button type="button" class="tab" role="tab" data-dtab="historico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></svg> Histórico</button>
   </div>
 
@@ -1226,6 +1225,7 @@
     if (msg.includes("not authorized")) return "O Supabase só envia e-mail para membros da sua equipe enquanto não houver um SMTP próprio. Configure em Authentication > SMTP.";
     if (msg.includes("error sending") || msg.includes("sending recovery") || msg.includes("sending confirmation")) return "O Supabase não conseguiu enviar o e-mail. Confira a configuração de e-mail (SMTP) no painel do Supabase.";
     if (msg.includes("session missing") || msg.includes("session_not_found")) return "O link de recuperação expirou ou já foi usado. Peça um novo.";
+    if (msg.includes("condition") && (msg.includes("column") || msg.includes("schema cache"))) return "O banco ainda não tem a coluna Condição. Rode o arquivo supabase_cozimento_reaquecimento.sql no SQL Editor do Supabase e recarregue a página.";
     if (msg.includes("cozimento_dia_finalizado")) return "Este dia já foi finalizado e não pode mais ser alterado.";
     if (msg.includes("cozimento_data_futura")) return "Não é possível usar uma data futura.";
     if (msg.includes("cozimento_sem_registros")) return "Adicione pelo menos um registro antes de finalizar o dia.";
@@ -3570,7 +3570,7 @@
 
   /* ---------------- Checklist: escolher qual fazer ---------------- */
 
-  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento", gerencial: "{list} Gerencial" };
+  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento e Reaquecimento", gerencial: "{list} Gerencial" };
 
   function resetChecklistScreen() {
     document.getElementById("checklistHome").hidden = false;
@@ -4648,8 +4648,11 @@
    salva sozinho e bloqueia o dia ao finalizar. Os dados ficam no Supabase
    (tabelas cooking_records e cooking_days, com RLS por conta). */
 
-// Sugestão automática do status (a pessoa sempre pode trocar): conforme a partir desta temperatura.
-const COOK_SUGGEST_MIN = 74;
+// Validação automática da Situação: temperatura mínima por condição.
+const COOK_MIN = { "Cozimento": 70, "Reaquecimento": 74 };
+const COOK_CONDS = ["Cozimento", "Reaquecimento"];
+function cookCond(v) { return COOK_CONDS.includes(v) ? v : "Cozimento"; }
+function cookEval(cond, temp) { return Number.isFinite(temp) && temp >= COOK_MIN[cookCond(cond)] ? "C" : "NC"; }
 
 let cookReady = null;     // null = ainda não sabe | true | false = tabelas não criadas no Supabase
 let cookError = "";
@@ -4658,7 +4661,6 @@ let cookRecords = [];     // registros da data selecionada
 let cookDay = null;       // { date, finalizedAt, finalizedBy } ou null (dia aberto)
 let cookReq = 0;          // evita que uma resposta antiga sobrescreva a data atual
 let cookBusy = false;
-let cookStatusTouched = false;
 let cookLastResp = "";
 const cookDash = { month: "", loadedMonth: "", loading: false, byDate: {}, open: "" };
 
@@ -4678,7 +4680,7 @@ function dbToCook(r) {
     product: r.product,
     temp: Number(r.temperature),
     responsible: r.responsible,
-    notes: r.notes || "",
+    condition: cookCond(r.condition),
     status: r.status,
     createdAt: r.created_at
   };
@@ -4729,7 +4731,7 @@ function cookTable(list, editable) {
   const table = mk("table", "ck-table");
   const thead = document.createElement("thead");
   const hr = document.createElement("tr");
-  ["Data", "Horário", "Produto / Alimento", "Temperatura", "Responsável", "Observações", "Status"].concat(editable ? [""] : []).forEach(h => hr.appendChild(mk("th", "", h)));
+  ["Data", "Produto", "Condição", "Temperatura atingida (°C)", "Responsável", "Situação"].concat(editable ? [""] : []).forEach(h => hr.appendChild(mk("th", "", h)));
   thead.appendChild(hr);
   table.appendChild(thead);
 
@@ -4745,12 +4747,11 @@ function cookTable(list, editable) {
       tr.appendChild(td);
     };
     cell("Data", fmtDate(r.date));
-    cell("Horário", r.time, "ck-num");
-    cell("Produto / Alimento", r.product, "ck-prod");
-    cell("Temperatura", fmtTemp(r.temp), "ck-num");
+    cell("Produto", r.product, "ck-prod");
+    cell("Condição", r.condition);
+    cell("Temperatura atingida (°C)", fmtNum1(r.temp), "ck-num");
     cell("Responsável", r.responsible);
-    cell("Observações", r.notes || "-", r.notes ? "ck-notes" : "ck-notes ck-dash");
-    cell("Status", mk("span", "ck-status " + (r.status === "C" ? "ok" : "bad"), cookLabel(r.status)));
+    cell("Situação", mk("span", "ck-status " + (r.status === "C" ? "ok" : "bad"), cookLabel(r.status)));
     if (editable) {
       const act = mk("div", "ck-rowact");
       act.append(
@@ -4776,7 +4777,7 @@ function ckRender() {
   ckEl("ckMissing").hidden = !missing;
   ckEl("ckMain").hidden = missing;
   if (missing) {
-    rich(ckEl("ckMissing"), "{warn} O Controle de Cozimento ainda não foi ativado no Supabase" + (cookError ? " (" + cookError + ")" : "") +
+    rich(ckEl("ckMissing"), "{warn} O Controle de Cozimento e Reaquecimento ainda não foi ativado no Supabase" + (cookError ? " (" + cookError + ")" : "") +
       ". Rode o arquivo supabase_cozimento.sql no SQL Editor do Supabase e recarregue a página.");
     return;
   }
@@ -4843,7 +4844,7 @@ async function cookLoadDate(date) {
 
 function ckFormDefaults() {
   const f = ckEl("ckForm");
-  f.ckTime.value = cookDate === localStamp() ? cookNowHM() : "";
+  cookSuggest();
   if (!f.ckResp.value) f.ckResp.value = cookLastResp || currentUser || "";
 }
 
@@ -4861,9 +4862,17 @@ function cookTouchedByError(error) {
 
 function cookSuggest() {
   const f = ckEl("ckForm");
-  if (cookStatusTouched) return;
+  const box = ckEl("ckAuto");
+  const min = COOK_MIN[cookCond(f.ckCond.value)];
   const t = parseFloat(String(f.ckTemp.value).replace(",", "."));
-  f.ckStatus.value = Number.isFinite(t) ? (t >= COOK_SUGGEST_MIN ? "C" : "NC") : "";
+  box.replaceChildren();
+  if (!Number.isFinite(t)) {
+    box.appendChild(mk("span", "ck-hint", "Automática: mínimo de " + min + " °C"));
+    return;
+  }
+  const st = cookEval(f.ckCond.value, t);
+  box.appendChild(mk("span", "ck-status " + (st === "C" ? "ok" : "bad"), cookLabel(st)));
+  box.appendChild(mk("span", "ck-hint", "  mínimo " + min + " °C"));
 }
 
 async function cookAdd(e) {
@@ -4871,17 +4880,19 @@ async function cookAdd(e) {
   if (cookBusy || cookIsFinal(cookDay)) return;
   const f = ckEl("ckForm");
   const temp = parseFloat(String(f.ckTemp.value).replace(",", "."));
+  const cond = cookCond(f.ckCond.value);
   const row = {
     log_date: cookDate,
-    record_time: f.ckTime.value,
+    record_time: cookDate === localStamp() ? cookNowHM() : "00:00",
     product: f.ckProduct.value.trim(),
+    condition: cond,
     temperature: temp,
     responsible: f.ckResp.value.trim(),
-    notes: f.ckNotes.value.trim(),
-    status: f.ckStatus.value
+    notes: "",
+    status: cookEval(cond, temp)
   };
-  if (!row.record_time || !row.product || !row.responsible || !Number.isFinite(temp) || !row.status) {
-    ckStatus("{warn} Preencha horário, produto, temperatura, responsável e status.", "warning");
+  if (!row.product || !row.responsible || !Number.isFinite(temp)) {
+    ckStatus("{warn} Preencha produto, temperatura atingida e responsável.", "warning");
     return;
   }
   if (temp < -50 || temp > 400) {
@@ -4900,11 +4911,8 @@ async function cookAdd(e) {
     cookDash.loadedMonth = "";
     f.ckProduct.value = "";
     f.ckTemp.value = "";
-    f.ckNotes.value = "";
-    f.ckStatus.value = "";
-    cookStatusTouched = false;
-    f.ckTime.value = cookDate === localStamp() ? cookNowHM() : row.record_time;
-    ckStatus("{check} Registro salvo automaticamente às " + cookNowHM() + ".", "positive");
+    cookSuggest();
+    ckStatus("{check} Registro salvo" + (row.status === "NC" ? " como NÃO CONFORME (abaixo de " + COOK_MIN[cond] + " °C)" : " como conforme") + " às " + cookNowHM() + ".", row.status === "NC" ? "warning" : "positive");
     f.ckProduct.focus();
   } catch (error) {
     ckStatus("{x} " + friendlyError(error), "negative");
@@ -4917,21 +4925,20 @@ async function cookAdd(e) {
 
 function cookEditModal(r) {
   if (cookIsFinal(cookDay)) return;
-  openModal("Editar registro de cozimento", [
-    { key: "time", label: "Horário", type: "time", value: r.time, required: true },
-    { key: "product", label: "Produto / Alimento", value: r.product, maxLength: 120, required: true },
-    { key: "temp", label: "Temperatura de cozimento (°C)", type: "number", step: "0.1", value: r.temp, required: true },
-    { key: "responsible", label: "Responsável pelo controle", value: r.responsible, maxLength: 80, required: true },
-    { key: "notes", label: "Observações", value: r.notes, maxLength: 500 },
-    { key: "status", label: "Status de conformidade", type: "select", value: r.status, options: [{ value: "C", label: "Conforme" }, { value: "NC", label: "Não conforme" }] }
+  openModal("Editar registro", [
+    { key: "product", label: "Produto", value: r.product, maxLength: 120, required: true },
+    { key: "condition", label: "Condição", type: "select", value: r.condition, options: COOK_CONDS.map(c => ({ value: c, label: c })) },
+    { key: "temp", label: "Temperatura atingida (°C)", type: "number", step: "0.1", value: r.temp, required: true },
+    { key: "responsible", label: "Responsável", value: r.responsible, maxLength: 80, required: true }
   ], async v => {
     const temp = parseFloat(String(v.temp).replace(",", "."));
     const product = v.product.trim();
     const responsible = v.responsible.trim();
-    if (!v.time || !product || !responsible || !Number.isFinite(temp)) return "Preencha horário, produto, temperatura e responsável.";
+    const cond = cookCond(v.condition);
+    if (!product || !responsible || !Number.isFinite(temp)) return "Preencha produto, temperatura atingida e responsável.";
     if (temp < -50 || temp > 400) return "Temperatura fora do intervalo aceito (-50 a 400 °C).";
     const { data, error } = await supabaseClient.from("cooking_records")
-      .update({ record_time: v.time, product: product, temperature: temp, responsible: responsible, notes: v.notes.trim(), status: v.status })
+      .update({ product: product, condition: cond, temperature: temp, responsible: responsible, status: cookEval(cond, temp) })
       .eq("id", r.id).select().single();
     if (error) { cookTouchedByError(error); return friendlyError(error); }
     const i = cookRecords.findIndex(x => x.id === r.id);
@@ -4945,7 +4952,7 @@ function cookEditModal(r) {
 
 async function cookDelete(r) {
   if (cookIsFinal(cookDay)) return;
-  if (!confirm("Excluir o registro de \"" + r.product + "\" (" + r.time + ")?")) return;
+  if (!confirm("Excluir o registro de \"" + r.product + "\" (" + r.condition + ")?")) return;
   try {
     const { error } = await supabaseClient.from("cooking_records").delete().eq("id", r.id);
     if (error) throw error;
@@ -4961,7 +4968,7 @@ async function cookDelete(r) {
 
 async function cookFinalize() {
   if (cookBusy || cookIsFinal(cookDay) || cookRecords.length === 0) return;
-  const msg = "Finalizar o controle de cozimento de " + fmtDate(cookDate) + "?\n\nDepois de finalizado, nenhum registro deste dia poderá ser adicionado, editado ou excluído.";
+  const msg = "Finalizar o controle de cozimento e reaquecimento de " + fmtDate(cookDate) + "?\n\nDepois de finalizado, nenhum registro deste dia poderá ser adicionado, editado ou excluído.";
   if (!confirm(msg)) return;
 
   cookBusy = true;
@@ -5043,8 +5050,8 @@ function cookBuildPdf(date, list, day) {
   const situacao = final
     ? "Finalizado em " + cookWhen(day.finalizedAt) + (day.finalizedBy ? " por " + day.finalizedBy : "")
     : "Em aberto (não finalizado)";
-  doc.text("Controle de cozimento   |   Situação: " + situacao, margin, 98);
-  doc.text(cnt.total + " registro(s)   |   Conformes: " + cnt.c + "   |   Não conformes: " + cnt.nc, margin, 113);
+  doc.text("Controle de Cozimento e Reaquecimento   |   Situação do dia: " + situacao, margin, 98);
+  doc.text(cnt.total + " registro(s)   |   Conforme: " + cnt.c + "   |   Não conforme: " + cnt.nc + "   |   Mínimos: Cozimento 70 °C, Reaquecimento 74 °C", margin, 113);
   doc.setTextColor(107, 114, 128);
   doc.text("Emitido em " + new Date().toLocaleString("pt-BR") + (currentUser ? " por " + currentUser : ""), w - margin, 98, { align: "right" });
 
@@ -5052,16 +5059,16 @@ function cookBuildPdf(date, list, day) {
     startY: 126,
     theme: "grid",
     margin: { left: margin, right: margin, top: 40, bottom: 62 },
-    head: [["Data", "Horário", "Produto / Alimento", "Temp. (°C)", "Responsável", "Observações", "Status"]],
-    body: list.map(r => [fmtDate(r.date), r.time, r.product, fmtNum1(r.temp), r.responsible, r.notes || "-", cookLabel(r.status)]),
+    head: [["Data", "Produto", "Condição", "Temperatura atingida (°C)", "Responsável", "Situação"]],
+    body: list.map(r => [fmtDate(r.date), r.product, r.condition, fmtNum1(r.temp), r.responsible, cookLabel(r.status)]),
     styles: { font: "helvetica", fontSize: 9, cellPadding: 6, lineColor: [200, 205, 212], lineWidth: 0.5, textColor: [30, 34, 40], valign: "middle" },
     headStyles: { fillColor: [38, 42, 48], textColor: [240, 241, 243], fontStyle: "bold", fontSize: 8.5 },
     alternateRowStyles: { fillColor: [246, 248, 250] },
-    columnStyles: { 0: { cellWidth: 62 }, 1: { cellWidth: 52, halign: "center" }, 3: { cellWidth: 64, halign: "center" }, 6: { cellWidth: 82, halign: "center" } },
+    columnStyles: { 0: { cellWidth: 66 }, 2: { cellWidth: 90, halign: "center" }, 3: { cellWidth: 110, halign: "center" }, 5: { cellWidth: 90, halign: "center" } },
     didParseCell: function (data) {
       if (data.section !== "body") return;
       const r = list[data.row.index];
-      if (data.column.index === 6) {
+      if (data.column.index === 5) {
         data.cell.styles.fontStyle = "bold";
         data.cell.styles.textColor = r.status === "C" ? [24, 110, 70] : [168, 52, 60];
       }
@@ -5080,7 +5087,7 @@ function cookBuildPdf(date, list, day) {
   doc.setTextColor(107, 114, 128);
   doc.text("Responsável", margin, y + 12);
   doc.text("Visto do gerente", margin + 300, y + 12);
-  doc.text("C = Conforme   |   NC = Não conforme (solicitar que o cozimento seja refeito).", margin, y + 34);
+  doc.text("Conforme: Cozimento a partir de 70 °C e Reaquecimento a partir de 74 °C.   Não Conforme: abaixo do mínimo (refazer o processo).", margin, y + 34);
 
   const pages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
@@ -5117,7 +5124,7 @@ function cookPdf(date, list, day, mode) {
       document.body.appendChild(frame);
       setTimeout(() => { URL.revokeObjectURL(url); frame.remove(); }, 180000);
     } else {
-      doc.save("operatto_cozimento_" + date + ".pdf");
+      doc.save("operatto_cozimento_reaquecimento_" + date + ".pdf");
     }
   } catch (error) {
     alert("Não foi possível gerar o PDF.");
@@ -5177,7 +5184,7 @@ function renderDashCozimento(box) {
     renderDashboard();
   });
   w1.appendChild(monthInput);
-  row.append(w1, mk("div", "hint", "Controles de cozimento por dia. Abra um dia para ver os registros, gerar o PDF ou imprimir."));
+  row.append(w1, mk("div", "hint", "Controles de cozimento e reaquecimento por dia. Abra um dia para ver os registros, gerar o PDF ou imprimir."));
   controls.appendChild(row);
   box.appendChild(controls);
 
@@ -5188,7 +5195,7 @@ function renderDashCozimento(box) {
   }
 
   const dates = Object.keys(cookDash.byDate).sort().reverse();
-  const sec = dashSection("{flame} Controle de cozimento");
+  const sec = dashSection("{flame} Controle de cozimento e reaquecimento");
   if (dates.length === 0) sec.appendChild(mk("div", "hint", "Nenhum controle registrado neste mês."));
 
   dates.forEach(date => {
@@ -5230,7 +5237,7 @@ function renderDashCozimento(box) {
   if (!f) return;
   f.addEventListener("submit", cookAdd);
   f.ckTemp.addEventListener("input", cookSuggest);
-  f.ckStatus.addEventListener("change", () => { cookStatusTouched = f.ckStatus.value !== ""; });
+  f.ckCond.addEventListener("change", cookSuggest);
   ckEl("ckDate").addEventListener("change", () => {
     const v = ckEl("ckDate").value;
     if (!v || v > localStamp()) { ckEl("ckDate").value = cookDate; return; }
