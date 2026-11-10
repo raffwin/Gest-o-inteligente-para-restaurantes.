@@ -907,7 +907,7 @@
     <button type="button" class="module" data-check="temperatura">
       <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14V5a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z"/><circle cx="12" cy="17" r="1.2"/></svg></div>
       <strong>Temperatura</strong>
-      <span id="checkDescTemp">Aferição de freezers, geladeiras e balcões</span>
+      <span id="checkDescTemp">Controle mensal de temperatura dos equipamentos</span>
       <span class="badge" id="checkBadgeTemp" style="margin-left:0;align-self:flex-start" hidden></span>
     </button>
     <button type="button" class="module" data-check="limpeza">
@@ -945,6 +945,36 @@
   <p>Preencha o checklist e salve.</p>
 
   <div class="tab-panel" id="tab-temperatura" role="tabpanel">
+
+    <div id="tempMonthRoot">
+      <div class="section">
+        <div class="cc-header">
+          <div><h2 class="cc-title">Registro de Controle de Temperatura de Equipamentos</h2><div class="cc-subtitle">Preencha a temperatura de cada equipamento no dia correspondente.</div></div>
+          <div class="row" style="max-width:420px">
+            <div><label for="tempMonthPicker">Mês</label><input id="tempMonthPicker" type="month"></div>
+            <div><label for="tempMonthUnit">Unidade</label><input id="tempMonthUnit" type="text" maxlength="80" value="SUDOESTE"></div>
+          </div>
+        </div>
+        <div class="table-wrap" id="tempMonthTable"></div>
+        <div class="actions" style="margin-top:12px">
+          <button type="button" id="tempMonthSave">Salvar temperaturas</button>
+          <button type="button" class="btn-edit" id="tempMonthPdf">Gerar PDF mensal</button>
+        </div>
+        <div class="sim" id="tempMonthStatus" role="status" aria-live="polite"></div>
+        <section class="section" style="margin-top:16px">
+          <h2>Parâmetros baseados na IN 16/2017 DIVISA/SVS</h2>
+          <div class="table-wrap"><table class="dash-table"><thead><tr><th>Processo</th><th>Mínimo</th><th>Máximo</th></tr></thead><tbody>
+            <tr><td>Congelados (freezers e câmara congelada)</td><td>-12 °C</td><td>-18 °C ou mais frio</td></tr>
+            <tr><td>Resfriados (geladeiras, câmara resfriada e pista fria)</td><td>4 °C</td><td>Ou mais frio</td></tr>
+            <tr><td>Pista fria</td><td>4 °C</td><td>Ou mais frio</td></tr>
+            <tr><td>Banho-maria (temperatura da água)</td><td>80 °C</td><td>Ou mais quente</td></tr>
+            <tr><td>Estufa de quibes</td><td>60 °C</td><td>80 °C</td></tr>
+          </tbody></table></div>
+        </section>
+      </div>
+    </div>
+
+    <div id="legacyTempView" hidden>
 
     <section class="section">
       <h2><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14V5a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z"/><circle cx="12" cy="17" r="1.2"/></svg> Aferição de temperatura</h2>
@@ -1008,6 +1038,7 @@
       </form>
     </section>
 
+    </div>
   </div>
 
   <section class="tab-panel" id="tab-limpeza" role="tabpanel" hidden>
@@ -3757,6 +3788,7 @@
     rich(document.getElementById("checklistOpenTitle"), CHECKLIST_TITLES[name] || "Checklist");
     if (name === "cozimento" && typeof ckOpen === "function") ckOpen();
     if (name === "oleo" && typeof olOpen === "function") olOpen();
+    if (name === "temperatura" && typeof temperatureMonthlyOpen === "function") temperatureMonthlyOpen();
     if (name === "gordura" && typeof greaseOpen === "function") greaseOpen();
     document.querySelectorAll("#checklistOpenView .tab-panel").forEach(p => {
       const show = p.id === "tab-" + name;
@@ -3786,22 +3818,8 @@
     const desc = document.getElementById("checkDescTemp");
     const badge = document.getElementById("checkBadgeTemp");
     if (!desc || !badge) return;
-
-    if (!tempReady || equipments.length === 0) {
-      desc.textContent = "Aferição de freezers, geladeiras e balcões";
-      badge.hidden = true;
-      return;
-    }
-
-    const today = localStamp();
-    const n = equipments.length;
-    const p1 = equipments.filter(e => findReading(e.id, today, 1)).length;
-    const p2 = equipments.filter(e => findReading(e.id, today, 2)).length;
-    desc.textContent = "Hoje — 1ª: " + p1 + "/" + n + " | 2ª: " + p2 + "/" + n;
-
-    const pending = p1 < n || (new Date().getHours() >= 12 && p2 < n);
-    badge.hidden = !pending;
-    rich(badge, "{clock} Aferição pendente hoje");
+    desc.textContent = "Controle mensal de temperatura — 16 equipamentos";
+    badge.hidden = true;
   }
 
   document.querySelectorAll("#checklistGroups .module").forEach(btn => {
@@ -6817,6 +6835,155 @@ greaseEl("greaseFrequency").addEventListener("change", () => { greaseDirty = tru
 greaseEl("greaseHistoryMonth").addEventListener("change", () => { if (greaseEl("greaseHistoryMonth").value) greaseLoadMonth(greaseEl("greaseHistoryMonth").value); });
 greaseEl("greaseSave").addEventListener("click", greaseSave);
 greaseEl("greasePdf").addEventListener("click", greaseBuildPdf);
+</script>
+
+<script>
+/* Controle mensal de temperatura conforme o formulário Controle de temperatura.pdf. */
+const TEMP_MONTH_GROUPS = [
+  { name: "SALÃO", items: ["Adega", "Freezer Picolé", "Geladeira Cerveja", "Estufa de Quibes"] },
+  { name: "COZINHA", items: ["Geladeira Peixe", "Geladeira Vermelha", "Geladeira Branca 1", "Balcão Refrigerado", "Pista Fria", "Banho-maria (guarnições)", "Banho-maria (molhos)", "Freezer Vertical I", "Freezer Vertical II"] },
+  { name: "COPA", items: ["Balcão Refrigerado", "Geladeira Refri", "Freezer Polpas"] }
+];
+const TEMP_MONTH_EQUIPMENT = TEMP_MONTH_GROUPS.flatMap(g => g.items.map(name => ({ group: g.name, name })));
+let tempMonthRef = "", tempMonthRows = [], tempMonthValues = {}, tempMonthChanged = new Set(), tempMonthBusy = false;
+const tempMEl = id => document.getElementById(id);
+function tempMonthKey(date, name) { return date + "|" + name; }
+function tempMonthLocalUnitKey() { return "operatto_temp_month_unit_" + (currentUserId || "guest"); }
+function tempMonthRule(name) {
+  const n = name.toLowerCase();
+  if (n.includes("freezer")) return { kind: "max", value: -18 };
+  if (n.includes("banho-maria")) return { kind: "min", value: 80 };
+  if (n.includes("estufa")) return { kind: "range", min: 60, max: 80 };
+  return { kind: "max", value: 4 };
+}
+function tempMonthOut(name, value) {
+  const v = Number(value), r = tempMonthRule(name);
+  if (!Number.isFinite(v)) return false;
+  return r.kind === "min" ? v < r.value : r.kind === "range" ? v < r.min || v > r.max : v > r.value;
+}
+function tempMonthStatus(text, cls) { const e = tempMEl("tempMonthStatus"); e.textContent = text || ""; e.className = "sim " + (cls || ""); }
+function tempMonthDraw() {
+  const box = tempMEl("tempMonthTable"); box.replaceChildren();
+  const p = tempMonthRef.split("-"), year = Number(p[0]), month = Number(p[1]);
+  const days = new Date(year, month, 0).getDate(), today = localStamp();
+  const table = document.createElement("table"); table.className = "dash-table temp-month-grid";
+  table.style.minWidth = "1450px"; table.style.fontSize = "10px"; table.style.tableLayout = "fixed";
+  const colgroup = document.createElement("colgroup");
+  [36, 155].concat(Array(days).fill(38)).forEach(w => { const c = document.createElement("col"); c.style.width = w + "px"; colgroup.appendChild(c); });
+  table.appendChild(colgroup);
+  const thead = document.createElement("thead"), trh = document.createElement("tr");
+  ["SETOR", "EQUIPAMENTOS"].forEach(label => { const th = document.createElement("th"); th.textContent = label; th.rowSpan = 2; th.style.textAlign = "center"; trh.appendChild(th); });
+  const tempHeading = document.createElement("th"); tempHeading.colSpan = days; tempHeading.textContent = "TEMPERATURA °C"; tempHeading.style.textAlign = "center"; trh.appendChild(tempHeading); thead.appendChild(trh);
+  const trd = document.createElement("tr");
+  for (let d = 1; d <= days; d++) { const th = document.createElement("th"); th.textContent = String(d).padStart(2, "0"); th.style.textAlign = "center"; trd.appendChild(th); }
+  thead.appendChild(trd); table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  TEMP_MONTH_GROUPS.forEach(group => group.items.forEach((name, index) => {
+    const tr = document.createElement("tr");
+    if (index === 0) { const g = document.createElement("td"); g.rowSpan = group.items.length; g.textContent = group.name; g.style.cssText = "font-weight:700;text-align:center;background:#262A30;color:#B5D1DA;writing-mode:vertical-rl;transform:rotate(180deg)"; tr.appendChild(g); }
+    const label = document.createElement("td"); label.textContent = name; label.style.fontWeight = "600"; tr.appendChild(label);
+    for (let d = 1; d <= days; d++) {
+      const date = tempMonthRef + "-" + String(d).padStart(2, "0"), key = tempMonthKey(date, name), td = document.createElement("td");
+      const input = document.createElement("input"); input.type = "number"; input.step = "0.1"; input.setAttribute("aria-label", name + ", " + date); input.style.cssText = "width:100%;min-width:0;margin:0;padding:3px 1px;text-align:center;font-size:11px";
+      input.value = tempMonthValues[key] == null ? "" : tempMonthValues[key];
+      if (date > today) input.disabled = true;
+      if (input.value !== "" && tempMonthOut(name, input.value)) input.style.color = "#E58A8A";
+      input.addEventListener("input", () => { tempMonthValues[key] = input.value; tempMonthChanged.add(key); input.style.color = input.value !== "" && tempMonthOut(name, input.value) ? "#E58A8A" : "var(--text)"; tempMonthStatus("Há alterações sem salvar.", "warning"); });
+      td.appendChild(input); tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }));
+  table.appendChild(tbody); box.appendChild(table);
+}
+async function tempMonthLoad(month) {
+  tempMonthRef = month; tempMEl("tempMonthPicker").value = month; tempMonthStatus("Carregando temperaturas...", "hint");
+  const p = month.split("-"), last = new Date(Number(p[0]), Number(p[1]), 0).getDate();
+  try {
+    const { data, error } = await supabaseClient.from("equipment_temperature_monthly").select("*")
+      .gte("reading_date", month + "-01").lte("reading_date", month + "-" + String(last).padStart(2, "0")).order("reading_date");
+    if (error) throw error;
+    tempMonthRows = data || []; tempMonthValues = {};
+    tempMonthRows.forEach(r => { tempMonthValues[tempMonthKey(r.reading_date, r.equipment_name)] = String(r.temperature); });
+    tempMonthChanged.clear(); tempMonthDraw(); tempMonthStatus("");
+  } catch (error) { tempMonthRows = []; tempMonthValues = {}; tempMonthDraw(); tempMonthStatus("Não foi possível carregar: " + friendlyError(error), "negative"); }
+}
+async function tempMonthSave() {
+  if (tempMonthBusy || tempMonthChanged.size === 0) { if (!tempMonthBusy) tempMonthStatus("Nenhuma alteração para salvar.", "hint"); return; }
+  const btn = tempMEl("tempMonthSave"); tempMonthBusy = true; btn.disabled = true; tempMonthStatus("Salvando temperaturas...", "hint");
+  try {
+    for (const key of Array.from(tempMonthChanged)) {
+      const split = key.indexOf("|"), date = key.slice(0, split), name = key.slice(split + 1), value = String(tempMonthValues[key] == null ? "" : tempMonthValues[key]).trim();
+      if (value === "") {
+        const del = await supabaseClient.from("equipment_temperature_monthly").delete().eq("reading_date", date).eq("equipment_name", name);
+        if (del.error) throw del.error;
+      } else {
+        const n = Number(value); if (!Number.isFinite(n) || n < -100 || n > 150) throw new Error("Temperatura inválida em " + name + " no dia " + fmtDate(date) + ".");
+        const res = await supabaseClient.from("equipment_temperature_monthly").upsert({ user_id: currentUserId, reading_date: date, equipment_name: name, sector: TEMP_MONTH_EQUIPMENT.find(e => e.name === name).group, temperature: n, updated_at: new Date().toISOString() }, { onConflict: "user_id,reading_date,equipment_name" });
+        if (res.error) throw res.error;
+      }
+    }
+    tempMonthChanged.clear(); await tempMonthLoad(tempMonthRef); tempMonthStatus("Temperaturas salvas na nuvem.", "positive");
+  } catch (error) { tempMonthStatus("Não foi possível salvar: " + friendlyError(error), "negative"); }
+  tempMonthBusy = false; btn.disabled = false;
+}
+function tempMonthPdf() {
+  const JsPDF = window.jspdf && window.jspdf.jsPDF;
+  if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
+  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+  const p = tempMonthRef.split("-"), monthName = MESES_PT[Number(p[1]) - 1].toUpperCase(), margin = 25, w = doc.internal.pageSize.getWidth();
+  const groupW = 24, equipmentW = 122, leftW = groupW + equipmentW, dayW = (w - margin * 2 - leftW) / 31;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+  doc.text("REGISTRO DE CONTROLE DE TEMPERATURA DE EQUIPAMENTOS", margin, 22);
+  doc.text("UNIDADE: " + (tempMEl("tempMonthUnit").value.trim() || "SUDOESTE"), w - margin, 22, { align: "right" });
+  const y0 = 31, h1 = 16, h2 = 17, rh = 17.5;
+  doc.setDrawColor(70, 70, 70); doc.setLineWidth(0.45);
+  doc.rect(margin, y0, leftW, h1); doc.setFontSize(8); doc.text("MÊS: " + monthName, margin + 4, y0 + 11);
+  doc.rect(margin + leftW, y0, dayW * 31, h1); doc.setFontSize(8); doc.text("TEMPERATURA °C", margin + leftW + dayW * 15.5, y0 + 11, { align: "center" });
+  let y = y0 + h1;
+  doc.rect(margin, y, leftW, h2); doc.setFont("helvetica", "bold"); doc.setFontSize(7); doc.text("EQUIPAMENTOS", margin + 4, y + 11);
+  for (let d = 1; d <= 31; d++) { const x = margin + leftW + (d - 1) * dayW; doc.rect(x, y, dayW, h2); doc.setFontSize(6.2); doc.text(String(d).padStart(2, "0"), x + dayW / 2, y + 11, { align: "center" }); }
+  y += h2;
+  TEMP_MONTH_GROUPS.forEach(group => group.items.forEach((name, index) => {
+    doc.rect(margin + groupW, y, equipmentW, rh); doc.setFont("helvetica", "normal"); doc.setFontSize(6.5); doc.text(name.toUpperCase(), margin + groupW + 3, y + 11, { maxWidth: equipmentW - 6 });
+    if (index === 0) { const gh = rh * group.items.length; doc.rect(margin, y, groupW, gh); doc.setFont("helvetica", "bold"); doc.setFontSize(6.7); doc.text(group.name, margin + groupW / 2, y + gh / 2, { align: "center", angle: 270 }); }
+    for (let d = 1; d <= 31; d++) {
+      const x = margin + leftW + (d - 1) * dayW; doc.rect(x, y, dayW, rh);
+      const date = tempMonthRef + "-" + String(d).padStart(2, "0"), value = tempMonthValues[tempMonthKey(date, name)];
+      if (value != null && value !== "") { const bad = tempMonthOut(name, value); doc.setFont("helvetica", bad ? "bold" : "normal"); doc.setFontSize(6.4); doc.setTextColor(...(bad ? [190, 35, 35] : [35, 31, 27])); doc.text(Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 1 }), x + dayW / 2, y + 11, { align: "center" }); doc.setTextColor(35, 31, 27); }
+    }
+    y += rh;
+  }));
+  y += 13; doc.setFont("helvetica", "bold"); doc.setFontSize(7.2); doc.text("PARÂMETROS BASEADOS NA IN 16/2017 DIVISA/SVS", w / 2, y, { align: "center" });
+  y += 5;
+  const rows = [
+    ["PROCESSO", "MÍNIMO", "MÁXIMO"],
+    ["CONGELADOS (FREEZERS E CÂMARA CONGELADA)", "-12°C", "-18° OU MAIS FRIO"],
+    ["RESFRIADOS (GELADEIRAS, CÂMARA RESFRIADA E PISTA FRIA)", "4°C", "OU MAIS FRIO"],
+    ["PISTA FRIA", "4°C", "OU MAIS FRIO"],
+    ["BANHO-MARIA (TEMPERATURA DA ÁGUA)", "80°C", "OU MAIS QUENTE"],
+    ["ESTUFA DE QUIBES", "60°C", "80°C"]
+  ];
+  const tx = w / 2 - 205, tw = 410, c1 = 282, c2 = 58, ph = 14;
+  rows.forEach((r, i) => { const yy = y + i * ph; doc.setFillColor(i === 0 ? 230 : 255, i === 0 ? 230 : 255, i === 0 ? 230 : 255); doc.rect(tx, yy, c1, ph, "FD"); doc.rect(tx + c1, yy, c2, ph, "D"); doc.rect(tx + c1 + c2, yy, tw - c1 - c2, ph, "D"); doc.setFont("helvetica", i === 0 ? "bold" : "normal"); doc.setFontSize(6.2); doc.text(r[0], tx + 3, yy + 9); doc.text(r[1], tx + c1 + c2 / 2, yy + 9, { align: "center" }); doc.text(r[2], tx + c1 + c2 + 3, yy + 9); });
+  doc.save("operatto_controle_temperatura_" + tempMonthRef + ".pdf");
+}
+async function temperatureMonthlyOpen() {
+  const today = localStamp(), month = today.slice(0, 7);
+  tempMEl("tempMonthPicker").max = month;
+  let unit = "SUDOESTE"; try { unit = localStorage.getItem(tempMonthLocalUnitKey()) || unit; } catch (e) {}
+  tempMEl("tempMonthUnit").value = unit;
+  if (!tempMonthRef) tempMonthRef = month;
+  await tempMonthLoad(tempMonthRef);
+}
+tempMEl("tempMonthPicker").addEventListener("change", () => {
+  if (tempMonthChanged.size && !confirm("Descartar alterações sem salvar e abrir outro mês?")) { tempMEl("tempMonthPicker").value = tempMonthRef; return; }
+  const month = tempMEl("tempMonthPicker").value;
+  if (!month || month > localStamp().slice(0, 7)) { tempMEl("tempMonthPicker").value = tempMonthRef; return; }
+  tempMonthLoad(month);
+});
+tempMEl("tempMonthUnit").addEventListener("change", () => { try { localStorage.setItem(tempMonthLocalUnitKey(), tempMEl("tempMonthUnit").value.trim()); } catch (e) {} });
+tempMEl("tempMonthSave").addEventListener("click", tempMonthSave);
+tempMEl("tempMonthPdf").addEventListener("click", tempMonthPdf);
 </script>
 
 </body>
