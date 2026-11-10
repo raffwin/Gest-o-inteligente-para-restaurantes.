@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+l<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -274,6 +274,53 @@
     #sauceRoot .sauce-history-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     #sauceRoot .sauce-history-actions button { width: auto; padding: 8px 11px; }
     #sauceRoot .sauce-status { min-height: 20px; }
+
+    /* ----- Controle de qualidade do óleo ----- */
+    #olRoot { color: var(--text); width: 100%; }
+    #olRoot .ol-notice { border: 1px solid var(--accent); background: var(--surface); border-radius: 7px; padding: 13px 15px; margin-bottom: 14px; font-size: 13px; line-height: 1.5; }
+    #olRoot .ol-warn { border-color: var(--warn); color: var(--warn); }
+    #olRoot .ol-field label { display: block; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    #olRoot .ol-field input { margin: 0; width: 100%; }
+    #olRoot .ol-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+    #olRoot .ol-daterow { display: flex; gap: 8px; align-items: center; }
+    #olRoot .ol-daterow input { width: auto; }
+    #olRoot .ol-meta { color: var(--muted); font-size: 12px; }
+    #olRoot .ol-machines { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    #olRoot .ol-card { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 16px; min-width: 0; }
+    #olRoot .ol-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+    #olRoot .ol-card-head h3 { margin: 0; font-size: 16px; }
+    #olRoot .ol-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; border: 1px solid var(--border); color: var(--muted); }
+    #olRoot .ol-chip.done { color: var(--ok); border-color: var(--ok); }
+    #olRoot .ol-q { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); }
+    #olRoot .ol-q span { font-size: 13.5px; }
+    #olRoot .ol-opts { display: flex; gap: 8px; flex: none; }
+    #olRoot .ol-opt { background: var(--field); border: 1px solid var(--field-border); color: var(--muted); border-radius: 6px; padding: 8px 16px; font-weight: 700; min-width: 68px; }
+    #olRoot .ol-opt:hover { border-color: var(--accent); color: var(--text); background: var(--field); }
+    #olRoot .ol-opt.on { background: #1F3329; border-color: var(--ok); color: #9BE0BD; }
+    #olRoot .ol-opt.on.no { background: #2B3138; border-color: var(--accent); color: var(--text); }
+    #olRoot .ol-resp { margin-top: 10px; }
+    #olRoot .ol-card .ol-save-btn { width: 100%; margin-top: 12px; padding: 11px 14px; font-weight: 700; }
+    #olRoot .ol-savebar { min-height: 22px; margin: 8px 2px 14px; font-size: 12px; }
+    #olRoot .ol-save.positive { color: var(--ok); }
+    #olRoot .ol-save.negative { color: var(--bad); }
+    #olRoot .ol-save.warning { color: var(--warn); }
+    #olRoot .ol-save.hint { color: var(--muted); }
+    #olRoot .ol-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 16px; }
+    #olRoot .ol-h { margin: 0 0 12px; font-size: 15px; }
+    #olRoot .ol-tools { display: grid; grid-template-columns: 170px minmax(0, 1fr) auto; gap: 12px; align-items: end; margin-bottom: 10px; }
+    #olRoot .ol-btns { display: flex; gap: 8px; }
+    #olRoot button.ol-ghost { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 10px 15px; }
+    #olRoot button.ol-ghost:hover:not(:disabled) { border-color: var(--accent); background: var(--hover); }
+    #olRoot button:disabled { opacity: .5; cursor: not-allowed; }
+    #olRoot .ol-meta { margin: 4px 0 10px; }
+    #olRoot .ol-yn.yes { font-weight: 700; }
+    #olRoot .ol-legend { color: var(--muted); font-size: 12px; margin-top: 14px; line-height: 1.5; }
+    @media (max-width: 820px) {
+      #olRoot .ol-machines { grid-template-columns: 1fr; }
+      #olRoot .ol-tools { grid-template-columns: 1fr; }
+      #olRoot .ol-btns button { flex: 1; }
+      #olRoot .ol-head { flex-direction: column; align-items: stretch; }
+    }
 
     /* ----- Controle de cozimento ----- */
     #ckRoot { color: var(--text); width: 100%; }
@@ -858,6 +905,11 @@
       <strong>Cozimento e Reaquecimento</strong>
       <span>Registro diário de temperatura</span>
     </button>
+    <button type="button" class="module" data-check="oleo">
+      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4.5 6 7.6 6 11a6 6 0 0 1-12 0c0-3.4 3-6.5 6-11z"/><path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"/></svg></div>
+      <strong>Controle de Qualidade do Óleo</strong>
+      <span>Fritadeira 1 e Fritadeira 2</span>
+    </button>
     <button type="button" class="module" data-check="gerencial">
       <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></svg></div>
       <strong>Gerencial</strong>
@@ -1015,6 +1067,42 @@
   </div>
   </section>
 
+  <section class="tab-panel" id="tab-oleo" role="tabpanel" hidden>
+  <div id="olRoot">
+    <div class="ol-notice ol-warn" id="olMissing" hidden></div>
+    <div id="olMain">
+      <div class="ol-head">
+        <div class="ol-field">
+          <label for="olDate">Data da verificação</label>
+          <div class="ol-daterow">
+            <input id="olDate" type="date">
+            <button type="button" class="ol-ghost" id="olToday">Hoje</button>
+          </div>
+        </div>
+        <div class="ol-meta" id="olDayMeta"></div>
+      </div>
+
+      <div class="ol-machines" id="olMachines"></div>
+      <div class="ol-savebar"><span class="ol-save" id="olSaveStatus" aria-live="polite"></span></div>
+
+      <div class="ol-panel">
+        <h3 class="ol-h">Histórico e PDF</h3>
+        <div class="ol-tools">
+          <div class="ol-field"><label for="olMonth">Mês de referência</label><input id="olMonth" type="month"></div>
+          <div class="ol-field ol-f-unit"><label for="olUnit">Unidade (aparece no PDF)</label><input id="olUnit" type="text" maxlength="80" placeholder="Nome da unidade"></div>
+          <div class="ol-btns">
+            <button type="button" class="ol-ghost" id="olPdf">Gerar PDF</button>
+            <button type="button" class="ol-ghost" id="olPrint">Imprimir</button>
+          </div>
+        </div>
+        <div class="ol-meta" id="olMonthMeta"></div>
+        <div id="olHistory"></div>
+      </div>
+      <div class="ol-legend">Cada fritadeira tem o seu próprio registro por dia. Salvar de novo na mesma data e fritadeira atualiza o registro. Os dados ficam na sua conta e aparecem em qualquer aparelho.</div>
+    </div>
+  </div>
+  </section>
+
   <section class="section tab-panel" id="tab-gerencial" role="tabpanel" hidden>
     <h2><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></svg> Checklist gerencial</h2>
     <div class="hint">Em configuração. Aqui ficará o checklist de gestão e conferência da operação.</div>
@@ -1090,7 +1178,8 @@
     counter: '<path d="M3 11h18v3H3zM5 14v6M19 14v6M6 11V8h12v3"/>',
     note: '<path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h4"/>',
     flame: '<path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/>',
-    print: '<path d="M7 9V3h10v6M7 17H4v-7h16v7h-3"/><path d="M7 14h10v7H7z"/>'
+    print: '<path d="M7 9V3h10v6M7 17H4v-7h16v7h-3"/><path d="M7 14h10v7H7z"/>',
+    drop: '<path d="M12 3c3 4.5 6 7.6 6 11a6 6 0 0 1-12 0c0-3.4 3-6.5 6-11z"/><path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"/>'
   };
   function ico(name) {
     const el = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -3570,7 +3659,7 @@
 
   /* ---------------- Checklist: escolher qual fazer ---------------- */
 
-  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento e Reaquecimento", gerencial: "{list} Gerencial" };
+  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento e Reaquecimento", oleo: "{drop} Controle de Qualidade do Óleo", gerencial: "{list} Gerencial" };
 
   function resetChecklistScreen() {
     document.getElementById("checklistHome").hidden = false;
@@ -3580,6 +3669,7 @@
   function openChecklist(name) {
     rich(document.getElementById("checklistOpenTitle"), CHECKLIST_TITLES[name] || "Checklist");
     if (name === "cozimento" && typeof ckOpen === "function") ckOpen();
+    if (name === "oleo" && typeof olOpen === "function") olOpen();
     document.querySelectorAll("#checklistOpenView .tab-panel").forEach(p => {
       const show = p.id === "tab-" + name;
       p.hidden = !show;
@@ -5248,6 +5338,508 @@ function renderDashCozimento(box) {
   ckEl("ckFinalize").addEventListener("click", cookFinalize);
   ckEl("ckPdf").addEventListener("click", () => cookPdf(cookDate, cookRecords, cookDay, "download"));
   ckEl("ckPrint").addEventListener("click", () => cookPdf(cookDate, cookRecords, cookDay, "print"));
+})();
+</script>
+<script>
+/* ---------------- Controle de qualidade do óleo ----------------
+   Checklist dentro de Checklists, no mesmo padrão do Controle de Cozimento:
+   dados no Supabase (tabela oil_checks, RLS por conta), um registro por data e por fritadeira,
+   histórico mensal na própria tela e PDF mensal em A4. */
+
+const OL_MACHINES = [1, 2];
+const OL_QUESTIONS = [
+  ["smoke", "Presença de fumaça?"],
+  ["residue", "Presença de resíduos?"],
+  ["change", "Troca de óleo?"]
+];
+
+let olReady = null;        // null = ainda não sabe | true | false = tabela não criada no Supabase
+let olDate = "";           // data selecionada no formulário (AAAA-MM-DD)
+let olMonth = "";          // mês do histórico e do PDF (AAAA-MM)
+let olDayRows = [];        // registros da data selecionada (0 a 2)
+let olMonthRows = [];      // registros do mês selecionado
+let olDraft = {};          // rascunho de cada fritadeira
+let olDayReq = 0;
+let olMonthReq = 0;
+let olBusy = false;
+let olLastResp = "";
+let olUnit = "";
+
+const olEl = id => document.getElementById(id);
+
+function olMissing(e) {
+  const m = String((e && e.message) || "").toLowerCase();
+  return !!(e && (e.code === "42P01" || e.code === "PGRST205")) ||
+    (m.includes("oil_checks") && (m.includes("does not exist") || m.includes("could not find")));
+}
+
+function dbToOil(r) {
+  return {
+    id: r.id,
+    date: r.log_date,
+    machine: Number(r.machine),
+    smoke: !!r.smoke,
+    residue: !!r.residue,
+    change: !!r.oil_change,
+    responsible: r.responsible || "",
+    updatedAt: r.updated_at || r.created_at
+  };
+}
+
+function olYN(v) { return v === true ? "Sim" : v === false ? "Não" : ""; }
+
+function olStatus(text, cls) {
+  const el = olEl("olSaveStatus");
+  if (!el) return;
+  rich(el, text || "");
+  el.className = "ol-save " + (cls || "");
+}
+
+function olNowHM() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+
+function olMonthName(month) {
+  const m = /^(\d{4})-(\d{2})$/.exec(month || "");
+  return m ? MESES_PT[Number(m[2]) - 1] + " de " + m[1] : "";
+}
+
+function olMonthRange(month) {
+  const p = month.split("-");
+  const last = new Date(Number(p[0]), Number(p[1]), 0).getDate();
+  return { from: month + "-01", to: month + "-" + String(last).padStart(2, "0"), days: last };
+}
+
+function olSortMonth(list) {
+  return list.slice().sort((a, b) => a.date === b.date ? a.machine - b.machine : a.date.localeCompare(b.date));
+}
+
+/* ----- Carregamento ----- */
+
+function olShowMissing(on) {
+  olEl("olMissing").hidden = !on;
+  olEl("olMain").hidden = on;
+  if (on) rich(olEl("olMissing"), "{warn} O Controle de Qualidade do Óleo ainda não foi ativado no Supabase. Rode o arquivo supabase_oleo.sql no SQL Editor do Supabase e recarregue a página.");
+}
+
+function olBlankDraft(n) {
+  return { smoke: null, residue: null, change: null, responsible: olLastResp || currentUser || "" };
+}
+
+function olFillDrafts() {
+  OL_MACHINES.forEach(n => {
+    const rec = olDayRows.find(r => r.machine === n);
+    olDraft[n] = rec
+      ? { smoke: rec.smoke, residue: rec.residue, change: rec.change, responsible: rec.responsible }
+      : olBlankDraft(n);
+  });
+}
+
+async function olLoadDate(date) {
+  const req = ++olDayReq;
+  olDate = date;
+  olEl("olDate").value = date;
+  try {
+    const { data, error } = await supabaseClient.from("oil_checks").select("*")
+      .eq("user_id", currentUserId).eq("log_date", date).order("machine");
+    if (error) throw error;
+    if (req !== olDayReq) return;
+    olDayRows = (data || []).map(dbToOil);
+    olReady = true;
+    olShowMissing(false);
+  } catch (error) {
+    if (req !== olDayReq) return;
+    olDayRows = [];
+    if (olMissing(error)) { olReady = false; olShowMissing(true); return; }
+    olReady = true;
+    olShowMissing(false);
+    olStatus("{x} " + friendlyError(error), "negative");
+  }
+  olFillDrafts();
+  olRenderMachines();
+}
+
+async function olLoadMonth(month) {
+  const req = ++olMonthReq;
+  olMonth = month;
+  olEl("olMonth").value = month;
+  olEl("olHistory").replaceChildren(mk("div", "ck-empty", "Carregando..."));
+  const range = olMonthRange(month);
+  try {
+    const { data, error } = await supabaseClient.from("oil_checks").select("*")
+      .eq("user_id", currentUserId).gte("log_date", range.from).lte("log_date", range.to)
+      .order("log_date").order("machine");
+    if (error) throw error;
+    if (req !== olMonthReq) return;
+    olMonthRows = olSortMonth((data || []).map(dbToOil));
+  } catch (error) {
+    if (req !== olMonthReq) return;
+    olMonthRows = [];
+    if (olMissing(error)) { olReady = false; olShowMissing(true); return; }
+    olStatus("{x} " + friendlyError(error), "negative");
+  }
+  olRenderHistory();
+}
+
+async function olLoadUnit() {
+  try {
+    const { data } = await supabaseClient.auth.getUser();
+    const meta = (data && data.user && data.user.user_metadata) || {};
+    olUnit = String(meta.unit || "").trim();
+  } catch (error) { /* mantém o valor atual */ }
+  olEl("olUnit").value = olUnit;
+}
+
+// Chamada ao abrir o checklist dentro de Checklists
+function olOpen() {
+  olStatus("");
+  const today = localStamp();
+  olEl("olDate").max = today;
+  olEl("olMonth").max = today.slice(0, 7);
+  olLoadUnit();
+  olLoadDate(olDate && olDate <= today ? olDate : today);
+  olLoadMonth(olMonth || today.slice(0, 7));
+}
+
+/* ----- Formulário (uma ficha por fritadeira) ----- */
+
+function olRenderMachines() {
+  const box = olEl("olMachines");
+  box.replaceChildren();
+  OL_MACHINES.forEach(n => box.appendChild(olCard(n)));
+  const done = olDayRows.length;
+  olEl("olDayMeta").textContent = fmtDate(olDate) + "  |  " + done + " de 2 fritadeiras registradas";
+}
+
+function olCard(n) {
+  const d = olDraft[n];
+  const rec = olDayRows.find(r => r.machine === n);
+  const card = mk("div", "ol-card");
+  card.dataset.machine = String(n);
+
+  const head = mk("div", "ol-card-head");
+  head.appendChild(mk("h3", "", "Fritadeira " + n));
+  head.appendChild(mk("span", "ol-chip" + (rec ? " done" : ""), rec ? "{check} Registrada às " + olHM(rec.updatedAt) : "{clock} Sem registro"));
+  card.appendChild(head);
+
+  OL_QUESTIONS.forEach(q => {
+    const row = mk("div", "ol-q");
+    row.appendChild(mk("span", "", q[1]));
+    const opts = mk("div", "ol-opts");
+    [["Sim", true], ["Não", false]].forEach(o => {
+      const b = mk("button", "ol-opt" + (d[q[0]] === o[1] ? " on" : "") + (o[1] === false ? " no" : ""), o[0]);
+      b.type = "button";
+      b.setAttribute("aria-pressed", d[q[0]] === o[1] ? "true" : "false");
+      b.addEventListener("click", () => {
+        olDraft[n][q[0]] = o[1];
+        card.replaceWith(olCard(n));
+      });
+      opts.appendChild(b);
+    });
+    row.appendChild(opts);
+    card.appendChild(row);
+  });
+
+  const respWrap = mk("div", "ol-field ol-resp");
+  const lab = mk("label", "", "Responsável");
+  lab.htmlFor = "olResp" + n;
+  const inp = document.createElement("input");
+  inp.type = "text";
+  inp.id = "olResp" + n;
+  inp.maxLength = 80;
+  inp.value = d.responsible;
+  inp.addEventListener("input", () => { olDraft[n].responsible = inp.value; });
+  respWrap.append(lab, inp);
+  card.appendChild(respWrap);
+
+  const save = mk("button", "ol-save-btn", rec ? "{save} Atualizar Fritadeira " + n : "{save} Salvar Fritadeira " + n);
+  save.type = "button";
+  save.disabled = olBusy;
+  save.addEventListener("click", () => olSave(n));
+  card.appendChild(save);
+  return card;
+}
+
+function olHM(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? "" : d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+async function olSave(n) {
+  if (olBusy) return;
+  const d = olDraft[n];
+  const resp = String(d.responsible || "").trim();
+  if (d.smoke === null || d.residue === null || d.change === null || !resp) {
+    olStatus("{warn} Fritadeira " + n + ": responda as três perguntas e informe o responsável.", "warning");
+    return;
+  }
+  if (!olDate || olDate > localStamp()) {
+    olStatus("{warn} Escolha uma data válida (não pode ser futura).", "warning");
+    return;
+  }
+  olBusy = true;
+  olRenderMachines();
+  olStatus("Salvando...", "hint");
+  try {
+    const { data, error } = await supabaseClient.from("oil_checks").upsert({
+      user_id: currentUserId,
+      log_date: olDate,
+      machine: n,
+      smoke: d.smoke,
+      residue: d.residue,
+      oil_change: d.change,
+      responsible: resp,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "user_id,log_date,machine" }).select().single();
+    if (error) throw error;
+    const rec = dbToOil(data);
+    olDayRows = olDayRows.filter(r => r.machine !== n).concat(rec).sort((a, b) => a.machine - b.machine);
+    if (olDate.slice(0, 7) === olMonth) {
+      olMonthRows = olSortMonth(olMonthRows.filter(r => !(r.date === olDate && r.machine === n)).concat(rec));
+    }
+    olLastResp = resp;
+    olDraft[n].responsible = resp;
+    olStatus("{check} Fritadeira " + n + " salva às " + olNowHM() + ".", "positive");
+  } catch (error) {
+    if (olMissing(error)) { olReady = false; olShowMissing(true); olBusy = false; return; }
+    olStatus("{x} " + friendlyError(error), "negative");
+  }
+  olBusy = false;
+  olRenderMachines();
+  olRenderHistory();
+}
+
+/* ----- Histórico do mês ----- */
+
+function olRenderHistory() {
+  const box = olEl("olHistory");
+  const list = olMonthRows;
+  const days = new Set(list.map(r => r.date)).size;
+  olEl("olMonthMeta").textContent = olMonthName(olMonth) + "  |  " + list.length + (list.length === 1 ? " registro" : " registros") + " em " + days + (days === 1 ? " dia" : " dias");
+  olEl("olPdf").disabled = false;
+  olEl("olPrint").disabled = false;
+
+  const wrap = mk("div", "ck-tablewrap");
+  if (list.length === 0) {
+    wrap.appendChild(mk("div", "ck-empty", "Nenhum registro neste mês."));
+    box.replaceChildren(wrap);
+    return;
+  }
+  const table = mk("table", "ck-table");
+  const thead = document.createElement("thead");
+  const hr = document.createElement("tr");
+  ["Data", "Maquinário", "Presença de fumaça", "Presença de resíduos", "Troca de óleo", "Responsável", ""].forEach(h => hr.appendChild(mk("th", "", h)));
+  thead.appendChild(hr);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  list.slice().sort((a, b) => a.date === b.date ? a.machine - b.machine : b.date.localeCompare(a.date)).forEach(r => {
+    const tr = document.createElement("tr");
+    const cell = (label, content, cls) => {
+      const td = document.createElement("td");
+      td.dataset.label = label;
+      if (cls) td.className = cls;
+      if (content instanceof Node) td.appendChild(content);
+      else td.textContent = content;
+      tr.appendChild(td);
+    };
+    cell("Data", fmtDate(r.date), "ck-num");
+    cell("Maquinário", "Fritadeira " + r.machine, "ck-prod");
+    cell("Presença de fumaça", olYN(r.smoke));
+    cell("Presença de resíduos", olYN(r.residue));
+    cell("Troca de óleo", olYN(r.change));
+    cell("Responsável", r.responsible);
+    const act = mk("div", "ck-rowact");
+    act.append(
+      actionBtn("{edit} Editar", "btn-edit", () => olEdit(r)),
+      actionBtn("{trash} Excluir", "btn-remove", () => olDelete(r))
+    );
+    cell("Ações", act, "ck-actcell");
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  box.replaceChildren(wrap);
+}
+
+function olEdit(r) {
+  olStatus("{edit} Editando " + fmtDate(r.date) + " - Fritadeira " + r.machine + ". Altere as respostas e salve.", "hint");
+  olLoadDate(r.date).then(() => {
+    const el = olEl("olMachines");
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+async function olDelete(r) {
+  if (!confirm("Excluir o registro da Fritadeira " + r.machine + " de " + fmtDate(r.date) + "?")) return;
+  try {
+    const { error } = await supabaseClient.from("oil_checks").delete().eq("id", r.id);
+    if (error) throw error;
+    olMonthRows = olMonthRows.filter(x => x.id !== r.id);
+    olDayRows = olDayRows.filter(x => x.id !== r.id);
+    if (olDraft[r.machine] && r.date === olDate) olDraft[r.machine] = olBlankDraft(r.machine);
+    olStatus("{check} Registro excluído.", "positive");
+  } catch (error) {
+    olStatus("{x} " + friendlyError(error), "negative");
+  }
+  olRenderMachines();
+  olRenderHistory();
+}
+
+/* ----- PDF (A4 retrato, 1 página, dias 01 ao último, 2 linhas por dia) ----- */
+
+function olBuildPdf(month, rows, unit) {
+  const JsPDF = window.jspdf && window.jspdf.jsPDF;
+  if (!JsPDF) {
+    alert("Biblioteca de PDF indisponível (sem internet). Conecte-se e tente novamente.");
+    return null;
+  }
+  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+  if (typeof doc.autoTable !== "function") {
+    alert("Biblioteca de tabelas do PDF indisponível (sem internet). Conecte-se e tente novamente.");
+    return null;
+  }
+  const margin = 28;
+  const w = doc.internal.pageSize.getWidth();
+  const h = doc.internal.pageSize.getHeight();
+  const range = olMonthRange(month);
+  const tw = w - margin * 2;
+
+  // Cabeçalho do formulário
+  doc.setTextColor(25, 28, 33);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("CONTROLE DE QUALIDADE DO ÓLEO DE FRITURA", w / 2, 40, { align: "center" });
+
+  doc.setDrawColor(60, 66, 75);
+  doc.setLineWidth(0.8);
+  doc.rect(margin, 52, tw, 22);
+  doc.line(margin + tw * 0.6, 52, margin + tw * 0.6, 74);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("UNIDADE:", margin + 6, 66);
+  doc.setFont("helvetica", "normal");
+  doc.text(unit || "", margin + 56, 66, { maxWidth: tw * 0.6 - 62 });
+  doc.setFont("helvetica", "bold");
+  doc.text("MÊS DE REFERÊNCIA:", margin + tw * 0.6 + 6, 66);
+  doc.setFont("helvetica", "normal");
+  doc.text(olMonthName(month).toUpperCase(), margin + tw * 0.6 + 104, 66, { maxWidth: tw * 0.4 - 108 });
+
+  // Corpo: dois registros por dia
+  const byKey = {};
+  rows.forEach(r => { byKey[r.date + "#" + r.machine] = r; });
+  const body = [];
+  for (let d = 1; d <= range.days; d++) {
+    const date = month + "-" + String(d).padStart(2, "0");
+    OL_MACHINES.forEach(n => {
+      const r = byKey[date + "#" + n];
+      const line = ["Fritadeira " + n, r ? olYN(r.smoke) : "", r ? olYN(r.residue) : "", r ? olYN(r.change) : "", r ? r.responsible : ""];
+      if (n === 1) line.unshift({ content: String(d).padStart(2, "0"), rowSpan: 2, styles: { halign: "center", valign: "middle", fontStyle: "bold" } });
+      body.push(line);
+    });
+  }
+
+  // Ajusta a altura das linhas para o mês inteiro caber em uma folha A4
+  const startY = 84;
+  const bottom = h - 54;
+  const headH = 24;
+  const rowH = Math.min(15, Math.floor(((bottom - startY - headH) / body.length) * 10) / 10 - 0.2);
+  const fs = Math.min(8.5, rowH * 0.62);
+  const padV = Math.max(0.6, (rowH - fs * 1.15) / 2);
+
+  doc.autoTable({
+    startY: startY,
+    theme: "grid",
+    margin: { left: margin, right: margin, top: startY, bottom: 54 },
+    tableWidth: tw,
+    head: [["DATA", "MAQUINÁRIO", "PRESENÇA DE FUMAÇA", "PRESENÇA DE RESÍDUOS", "TROCA DE ÓLEO", "RESPONSÁVEL"]],
+    body: body,
+    styles: { font: "helvetica", fontSize: fs, cellPadding: { top: padV, bottom: padV, left: 4, right: 4 }, minCellHeight: rowH, lineColor: [70, 76, 85], lineWidth: 0.5, textColor: [25, 28, 33], valign: "middle", overflow: "ellipsize" },
+    headStyles: { fillColor: [38, 42, 48], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 7.5, halign: "center", valign: "middle", minCellHeight: headH, cellPadding: 3 },
+    columnStyles: {
+      0: { cellWidth: 38 },
+      1: { cellWidth: 72 },
+      2: { cellWidth: 92, halign: "center" },
+      3: { cellWidth: 92, halign: "center" },
+      4: { cellWidth: 78, halign: "center" }
+    },
+    didParseCell: function (data) {
+      if (data.section !== "body") return;
+      if (Math.floor(data.row.index / 2) % 2 === 1) data.cell.styles.fillColor = [238, 241, 245];
+      if ([2, 3, 4].includes(data.column.index) && data.cell.raw === "Sim") data.cell.styles.fontStyle = "bold";
+    }
+  });
+
+  // Rodapé: identificação do responsável e crédito
+  doc.setDrawColor(60, 66, 75);
+  doc.setLineWidth(0.6);
+  doc.line(margin, h - 34, margin + 230, h - 34);
+  doc.line(margin + 280, h - 34, margin + 510, h - 34);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(90, 96, 106);
+  doc.text("Responsável pela verificação", margin, h - 25);
+  doc.text("Visto do gerente", margin + 280, h - 25);
+  doc.setFontSize(7);
+  doc.text("Operatto", w - margin, h - 14, { align: "right" });
+  return doc;
+}
+
+function olPdf(mode) {
+  if (!olMonth) return;
+  try {
+    const doc = olBuildPdf(olMonth, olMonthRows, olEl("olUnit").value.trim());
+    if (!doc) return;
+    if (mode === "print") {
+      const url = URL.createObjectURL(doc.output("blob"));
+      const frame = document.createElement("iframe");
+      frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+      frame.src = url;
+      frame.onload = () => {
+        try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+        catch (e) { window.open(url, "_blank"); }
+      };
+      document.body.appendChild(frame);
+      setTimeout(() => { URL.revokeObjectURL(url); frame.remove(); }, 180000);
+    } else {
+      doc.save("operatto_oleo_" + olMonth + ".pdf");
+    }
+  } catch (error) {
+    alert("Não foi possível gerar o PDF.");
+  }
+}
+
+/* ----- Ligações da tela ----- */
+
+(function () {
+  const dateEl = olEl("olDate");
+  if (!dateEl) return;
+  dateEl.addEventListener("change", () => {
+    const v = dateEl.value;
+    if (!v || v > localStamp()) { dateEl.value = olDate; return; }
+    olStatus("");
+    olLoadDate(v);
+  });
+  olEl("olToday").addEventListener("click", () => { olStatus(""); olLoadDate(localStamp()); });
+  olEl("olMonth").addEventListener("change", () => {
+    const v = olEl("olMonth").value;
+    if (!v) { olEl("olMonth").value = olMonth; return; }
+    olLoadMonth(v);
+  });
+  olEl("olUnit").addEventListener("change", async () => {
+    const v = olEl("olUnit").value.trim();
+    try {
+      const { error } = await supabaseClient.auth.updateUser({ data: { unit: v } });
+      if (error) throw error;
+      olUnit = v;
+      olStatus("{check} Unidade salva.", "positive");
+    } catch (error) {
+      olStatus("{x} Não foi possível salvar o nome da unidade: " + friendlyError(error), "negative");
+    }
+  });
+  olEl("olPdf").addEventListener("click", () => olPdf("download"));
+  olEl("olPrint").addEventListener("click", () => olPdf("print"));
 })();
 </script>
 <script>
