@@ -752,7 +752,7 @@
 
   <div id="sheetStockView" hidden>
     <div class="sauce-head">
-      <div><h2 class="section-heading">Contagem da planilha</h2><div class="hint">Informe o estoque atual e a quantidade a pedir por produto.</div></div>
+      <div><h2 class="section-heading">Cotação</h2><div class="hint">Preencha estoque e pedido em uma única tabela, organizada conforme a planilha enviada.</div></div>
       <div class="sauce-date"><label for="sheetStockDate">Data da contagem</label><input id="sheetStockDate" type="date"></div>
     </div>
     <div id="sheetStockGroups" class="modules"></div>
@@ -2432,60 +2432,24 @@
     return hasOther ? [...STOCK_GROUPS, STOCK_OTHER] : [...STOCK_GROUPS];
   }
 
-  // Cartões da tela do Estoque: cada um abre uma lacuna (Bar, Molhos, Mercearia, Hortifruti, Limpeza)
+  // No Estoque, a cotação reúne os itens da planilha em uma única tela; Molhos segue separado.
   function renderStockGroupCards(names, totalBy, lowBy) {
     const box = document.getElementById("stockGroups");
-    box.replaceChildren();
-
-    names.filter(g => g === "Molhos").forEach(g => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "module op-category";
-      btn.dataset.group = g;
-
-      const icon = document.createElement("div");
-      icon.className = "op-category-icon";
-      icon.innerHTML = '<svg viewBox="0 0 24 24">' + (STOCK_SVG[g] || STOCK_SVG.Outros) + "</svg>";
-
-      const title = document.createElement("h3");
-      title.textContent = g;
-
-      const desc = document.createElement("p");
-      desc.textContent = totalBy[g] === 0
-        ? "Nenhum produto"
-        : totalBy[g] + (totalBy[g] === 1 ? " produto" : " produtos");
-
-      btn.append(icon, title, desc);
-
-      if (lowBy[g] > 0) {
-        const badge = document.createElement("span");
-        badge.className = "op-low-stock";
-        badge.textContent = lowBy[g] + " com estoque baixo";
-        btn.appendChild(badge);
-      }
-
-      btn.addEventListener("click", () => openStockGroup(g));
-      box.appendChild(btn);
-    });
     box.replaceChildren();
     const sauceBtn = document.createElement("button");
     sauceBtn.type = "button"; sauceBtn.className = "module op-category";
     sauceBtn.innerHTML = '<div class="op-category-icon"><svg viewBox="0 0 24 24">' + STOCK_SVG.Molhos + '</svg></div><h3>Molhos</h3><p>' + SAUCE_CATALOG.length + ' produtos</p>';
     sauceBtn.addEventListener("click", () => openStockGroup("Molhos"));
     box.appendChild(sauceBtn);
-    Object.keys(SHEET_STOCK).forEach(g => {
-      const card = document.createElement("button"); card.type = "button"; card.className = "module op-category";
-      card.innerHTML = '<div class="op-category-icon"><svg viewBox="0 0 24 24">' + STOCK_SVG.Outros + '</svg></div><h3></h3><p></p>';
-      card.querySelector("h3").textContent = g;
-      card.querySelector("p").textContent = SHEET_STOCK[g].length + " produtos";
-      card.addEventListener("click", () => openStockGroup(g));
-      box.appendChild(card);
-    });
+    const quoteBtn = document.createElement("button"); quoteBtn.type = "button"; quoteBtn.className = "module op-category";
+    quoteBtn.innerHTML = '<div class="op-category-icon"><svg viewBox="0 0 24 24">' + STOCK_SVG.Outros + '</svg></div><h3>Cotação</h3><p>' + Object.values(SHEET_STOCK).reduce((n, items) => n + items.length, 0) + ' produtos da planilha</p>';
+    quoteBtn.addEventListener("click", () => openStockGroup("Cotação"));
+    box.appendChild(quoteBtn);
   }
 
   // Há contagens digitadas na lacuna aberta que ainda não foram salvas?
   function stockGroupDirty() {
-    if (typeof SHEET_STOCK !== "undefined" && SHEET_STOCK[activeStockTab] && typeof sheetStockDirty !== "undefined" && sheetStockDirty) return true;
+    if (activeStockTab === "Cotação" && typeof sheetStockDirty !== "undefined" && sheetStockDirty) return true;
     if (activeStockTab === "Molhos" && sauceDirty) return true;
     return countInputs.some(entry => {
       if (entry.group !== activeStockTab) return false;
@@ -2504,7 +2468,7 @@
   function openStockGroup(name) {
     activeStockTab = name;
 
-    const sheetMode = Object.prototype.hasOwnProperty.call(SHEET_STOCK, name);
+    const sheetMode = name === "Cotação";
     document.getElementById("sheetStockView").hidden = !sheetMode;
     document.getElementById("stockSauceView").hidden = sheetMode || name !== "Molhos";
     const sauceMode = name === "Molhos";
@@ -2518,7 +2482,7 @@
       document.getElementById("stockGroupView").hidden = false;
       document.getElementById("sheetStockGroups").hidden = true;
       document.getElementById("sheetStockTable").hidden = true;
-      sheetStockOpen(name);
+      sheetStockOpen();
       window.scrollTo(0, 0);
       return;
     }
@@ -6567,63 +6531,63 @@ function sheetStockStatus(text, cls) {
   el.textContent = text || "";
   el.className = "sauce-status sim " + (cls || "");
 }
-function sheetStockDrawGroups() {
-  const box = document.getElementById("sheetStockGroups");
-  box.replaceChildren();
-  Object.keys(SHEET_STOCK).forEach(name => {
-    const b = document.createElement("button"); b.type = "button"; b.className = "module op-category";
-    const icon = document.createElement("div"); icon.className = "op-category-icon"; icon.innerHTML = '<svg viewBox="0 0 24 24">' + STOCK_SVG.Outros + '</svg>';
-    const title = document.createElement("h3"); title.textContent = name;
-    const desc = document.createElement("p"); desc.textContent = SHEET_STOCK[name].length + " produtos";
-    b.append(icon, title, desc); b.addEventListener("click", () => sheetStockOpenCategory(name)); box.appendChild(b);
-  });
-}
-function sheetStockOpen(name) {
+async function sheetStockOpen() {
   const date = document.getElementById("sheetStockDate");
   date.max = localStamp(); if (!date.value || date.value > date.max) date.value = date.max;
-  sheetStockDrawGroups(); sheetStockCategory = ""; sheetStockValues = {}; sheetStockDirty = false;
-  sheetStockStatus("");
-  sheetStockOpenCategory(name);
-}
-async function sheetStockOpenCategory(name) {
-  if (sheetStockDirty && !confirm("Há alterações sem salvar. Descartar e abrir este subgrupo?")) return;
-  sheetStockCategory = name;
-  const date = document.getElementById("sheetStockDate").value;
-  sheetStockStatus("Carregando contagem...", "hint");
+  sheetStockCategory = "Cotação"; sheetStockValues = {}; sheetStockDirty = false;
+  const box = document.getElementById("sheetStockTable"); box.hidden = false; box.replaceChildren(mk("div", "loading", "Carregando cotação salva..."));
+  sheetStockStatus("Carregando contagens...", "hint");
   try {
-    const { data, error } = await supabaseClient.from("stock_quote_sessions").select("items")
-      .eq("user_id", currentUserId).eq("count_date", date).eq("category", name).maybeSingle();
-    if (error) throw error;
-    sheetStockValues = {};
-    (data && Array.isArray(data.items) ? data.items : []).forEach(x => { sheetStockValues[x.product] = x; });
-    sheetStockDirty = false;
+    const categories = Object.keys(SHEET_STOCK);
+    const results = await Promise.all(categories.map(category => supabaseClient.from("stock_quote_sessions").select("items")
+      .eq("user_id", currentUserId).eq("count_date", date.value).eq("category", category).maybeSingle()));
+    results.forEach((result, i) => {
+      if (result.error) throw result.error;
+      sheetStockValues[categories[i]] = {};
+      (result.data && Array.isArray(result.data.items) ? result.data.items : []).forEach(item => { sheetStockValues[categories[i]][item.product] = item; });
+    });
   } catch (error) { sheetStockStatus("Falha ao carregar: " + friendlyError(error), "negative"); return; }
-  const box = document.getElementById("sheetStockTable"); box.hidden = false; box.replaceChildren();
-  const back = document.createElement("button"); back.type = "button"; back.className = "back-btn"; back.textContent = "← Subgrupos";
-  back.addEventListener("click", () => closeStockGroup());
-  const title = document.createElement("h3"); title.className = "section-heading"; title.textContent = name;
-  const wrap = document.createElement("div"); wrap.className = "sauce-table-wrap";
-  const table = document.createElement("table"); table.className = "sauce-table";
-  table.innerHTML = "<thead><tr><th>PRODUTO</th><th style='text-align:center'>ESTOQUE</th><th style='text-align:center'>PEDIR</th></tr></thead>";
-  const body = document.createElement("tbody");
-  SHEET_STOCK[name].forEach(product => {
-    const tr = document.createElement("tr"); const td = document.createElement("td"); td.textContent = product; tr.appendChild(td);
-    ["stock", "order"].forEach(key => { const cell = document.createElement("td"); const input = document.createElement("input"); input.type = "number"; input.min = "0"; input.step = "any"; input.value = sheetStockValues[product] && sheetStockValues[product][key] != null ? sheetStockValues[product][key] : ""; input.setAttribute("aria-label", key === "stock" ? "Estoque de " + product : "Pedir " + product); input.addEventListener("input", () => { if (!sheetStockValues[product]) sheetStockValues[product] = { product, stock: null, order: null }; sheetStockValues[product][key] = input.value === "" ? null : Number(input.value); sheetStockDirty = true; sheetStockStatus("Há alterações sem salvar.", "warning"); }); cell.appendChild(input); tr.appendChild(cell); });
-    body.appendChild(tr);
+  box.replaceChildren();
+  const title = document.createElement("h3"); title.className = "section-heading"; title.textContent = "Cotação geral"; box.appendChild(title);
+  Object.keys(SHEET_STOCK).forEach(category => {
+    const section = document.createElement("section"); section.className = "section";
+    const heading = document.createElement("h2"); heading.textContent = category; section.appendChild(heading);
+    const wrap = document.createElement("div"); wrap.className = "sauce-table-wrap";
+    const table = document.createElement("table"); table.className = "sauce-table";
+    table.innerHTML = "<thead><tr><th>PRODUTOS</th><th style='text-align:center'>ESTOQUE</th><th style='text-align:center'>PEDIR</th></tr></thead>";
+    const body = document.createElement("tbody");
+    SHEET_STOCK[category].forEach(product => {
+      const tr = document.createElement("tr"), name = document.createElement("td"); name.textContent = product; tr.appendChild(name);
+      ["stock", "order"].forEach(key => {
+        const cell = document.createElement("td"), input = document.createElement("input");
+        input.type = "number"; input.min = "0"; input.step = "any";
+        const saved = (sheetStockValues[category] || {})[product] || {};
+        input.value = saved[key] == null ? "" : saved[key];
+        input.setAttribute("aria-label", (key === "stock" ? "Estoque de " : "Pedir ") + product);
+        input.addEventListener("input", () => {
+          if (!sheetStockValues[category][product]) sheetStockValues[category][product] = { product, stock: null, order: null };
+          sheetStockValues[category][product][key] = input.value === "" ? null : Number(input.value);
+          sheetStockDirty = true; sheetStockStatus("Há alterações sem salvar.", "warning");
+        });
+        cell.appendChild(input); tr.appendChild(cell);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body); wrap.appendChild(table); section.appendChild(wrap); box.appendChild(section);
   });
-  table.appendChild(body); wrap.appendChild(table); box.replaceChildren(back, title, wrap);
-  document.getElementById("sheetStockGroups").hidden = true;
   sheetStockStatus("");
 }
 async function sheetStockSave() {
   if (!sheetStockCategory) { sheetStockStatus("Escolha um subgrupo primeiro.", "warning"); return; }
   const date = document.getElementById("sheetStockDate").value;
-  const items = SHEET_STOCK[sheetStockCategory].map(product => sheetStockValues[product] || { product, stock: null, order: null });
-  const payload = { user_id: currentUserId, count_date: date, category: sheetStockCategory, employee: currentUser || "", items, updated_at: new Date().toISOString() };
   const btn = document.getElementById("sheetStockSave"); btn.disabled = true; sheetStockStatus("Salvando...", "hint");
   try {
-    const { error } = await supabaseClient.from("stock_quote_sessions").upsert(payload, { onConflict: "user_id,count_date,category" });
-    if (error) throw error;
+    for (const category of Object.keys(SHEET_STOCK)) {
+      const items = SHEET_STOCK[category].map(product => (sheetStockValues[category] || {})[product] || { product, stock: null, order: null });
+      const payload = { user_id: currentUserId, count_date: date, category, employee: currentUser || "", items, updated_at: new Date().toISOString() };
+      const { error } = await supabaseClient.from("stock_quote_sessions").upsert(payload, { onConflict: "user_id,count_date,category" });
+      if (error) throw error;
+    }
     sheetStockDirty = false; sheetStockStatus("Contagem salva na nuvem.", "positive");
   } catch (error) { sheetStockStatus("Não foi possível salvar: " + friendlyError(error), "negative"); }
   btn.disabled = false;
@@ -6632,29 +6596,36 @@ function sheetStockPdf() {
   if (!sheetStockCategory) { sheetStockStatus("Abra um subgrupo antes de gerar o PDF.", "warning"); return; }
   const JsPDF = window.jspdf && window.jspdf.jsPDF;
   if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
-  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
   if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo e tente novamente."); return; }
   const date = document.getElementById("sheetStockDate").value;
-  doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.text("CONTAGEM DE ESTOQUE", 40, 42);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.text("COTAÇÃO", 40, 42);
   doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-  doc.text("Subgrupo: " + sheetStockCategory, 40, 62);
+  doc.text("Cotação: " + fmtDate(date) + " à " + fmtDate(date), 40, 62);
   doc.text("Data: " + fmtDate(date) + "   |   Responsável: " + (currentUser || ""), 40, 78);
-  doc.autoTable({
-    startY: 94, theme: "grid", margin: { left: 40, right: 40, bottom: 40 },
-    head: [["PRODUTO", "ESTOQUE", "PEDIR"]],
-    body: SHEET_STOCK[sheetStockCategory].map(product => {
-      const v = sheetStockValues[product] || {};
-      return [product, v.stock == null ? "" : String(v.stock), v.order == null ? "" : String(v.order)];
-    }),
-    styles: { font: "helvetica", fontSize: 9, cellPadding: 5, lineColor: [190, 195, 202], lineWidth: 0.5, textColor: [35, 39, 45], valign: "middle" },
-    headStyles: { fillColor: [38, 42, 48], textColor: [255, 255, 255], fontStyle: "bold" },
-    columnStyles: { 0: { cellWidth: "auto" }, 1: { cellWidth: 90, halign: "center" }, 2: { cellWidth: 90, halign: "center" } }
+  let y = 94;
+  Object.keys(SHEET_STOCK).forEach(category => {
+    if (y > doc.internal.pageSize.getHeight() - 100) { doc.addPage(); y = 38; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.text(category.toUpperCase(), 40, y);
+    const suppliers = category === "Estoque Seco" ? ["D.B", "N.A", "GAR"] : category === "Pescados e Carnes e Frango" ? ["Grelhado", "Belle", "Moqueca"] : [];
+    const head = [["PRODUTOS", "ESTOQUE", "PEDIR"].concat(suppliers)];
+    const body = SHEET_STOCK[category].map(product => {
+      const v = ((sheetStockValues[category] || {})[product]) || {};
+      return [product, v.stock == null ? "" : String(v.stock), v.order == null ? "" : String(v.order)].concat(suppliers.map(() => ""));
+    });
+    const styles = {};
+    suppliers.forEach((_, i) => { styles[i + 3] = { halign: "center" }; });
+    doc.autoTable({ startY: y + 5, theme: "grid", margin: { left: 40, right: 40, bottom: 35 }, head, body,
+      styles: { font: "helvetica", fontSize: 7, cellPadding: 3, lineColor: [90, 90, 90], lineWidth: 0.4, textColor: [25, 25, 25], valign: "middle" },
+      headStyles: { fillColor: [225, 225, 225], textColor: [20, 20, 20], fontStyle: "bold" },
+      columnStyles: Object.assign({ 0: { cellWidth: 250 }, 1: { cellWidth: 66, halign: "center" }, 2: { cellWidth: 66, halign: "center" } }, styles) });
+    y = doc.lastAutoTable.finalY + 13;
   });
-  doc.save("operatto_estoque_" + sheetStockCategory.toLowerCase().replace(/[^a-z0-9]+/g, "_") + "_" + date + ".pdf");
+  doc.save("operatto_cotacao_" + date + ".pdf");
 }
 document.getElementById("sheetStockDate").addEventListener("change", () => {
   if (sheetStockDirty && !confirm("Descartar alterações sem salvar e carregar outra data?")) return;
-  if (sheetStockCategory) { sheetStockDirty = false; sheetStockOpenCategory(sheetStockCategory); }
+  if (sheetStockCategory) { sheetStockDirty = false; sheetStockOpen(); }
 });
 document.getElementById("sheetStockSave").addEventListener("click", sheetStockSave);
 document.getElementById("sheetStockPdf").addEventListener("click", sheetStockPdf);
