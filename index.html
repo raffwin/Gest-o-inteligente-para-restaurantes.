@@ -241,6 +241,7 @@
     #operatto-limpeza .lc-header { margin-bottom: 18px; }
     #operatto-limpeza .lc-header h2 { display: none; }
     #operatto-limpeza .lc-header p { font-size: 13px; color: var(--muted); margin: 0; }
+    #operatto-limpeza .lc-sync-status { min-height: 18px; margin: -8px 0 12px; color: var(--muted); font-size: 12px; }
     #operatto-limpeza .lc-setores, #operatto-limpeza .lc-lista { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     #operatto-limpeza .lc-painel { display: none; }
     #operatto-limpeza button.lc-setor { display: block; width: 100%; padding: 19px 15px; text-align: left; border-radius: 7px; background: var(--surface); border: 1px solid var(--border); color: var(--text); }
@@ -1057,6 +1058,7 @@
       <h2>Checklist de limpeza</h2>
       <p>Selecione o setor para iniciar a conferência.</p>
     </div>
+    <div class="lc-sync-status" id="lcSyncStatus" role="status" aria-live="polite"></div>
 
     <div class="lc-setores" id="lcSetores">
       <button type="button" class="lc-setor" data-setor="cozinha"><strong>Cozinha</strong><small>Higienização e organização</small><span class="lc-status"></span></button>
@@ -3548,6 +3550,15 @@
       box.appendChild(mk("section", "section hint", "{warn} Checklist de limpeza indisponível."));
       return;
     }
+    if (!api.carregado()) {
+      box.appendChild(mk("div", "loading", "Carregando histórico de limpeza da nuvem..."));
+      api.carregar().then(() => {
+        if (dashTab === "limpeza" && !document.getElementById("dashboardView").hidden) renderDashboard();
+      });
+      return;
+    }
+    const cloudWarning = api.avisoNuvem();
+    if (cloudWarning) box.appendChild(mk("section", "section warning", "{warn} " + cloudWarning));
 
     const hoje = localStamp();
     if (!dashLimpezaMonth) dashLimpezaMonth = hoje.slice(0, 7);
@@ -3599,7 +3610,7 @@
       inp.placeholder = c[2];
       inp.value = resp[c[0]] || "";
       inp.addEventListener("change", () => {
-        api.salvarResponsaveis(mes, { chefe: inputs.chefe.value.trim(), gerente: inputs.gerente.value.trim() });
+        api.salvarResponsaveis(mes, { chefe: inputs.chefe.value.trim(), gerente: inputs.gerente.value.trim() }).catch(() => {});
       });
       inputs[c[0]] = inp;
       f.appendChild(inp);
@@ -4682,12 +4693,46 @@
   // dados = { registros: { "AAAA-MM-DD": { setor: { itens: [], salvo, dataSalvamento } } }, responsaveis: { "AAAA-MM": { chefe, gerente } } }
   let dados = { registros: {}, responsaveis: {} };
   let atual = null;
+  let cloudLoadedUid = "";
+  let cloudFailedUid = "";
+  let cloudLoading = null;
+  let cloudLoadingUid = "";
+  let cloudRequest = 0;
+  let cloudSyncing = false;
+  let cloudWriteQueue = Promise.resolve();
 
   const setoresEl = root.querySelector("#lcSetores");
   const painel = root.querySelector("#lcPainel");
   const lista = root.querySelector("#lcLista");
   const titulo = root.querySelector("#lcTitulo");
   const progresso = root.querySelector("#lcProgresso");
+  const syncStatus = root.querySelector("#lcSyncStatus");
+
+  function statusNuvem(texto, tipo) {
+    if (!syncStatus) return;
+    syncStatus.textContent = texto || "";
+    syncStatus.className = "lc-sync-status" + (tipo ? " " + tipo : "");
+  }
+
+  function erroNuvem(error) {
+    const message = String((error && error.message) || error || "");
+    if ((error && (error.code === "42P01" || error.code === "PGRST205")) || /cleaning_checklists|cleaning_monthly_responsibles/i.test(message) && /does not exist|schema cache|could not find/i.test(message)) {
+      return "Tabelas de limpeza ainda não configuradas. Execute supabase_checklist_limpeza.sql no SQL Editor do Supabase.";
+    }
+    if (/row-level security/i.test(message)) return "O Supabase bloqueou a sincronização. Confira as políticas do arquivo supabase_checklist_limpeza.sql.";
+    return "Falha ao sincronizar com a nuvem: " + message;
+  }
+
+  function enfileirarGravacao(tarefa, uid) {
+    const execucao = cloudWriteQueue.then(tarefa);
+    cloudWriteQueue = execucao.catch(error => {
+      if (typeof currentUserId !== "undefined" && currentUserId === uid) {
+        cloudFailedUid = uid;
+        statusNuvem("Registro mantido neste aparelho. " + erroNuvem(error), "warning");
+      }
+    });
+    return execucao;
+  }
 
   function pad(n) { return String(n).padStart(2, "0"); }
   function dataLocal(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
@@ -4717,7 +4762,150 @@
     });
   }
   function persistir() {
-    try { localStorage.setItem(chave(), JSON.stringify(dados)); } catch (e) {}
+    try {
+      localStorage.setItem(chave(), JSON.stringify(dados));
+      return true;
+    } catch (e) {
+      statusNuvem("Não foi possível gravar a cópia local neste aparelho.", "warning");
+      return false;
+    }
+  }
+
+  function gravarSetorNuvem(data, setorKey) {
+    const uid = typeof currentUserId !== "undefined" ? currentUserId : null;
+    const registroAtual = dados.registros[data] && dados.registros[data][setorKey];
+    if (!uid || !registroAtual) return Promise.resolve();
+    const payload = {
+      user_id: uid,
+      log_date: data,
+      sector: setorKey,
+      items: registroAtual.itens || [],
+      completed: !!registroAtual.salvo,
+      saved_at: registroAtual.atualizadoEm || registroAtual.dataSalvamento || new Date().toISOString()
+    };
+    return enfileirarGravacao(async () => {
+      if (currentUserId !== uid) return;
+      const { error } = await supabaseClient.from("cleaning_checklists")
+        .upsert(payload, { onConflict: "user_id,log_date,sector" });
+      if (error) throw error;
+      cloudLoadedUid = uid;
+      cloudFailedUid = "";
+      statusNuvem("Alterações sincronizadas com a nuvem.", "positive");
+    }, uid);
+  }
+
+  async function carregarNuvem(force) {
+    const uid = typeof currentUserId !== "undefined" ? currentUserId : null;
+    if (!uid) return false;
+    if (!force && cloudLoadedUid === uid) return true;
+    if (!force && cloudFailedUid === uid) return false;
+    if (cloudLoading && cloudLoadingUid === uid) return cloudLoading;
+
+    const request = ++cloudRequest;
+    ler();
+    cloudSyncing = true;
+    statusNuvem("Carregando os registros de limpeza da nuvem...", "hint");
+    renderizarSetores();
+    cloudLoadingUid = uid;
+    cloudLoading = (async () => {
+      try {
+        const [checkRes, respRes] = await Promise.all([
+          supabaseClient.from("cleaning_checklists").select("*").eq("user_id", uid).order("log_date").order("sector"),
+          supabaseClient.from("cleaning_monthly_responsibles").select("*").eq("user_id", uid).order("month_ref")
+        ]);
+        if (checkRes.error) throw checkRes.error;
+        if (respRes.error) throw respRes.error;
+        if (request !== cloudRequest || currentUserId !== uid) return false;
+
+        const cloudRecords = {};
+        (checkRes.data || []).forEach(row => {
+          if (!setores[row.sector] || !/^\d{4}-\d{2}-\d{2}$/.test(row.log_date)) return;
+          if (!cloudRecords[row.log_date]) cloudRecords[row.log_date] = {};
+          cloudRecords[row.log_date][row.sector] = {
+            itens: Array.isArray(row.items) ? row.items : [],
+            salvo: !!row.completed,
+            dataSalvamento: row.completed ? (row.saved_at || null) : null,
+            atualizadoEm: row.saved_at || null
+          };
+        });
+
+        const localRecords = dados.registros || {};
+        const recordsToSync = [];
+        Object.keys(localRecords).forEach(date => Object.keys(localRecords[date] || {}).forEach(sector => {
+          const row = localRecords[date][sector];
+          if (!setores[sector] || !row || !Array.isArray(row.itens) || (!row.itens.some(Boolean) && !row.salvo)) return;
+          const remote = cloudRecords[date] && cloudRecords[date][sector];
+          const localTime = Date.parse(row.atualizadoEm || row.dataSalvamento || "") || 0;
+          const remoteTime = Date.parse(remote && (remote.atualizadoEm || remote.dataSalvamento) || "") || 0;
+          if (remote && localTime <= remoteTime) return;
+          if (!cloudRecords[date]) cloudRecords[date] = {};
+          cloudRecords[date][sector] = row;
+          recordsToSync.push({
+            user_id: uid,
+            log_date: date,
+            sector: sector,
+            items: row.itens,
+            completed: !!row.salvo,
+            saved_at: row.atualizadoEm || row.dataSalvamento || new Date().toISOString()
+          });
+        }));
+
+        const cloudResponsibles = {};
+        (respRes.data || []).forEach(row => {
+          cloudResponsibles[row.month_ref] = { chefe: row.chefe || "", gerente: row.gerente || "", atualizadoEm: row.updated_at || null };
+        });
+        const localResponsibles = dados.responsaveis || {};
+        const responsiblesToSync = [];
+        Object.keys(localResponsibles).forEach(month => {
+          const local = localResponsibles[month] || {};
+          const remote = cloudResponsibles[month];
+          const localTime = Date.parse(local.atualizadoEm || "") || 0;
+          const remoteTime = Date.parse(remote && remote.atualizadoEm || "") || 0;
+          if (remote && localTime <= remoteTime) return;
+          cloudResponsibles[month] = local;
+          responsiblesToSync.push({
+            user_id: uid,
+            month_ref: month,
+            chefe: local.chefe || "",
+            gerente: local.gerente || "",
+            updated_at: local.atualizadoEm || new Date().toISOString()
+          });
+        });
+
+        dados = { registros: cloudRecords, responsaveis: cloudResponsibles };
+        persistir();
+
+        // Migra os registros locais e envia as alterações locais mais recentes.
+        if (recordsToSync.length) {
+          const { error } = await supabaseClient.from("cleaning_checklists")
+            .upsert(recordsToSync, { onConflict: "user_id,log_date,sector" });
+          if (error) throw error;
+        }
+        if (responsiblesToSync.length) {
+          const { error } = await supabaseClient.from("cleaning_monthly_responsibles")
+            .upsert(responsiblesToSync, { onConflict: "user_id,month_ref" });
+          if (error) throw error;
+        }
+
+        cloudLoadedUid = uid;
+        cloudFailedUid = "";
+        statusNuvem("Registros sincronizados com a nuvem.", "positive");
+        return true;
+      } catch (error) {
+        if (request !== cloudRequest || currentUserId !== uid) return false;
+        cloudFailedUid = uid;
+        statusNuvem("Os registros locais foram mantidos. " + erroNuvem(error), "warning");
+        return false;
+      } finally {
+        if (request === cloudRequest) {
+          cloudSyncing = false;
+          renderizarSetores();
+          cloudLoading = null;
+          cloudLoadingUid = "";
+        }
+      }
+    })();
+    return cloudLoading;
   }
 
   // Registro do setor no dia de hoje
@@ -4746,6 +4934,7 @@
   function renderizarSetores() {
     setoresEl.querySelectorAll("[data-setor]").forEach(botao => {
       const k = botao.dataset.setor;
+      botao.disabled = cloudSyncing;
       const total = setores[k].itens.length;
       const r = registro(k, false);
       const preenchidos = ((r && r.itens) || []).filter(Boolean).length;
@@ -4788,7 +4977,7 @@
       btnNC.type = "button";
       btnNC.textContent = "NC";
       btnNC.className = "lc-nc" + (valor === "NC" ? " ativo" : "");
-      if (bloqueado(k)) { btnC.disabled = true; btnNC.disabled = true; }
+      if (bloqueado(k) || cloudSyncing) { btnC.disabled = true; btnNC.disabled = true; }
       btnC.addEventListener("click", () => marcar(index, "C"));
       btnNC.addEventListener("click", () => marcar(index, "NC"));
 
@@ -4800,21 +4989,24 @@
   }
 
   function marcar(index, valor) {
-    if (bloqueado(atual)) return;
+    if (bloqueado(atual) || cloudSyncing) return;
     const r = registro(atual, true);
     r.itens[index] = valor;
     r.salvo = false;
+    r.atualizadoEm = new Date().toISOString();
     persistir();
     const y = window.scrollY;
     abrirSetor(atual);
     window.scrollTo(0, y);
+    statusNuvem("Salvando alteração na nuvem...", "hint");
+    gravarSetorNuvem(hoje(), atual).catch(() => {});
   }
 
   setoresEl.querySelectorAll("[data-setor]").forEach(b => b.addEventListener("click", () => abrirSetor(b.dataset.setor)));
   root.querySelector("#lcVoltar").addEventListener("click", mostrarSetores);
 
-  root.querySelector("#lcSalvar").addEventListener("click", () => {
-    if (bloqueado(atual)) return;
+  root.querySelector("#lcSalvar").addEventListener("click", async () => {
+    if (bloqueado(atual) || cloudSyncing) return;
     const total = setores[atual].itens.length;
     const preenchidos = respostas().filter(Boolean).length;
     if (preenchidos !== total) {
@@ -4824,22 +5016,55 @@
     const r = registro(atual, true);
     r.salvo = true;
     r.dataSalvamento = new Date().toISOString();
+    r.atualizadoEm = r.dataSalvamento;
     persistir();
-    alert("Setor salvo com sucesso!");
+    statusNuvem("Finalizando e sincronizando o setor...", "hint");
+    let sincronizado = true;
+    try {
+      await gravarSetorNuvem(hoje(), atual);
+    } catch (error) {
+      // A cópia local permanece disponível para sincronização posterior.
+      sincronizado = false;
+    }
+    alert(sincronizado ? "Setor salvo e sincronizado com a nuvem!" : "Setor salvo neste aparelho, mas não foi possível sincronizar. Veja o aviso na tela.");
     mostrarSetores();
   });
 
   // Interfaces consumidas pelo núcleo e pelo Dashboard.
   window.operattoLimpeza = {
     setores: setores,
-    abrir: () => { ler(); mostrarSetores(); },
+    abrir: async () => {
+      ler();
+      mostrarSetores();
+      await carregarNuvem(true);
+      mostrarSetores();
+    },
+    carregar: () => carregarNuvem(false),
+    carregado: () => cloudLoadedUid === (typeof currentUserId !== "undefined" ? currentUserId : "") || cloudFailedUid === (typeof currentUserId !== "undefined" ? currentUserId : ""),
+    avisoNuvem: () => cloudFailedUid === (typeof currentUserId !== "undefined" ? currentUserId : "") ? syncStatus.textContent : "",
     registros: () => { ler(); return dados.registros; },
     responsaveis: mes => { ler(); return (dados.responsaveis && dados.responsaveis[mes]) || { chefe: "", gerente: "" }; },
     salvarResponsaveis: (mes, valores) => {
       ler();
       if (!dados.responsaveis) dados.responsaveis = {};
-      dados.responsaveis[mes] = valores;
+      dados.responsaveis[mes] = { chefe: valores.chefe || "", gerente: valores.gerente || "", atualizadoEm: new Date().toISOString() };
       persistir();
+      const uid = typeof currentUserId !== "undefined" ? currentUserId : null;
+      if (!uid) return Promise.resolve();
+      return enfileirarGravacao(async () => {
+        if (currentUserId !== uid) return;
+        const { error } = await supabaseClient.from("cleaning_monthly_responsibles").upsert({
+          user_id: uid,
+          month_ref: mes,
+          chefe: valores.chefe || "",
+          gerente: valores.gerente || "",
+          updated_at: dados.responsaveis[mes].atualizadoEm
+        }, { onConflict: "user_id,month_ref" });
+        if (error) throw error;
+        cloudLoadedUid = uid;
+        cloudFailedUid = "";
+        statusNuvem("Responsáveis sincronizados com a nuvem.", "positive");
+      }, uid);
     }
   };
 
@@ -5993,6 +6218,7 @@ async function d30Pdf(chosen) {
       });
     } else if (key === "limpeza") {
       const api = window.operattoLimpeza;
+      if (api) await api.carregar();
       const reg = api ? api.registros() : {};
       const rows = [];
       Object.keys(reg).filter(d => d >= range.from && d <= range.to).sort().forEach(d => {
