@@ -946,6 +946,10 @@
       <strong>Gerencial</strong>
       <span>Em configuração</span>
     </button>
+    <button type="button" class="module" data-check="producao"><div class="module-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M4 19h16M6 19V9h12v10M8 9V5h8v4M9 13h6M9 16h6"/></svg></div><strong>Produção da Cozinha</strong><span>Estoque, insumos e preparação</span></button>
+    <button type="button" class="module" data-check="salao"><div class="module-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M4 4v7M7 4v7M4 8h3M5.5 11v9M13 4v16M13 4c4 2 4 7 0 9"/></svg></div><strong>Salão</strong><span>Materiais, organização e limpeza</span></button>
+    <button type="button" class="module" data-check="copa"><div class="module-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16l-2 15H6L4 5ZM8 5V3h8v2M8 10h8"/></svg></div><strong>Copa</strong><span>Estoque, reposição e limpeza</span></button>
+    <button type="button" class="module" data-check="fechamento"><div class="module-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M4 20V5l8-2 8 2v15M9 20v-6h6v6M8 8h1M15 8h1M8 11h1M15 11h1"/></svg></div><strong>Abertura e Fechamento</strong><span>Conferência gerencial por área</span></button>
   </div>
   </div>
 
@@ -1193,6 +1197,12 @@
       </div>
       <div class="hint"><strong>Orientações:</strong> desligue a torneira da pia; use luvas de borracha azul, avental plástico, botas e óculos de proteção; abra a caixa; retire os dejetos com pá reservada para esse uso e coloque-os em saco reforçado dentro do balde reservado; desmonte as partes removíveis; lave-as com detergente neutro e escova e enxágue; lave laterais e fundo com escova e detergente neutro e enxágue com água corrente; monte novamente a caixa e descarte os dejetos.</div>
     </div>
+  </section>
+
+  <section class="section tab-panel" id="tab-planilha" role="tabpanel" hidden>
+    <h2 id="sheetChecklistTitle"></h2>
+    <div class="hint" style="margin-bottom:12px">Marque cada item como Conforme ou Não conforme. Os registros ficam salvos neste navegador por checklist e data.</div>
+    <div id="sheetChecklistRoot"></div>
   </section>
 
   <section class="section tab-panel" id="tab-gerencial" role="tabpanel" hidden>
@@ -3796,7 +3806,54 @@
 
   /* ---------------- Checklist: escolher qual fazer ---------------- */
 
-  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento e Reaquecimento", oleo: "{drop} Controle de Qualidade do Óleo", gordura: "{clean} Limpeza da Caixa de Gordura", gerencial: "{list} Gerencial" };
+  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento e Reaquecimento", oleo: "{drop} Controle de Qualidade do Óleo", gordura: "{clean} Limpeza da Caixa de Gordura", gerencial: "{list} Gerencial", producao: "Produção da Cozinha", salao: "Salão", copa: "Copa", fechamento: "Abertura e Fechamento da Casa" };
+  const SHEET_CHECKLISTS = {"producao":{"title":"Produção da Cozinha","items":["Açúcar 5 kg","Alcaparras balde","Arroz Camil 5 kg","Azeite dendê /Farofa Pronta","Azeite 5 litros Composto","Batata Palito","Champion","Farinha de trigo","Farinh panko","Leite de coco","Leite","Molho tartaro","Manteiga Paracatu","Margarina primor Bd 15 kg","Óleo","Óleo de Algodão","Papel toalha","Sal","Gergelim","Castanha caju xerém kgs","Mussarela fatiada","Bobina termica 80x40","Etiqueta Manipulação","Saco bobina 20/30","Emb. Pote para Molho unid","Emb.3 Divisórias D118","Emb. Moqueca K 151","Emb. Guanições K 49","Filé de Tilápia Bem Bom","Pescada em posta","File de pescada","Salmao","Camarão cinza 41/50","Filé Peito frango","Filé Mingnon","Bolinho de carne seca","Bolinho Bacalhau Unidade","Bolinho de Tilápia Unidade","Quibe Pacote 25 Unidade","Conferir Os Pasteis Pronto","Legumes na Manteiga","Legumes no Vapor","Batata Soute","Pure de Batata","Detergente","Chefe Grill chapa","Limpa coifa","Esponja Amarela","Isqueiro","Luva vinil","Mascara descartável","Perfex","Touca descartável"],"sections":[]},"salao":{"title":"Salão","items":["Açúcar sache","Adoçante sache","Azeite extra Virgem 250 ml","Bobina Termica","Caneta","Café capsula","Guardanapo Normal","Palito sache","Sal sache","Talher Descartável kit","Mexedor para Café","Álcool 70 %","Saco p/ Talher","Saco Personalizado","Lacre delivery","Perfex","Pimenta Mendes","Limpar Os Quadros","Limpar As Luminarias","Portas de Vidros","Limpar Balcão Frente","Limpar Aparadores","Limpar Letreiros","Limpar Adega"],"sections":[]},"copa":{"title":"Copa","items":["Açúcar Para suco","Canudo bio shake 8 mm","Cobertura de Chocolate","Copo descartável 500 ml","Copo descartável 300ml","Bobina termica 80x40","Bobina Picotada 20x30","Etiqueta Manipulação","Garrafa para Suco G","Caldo DE Tilapia","Pudim Tradicional","Petit Gateau","Café (Capsulas)","Fruta Morango KG","Fruta Acerola KG","Polpa de Maracujá Unid","Polpa de Abacaxi Unid","Sorvete de Creme","Sorvete de Queijo","Goiabada Cascão","Polpa de Maracujá Unid","Hortelã","Gengibre","Limao kgs","Laranja","Morango","Fazer Reposição Bebidas","Conferir o Gás do Chopp","Limpar Geladeira Refrigerante","Limpar Balcão Refrigerado","Limpar as Bancadas","Limpar Adega","Lavar a Lixeira"],"sections":[]},"fechamento":{"title":"Fechamento da Casa","items":["Abertura de loja","Abertura de caixa","Verificar fundo de caixa R$200,00","Verificar ifood e itens pausados","Verificar banheiros(Papel,sabão e limpeza)","Ligar TV fora","Ligar Ar condicionado","Verificar se o quibe subiu","Degustação (Ausencia do Antonio)","Verificar checklist salão","Verificar checklist Cozinha","Fechamento de loja","Cozinha","Fechamento gas","Fechamento Agua","Desligar microondas","Desligar banho Maria","Desligar Fritadeiras","Ferir a temperatura dos freezeres","limpar as bancadas","retirar e lavar as louças","Bar","Organizar o bar","Mandar todas as louças","Lavar os copos","limpar choppeira","Limpar maquina de café","Ferir a temperatura dos freezeres","desligar o microondas","Salao","Carregar máquinas","Pasta ANVISA","Desligar estufa","Desligar as luzes","Desligar as luzes dos banheiros"],"sections":["Abertura de loja","Salao","Salão","Fechamento de loja","Bar","Cozinha"]}};
+
+  function renderSheetChecklist(name) {
+    const config = SHEET_CHECKLISTS[name];
+    const root = document.getElementById("sheetChecklistRoot");
+    const title = document.getElementById("sheetChecklistTitle");
+    if (!config || !root || !title) return;
+    title.textContent = config.title;
+    const now = new Date();
+    const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    root.replaceChildren();
+    const fields = document.createElement("div"); fields.className = "row";
+    fields.innerHTML = '<div><label for="sheetDate">Data</label><input id="sheetDate" type="date"></div><div><label for="sheetResponsible">Responsável</label><input id="sheetResponsible" type="text" maxlength="120" placeholder="Nome do responsável"></div>';
+    const tableWrap = document.createElement("div"); tableWrap.className = "table-wrap"; tableWrap.style.marginTop = "12px";
+    const table = document.createElement("table"); table.className = "dash-table";
+    table.innerHTML = "<thead><tr><th>Item</th><th>Resposta</th></tr></thead>";
+    const body = document.createElement("tbody");
+    const rows = [];
+    config.items.forEach((item, index) => {
+      const tr = document.createElement("tr");
+      const itemCell = document.createElement("td"); itemCell.textContent = item;
+      const responseCell = document.createElement("td");
+      const select = document.createElement("select"); select.setAttribute("aria-label", "Resposta para " + item);
+      [ ["", "Selecione"], ["Conforme", "Conforme"], ["Não conforme", "Não conforme"] ].forEach(([value,label]) => { const option=document.createElement("option"); option.value=value; option.textContent=label; select.appendChild(option); });
+      responseCell.appendChild(select); tr.append(itemCell,responseCell); body.appendChild(tr); rows.push(select);
+    });
+    table.appendChild(body); tableWrap.appendChild(table);
+    const actions = document.createElement("div"); actions.className = "actions"; actions.style.marginTop = "12px";
+    const save = document.createElement("button"); save.type="button"; save.textContent="Salvar checklist";
+    const status = document.createElement("div"); status.className="sim"; status.setAttribute("role","status"); status.setAttribute("aria-live","polite");
+    const dateInput = fields.querySelector("#sheetDate"), responsible = fields.querySelector("#sheetResponsible"); dateInput.value=today;
+    function storageKey() { return "operatto_sheet_checklist_v1_" + (currentEmail || "local") + "_" + name + "_" + dateInput.value; }
+    function load() {
+      let saved={}; try { saved=JSON.parse(localStorage.getItem(storageKey()) || "{}"); } catch (_) {}
+      responsible.value=saved.responsible || "";
+      rows.forEach((select,i)=>select.value=(saved.responses || [])[i] || "");
+      status.textContent=saved.updatedAt ? "Checklist salvo neste navegador." : "";
+    }
+    dateInput.addEventListener("change",load);
+    save.addEventListener("click",()=>{
+      if (!dateInput.value) { status.textContent="Informe a data do checklist."; return; }
+      const payload={responsible:responsible.value.trim(),responses:rows.map(select=>select.value),updatedAt:new Date().toISOString()};
+      try { localStorage.setItem(storageKey(),JSON.stringify(payload)); status.textContent="Checklist salvo neste navegador."; }
+      catch (_) { status.textContent="Não foi possível salvar. Verifique o espaço disponível no navegador."; }
+    });
+    actions.appendChild(save); root.append(fields,tableWrap,actions,status); load();
+  }
 
   function resetChecklistScreen() {
     document.getElementById("checklistHome").hidden = false;
@@ -3810,8 +3867,9 @@
     if (name === "temperatura" && typeof temperatureMonthlyOpen === "function") temperatureMonthlyOpen();
     if (name === "gordura" && typeof greaseOpen === "function") greaseOpen();
     if (name === "limpeza" && window.operattoLimpeza && typeof window.operattoLimpeza.abrir === "function") window.operattoLimpeza.abrir();
+    if (SHEET_CHECKLISTS[name]) renderSheetChecklist(name);
     document.querySelectorAll("#checklistOpenView .tab-panel").forEach(p => {
-      const show = p.id === "tab-" + name;
+      const show = p.id === (SHEET_CHECKLISTS[name] ? "tab-planilha" : "tab-" + name);
       p.hidden = !show;
       p.classList.remove("enter");
       if (show) {
