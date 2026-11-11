@@ -729,7 +729,7 @@
       </div>
       <div class="sauce-table-wrap">
         <table class="sauce-table">
-          <thead id="sauceItemsHead"><tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr></thead>
+          <thead id="sauceItemsHead"><tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">VENDAS</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr></thead>
           <tbody id="sauceItems"><tr><td colspan="4" class="loading">Carregando...</td></tr></tbody>
         </table>
       </div>
@@ -6182,7 +6182,7 @@ function sauceDefaultValues(items) {
 function sauceRenderItems() {
   const body = sauceEl("sauceItems");
   if (!body) return;
-  sauceEl("sauceItemsHead").innerHTML = '<tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th><th style="text-align:center">VENDAS</th></tr>';
+  sauceEl("sauceItemsHead").innerHTML = '<tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">VENDAS</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr>';
   sauceEl("sauceSaveBtn").textContent = "Salvar contagem";
   sauceEl("saucePdfBtn").textContent = "Gerar PDF";
   body.replaceChildren();
@@ -6265,7 +6265,7 @@ function sauceRenderItems() {
       sauceSetStatus("Há alterações sem salvar.", "warning");
     });
     salesCell.appendChild(salesInput);
-    row.append(code, name, countCell, orderCell, salesCell);
+    row.append(code, name, salesCell, countCell, orderCell);
     body.appendChild(row);
   });
 }
@@ -6443,13 +6443,13 @@ function sauceGeneratePdf(record) {
     startY: 112,
     theme: "grid",
     margin: { left: margin, right: margin, bottom: 40 },
-    head: [["COD.", "MOLHO", "CONTAGEM", "PEDIDO", "VENDAS"]],
+    head: [["COD.", "MOLHO", "VENDAS", "CONTAGEM", "PEDIDO"]],
     body: SAUCE_CATALOG.map(product => {
       const item = byRow.get(product.row) || {};
       return [product.code == null ? "" : String(product.code), product.name,
+        item.sales_quantity == null ? "" : String(item.sales_quantity),
         item.count_quantity == null ? "" : String(item.count_quantity),
-        item.order_quantity == null ? "" : String(item.order_quantity),
-        item.sales_quantity == null ? "" : String(item.sales_quantity)];
+        item.order_quantity == null ? "" : String(item.order_quantity)];
     }),
     styles: { font: "helvetica", fontSize: 8.5, cellPadding: 5, lineColor: [190, 195, 202], lineWidth: 0.5, textColor: [35, 39, 45], valign: "middle" },
     headStyles: { fillColor: [150, 150, 150], textColor: [25, 28, 32], fontStyle: "bold", fontSize: 8 },
