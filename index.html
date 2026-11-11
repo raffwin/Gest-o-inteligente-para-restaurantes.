@@ -1179,7 +1179,7 @@
         <div><label for="greaseFrequency">Frequência da higienização</label><select id="greaseFrequency"><option value="Semanal">Semanal</option><option value="Diária">Diária</option><option value="Quinzenal">Quinzenal</option><option value="Mensal">Mensal</option></select></div>
       </div>
       <label for="greaseResponsible">Responsável</label><input id="greaseResponsible" type="text" maxlength="80" placeholder="Nome do responsável">
-      <h3 class="section-heading">Etapas da higienização</h3>
+      <h3 class="section-heading">A limpeza foi realizada conforme o procedimento?</h3>
       <div id="greaseSteps"></div>
       <div class="actions"><button type="button" id="greaseSave">Salvar limpeza</button></div>
       <div class="sim" id="greaseStatus" role="status" aria-live="polite"></div>
@@ -6929,16 +6929,7 @@ document.getElementById("sheetStockPdf").addEventListener("click", sheetStockPdf
 <script>
 /* Registro mensal de limpeza das caixas de gordura, seguindo o formulário enviado. */
 const GREASE_STEPS = [
-  "Desligar a torneira da pia.",
-  "Vestir luvas de borracha azul, avental plástico, botas e óculos de proteção.",
-  "Abrir a caixa de gordura.",
-  "Retirar os dejetos com uma pá reservada somente para esse uso.",
-  "Colocar os dejetos em saco de lixo reforçado dentro do balde reservado para esse uso.",
-  "Desmontar as partes removíveis.",
-  "Lavar as partes removíveis com detergente neutro e escova e enxaguá-las.",
-  "Lavar laterais e fundo com escova e detergente neutro e enxaguar com água corrente.",
-  "Montar novamente a caixa de gordura.",
-  "Descartar os dejetos."
+  "Limpeza realizada conforme o procedimento?"
 ];
 let greaseDate = "", greaseMonth = "", greaseTrap = 1, greaseDayRows = [], greaseMonthRows = [], greaseChecks = [], greaseDirty = false, greaseBusy = false;
 const greaseEl = id => document.getElementById(id);
@@ -6947,7 +6938,7 @@ function greaseRenderSteps() {
   const box = greaseEl("greaseSteps"); box.replaceChildren();
   GREASE_STEPS.forEach((step, i) => {
     const row = document.createElement("div"); row.className = "panel-row";
-    const name = document.createElement("span"); name.textContent = (i + 1) + ". " + step;
+    const name = document.createElement("span"); name.textContent = step;
     const select = document.createElement("select"); select.setAttribute("aria-label", "Conferência da etapa " + (i + 1));
     select.innerHTML = '<option value="">Selecione</option><option value="C">Conforme</option><option value="NC">Não conforme</option>';
     select.value = greaseChecks[i] || "";
@@ -6995,14 +6986,14 @@ function greaseRenderHistory() {
   });
   table.appendChild(body); box.appendChild(table);
   const details = document.createElement("div"); details.className = "hint"; details.style.marginTop = "10px";
-  details.textContent = greaseMonthRows.length ? greaseMonthRows.length + " limpeza(s) registrada(s) no mês. X marca uma limpeza; vermelho indica ao menos uma etapa não conforme." : "Nenhuma limpeza registrada neste mês.";
+  details.textContent = greaseMonthRows.length ? greaseMonthRows.length + " limpeza(s) registrada(s) no mês. X marca uma limpeza; vermelho indica limpeza não conforme." : "Nenhuma limpeza registrada neste mês.";
   box.appendChild(details);
 }
 async function greaseSave() {
   if (greaseBusy) return;
   const responsible = greaseEl("greaseResponsible").value.trim();
   if (!responsible) { greaseSetStatus("Informe o responsável.", "warning"); return; }
-  if (greaseChecks.length !== GREASE_STEPS.length || greaseChecks.some(x => !["C", "NC"].includes(x))) { greaseSetStatus("Marque C ou NC em todas as etapas antes de salvar.", "warning"); return; }
+  if (greaseChecks.length !== GREASE_STEPS.length || greaseChecks.some(x => !["C", "NC"].includes(x))) { greaseSetStatus("Informe se a limpeza foi realizada conforme ou não conforme.", "warning"); return; }
   const payload = { user_id: currentUserId, cleaning_date: greaseDate, grease_trap: Number(greaseTrap), responsible, frequency: greaseEl("greaseFrequency").value, checks: greaseChecks, updated_at: new Date().toISOString() };
   greaseBusy = true; const btn = greaseEl("greaseSave"); btn.disabled = true; greaseSetStatus("Salvando...", "hint");
   try {
