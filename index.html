@@ -1276,6 +1276,7 @@
       <div class="table-wrap"><table class="dash-table"><thead><tr><th>Organização</th><th>Restaurante</th><th>Status</th><th>Usuários</th><th>Ações</th></tr></thead><tbody id="ownerRestaurantsBody"><tr><td colspan="5">Carregando…</td></tr></tbody></table></div>
     </section>
     <section class="section owner-section"><h3>Atividade administrativa recente</h3><div id="ownerNetworkActivityList" class="owner-activity" style="margin-top:10px"></div></section>
+    <section class="section owner-section"><h3>Acompanhamento operacional de todas as contas</h3><p class="hint">Dados consolidados para consulta e geração de relatórios.</p><div id="ownerOperationalStatus" class="hint"></div><div id="ownerOperationalCounts" class="owner-activity" style="margin-top:10px"></div></section>
     <section class="section owner-section" id="ownerRestaurantFormSection" hidden>
       <h3 id="ownerFormTitle">Cadastrar restaurante</h3>
       <form id="ownerRestaurantForm" class="owner-form">
@@ -1298,7 +1299,6 @@
       <div class="table-wrap"><table class="dash-table"><thead><tr><th>E-mail</th><th>Nome</th><th>Função</th><th>Ação</th></tr></thead><tbody id="ownerUsersBody"></tbody></table></div>
       <h4 style="margin-top:18px">Atividade administrativa</h4>
       <div id="ownerActivityList" class="owner-activity"></div>
-      <div class="hint" style="margin-top:14px">A consulta aos módulos operacionais será habilitada após a etapa de associação dos registros existentes às unidades e revisão das políticas RLS.</div>
     </section>
   </div>
 </main>
@@ -1317,10 +1317,9 @@
   2. Módulos: limpeza, cozimento, óleo, relatórios, molhos, cotação e gordura.
   3. Os módulos expõem APIs no window quando o núcleo precisa chamá-los.
 
-  ISOLAMENTO ATUAL: os dados de nuvem pertencem ao usuário autenticado (currentUserId).
-  Uma futura organização por restaurante precisará de vínculo usuário-restaurante,
-  escopo restaurant_id e políticas RLS correspondentes no backend. Este arquivo não
-  implementa essa mudança nem substitui a segurança do Supabase.
+  CONTAS OPERACIONAIS: continuam isoladas por usuário.
+  A conta proprietária Rafael recebe uma visão global somente para leitura via RPC
+  validada no Supabase; a autorização não depende apenas desta interface.
 */
   // Chaves antigas do navegador (usadas só para migrar dados para o banco)
   const STORAGE_KEY = "operatto_movements";
@@ -1422,6 +1421,8 @@
   let currentEmail = "";
   let isSpreadsheetOwner = false;
   let isPlatformOwner = false; // definido somente pela função protegida do Supabase
+  let platformOwnerData = null; // registros operacionais globais, somente leitura
+  let platformOwnerDataError = "";
   let dataReady = false;       // só permite gravar depois de carregar tudo da nuvem
   let recoverEmailValue = "";
   let resetViaLink = false;    // true = a pessoa chegou pelo link do e-mail (não precisa digitar código)
@@ -1487,6 +1488,7 @@
 
   function friendlyError(error) {
     const msg = String((error && error.message) || error || "").toLowerCase();
+    if (msg.includes("platform_owner_operational_rows")) return "A consulta global do proprietário ainda não foi instalada. Execute supabase_platform_owner_operational_data.sql no SQL Editor do Supabase.";
     if ((msg.includes("spreadsheet_checklists") || msg.includes("spreadsheet checklists")) &&
         (msg.includes("does not exist") || msg.includes("schema cache") || msg.includes("pgrst205"))) {
       return "A tabela dos quatro checklists ainda não está no Supabase. Execute supabase_planilha_checklists.sql no SQL Editor e recarregue o app.";
@@ -1623,13 +1625,69 @@
     return all;
   }
 
+  // A conta proprietária pode consultar registros operacionais de todas as contas.
+  // O RPC do banco valida platform_is_owner() e retorna linhas somente para leitura.
+  async function fetchPlatformOwnerRows(table) {
+    const all = [];
+    let from = 0;
+    while (true) {
+      const { data, error } = await supabaseClient
+        .rpc("platform_owner_operational_rows", { p_table: table })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw error;
+      const page = (data || []).map(row => row.row_data).filter(Boolean);
+      all.push(...page);
+      if (page.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+    return all;
+  }
+
   async function loadCloud() {
-    const [productRows, movementRows, settingsRes] = await Promise.all([
+    let [productRows, movementRows, settingsRes] = await Promise.all([
       fetchAll("products", "created_at"),
       fetchAll("movements", "created_at"),
       supabaseClient.from("settings").select("target_factor").maybeSingle()
     ]);
     if (settingsRes.error) throw settingsRes.error;
+
+    let ownerEquipmentRows = null;
+    let ownerReadingRows = null;
+    if (isPlatformOwner) {
+      try {
+        const tableNames = ["products", "movements", "settings", "equipment", "temperature_readings",
+          "equipment_temperature_monthly", "cleaning_checklists", "cleaning_monthly_responsibles",
+          "spreadsheet_checklists", "cooking_records", "cooking_days", "oil_checks",
+          "grease_trap_cleanings", "sauce_count_sessions", "stock_quote_sessions"];
+        const tableRows = await Promise.all(tableNames.map(fetchPlatformOwnerRows));
+        platformOwnerData = Object.fromEntries(tableNames.map((name, i) => [name, tableRows[i]]));
+        platformOwnerDataError = "";
+      } catch (ownerError) {
+        // Sem a migration ou sem confirmação de OWNER, preserva o acesso normal da própria conta.
+        platformOwnerData = null;
+        platformOwnerDataError = friendlyError(ownerError);
+      }
+      const ownerProducts = platformOwnerData && platformOwnerData.products;
+      const ownerMovements = platformOwnerData && platformOwnerData.movements;
+      const ownerSettings = platformOwnerData && platformOwnerData.settings;
+      const ownerEquipment = platformOwnerData && platformOwnerData.equipment;
+      const ownerReadings = platformOwnerData && platformOwnerData.temperature_readings;
+      if (platformOwnerData) {
+      // Para estoque consolidado, mantém um cadastro por nome e soma as movimentações.
+      const productsByName = new Map();
+      ownerProducts.forEach(row => {
+        const key = String(row.name || "").trim().toLowerCase();
+        if (!key) return;
+        if (!productsByName.has(key) || row.user_id === currentUserId) productsByName.set(key, row);
+      });
+      productRows = Array.from(productsByName.values());
+      movementRows = ownerMovements;
+      const ownSettings = ownerSettings.find(row => row.user_id === currentUserId);
+      if (ownSettings) settingsRes = { data: ownSettings, error: null };
+      ownerEquipmentRows = ownerEquipment;
+      ownerReadingRows = ownerReadings;
+      }
+    }
 
     catalog = productRows.map(dbToProduct);
     movements = movementRows.map(dbToMovement);
@@ -1642,10 +1700,12 @@
     // Temperatura: carregado à parte, para o estoque continuar funcionando
     // mesmo se as tabelas novas ainda não tiverem sido criadas no Supabase.
     try {
-      const [equipRows, readingRows] = await Promise.all([
-        fetchAll("equipment", "created_at"),
-        fetchAll("temperature_readings", "reading_date")
-      ]);
+      const [equipRows, readingRows] = ownerEquipmentRows && ownerReadingRows
+        ? [ownerEquipmentRows, ownerReadingRows]
+        : await Promise.all([
+            fetchAll("equipment", "created_at"),
+            fetchAll("temperature_readings", "reading_date")
+          ]);
       equipments = equipRows.map(dbToEquipment);
       readings = readingRows.map(dbToReading);
       tempReady = true;
@@ -1790,6 +1850,30 @@
     el.textContent = message || "";
     el.className = "sim" + (kind ? " " + kind : "");
   }
+  function renderOwnerOperationalSummary() {
+    const status = document.getElementById("ownerOperationalStatus");
+    const list = document.getElementById("ownerOperationalCounts");
+    if (!status || !list) return;
+    list.replaceChildren();
+    if (!isPlatformOwner) { status.textContent = "Acesso restrito ao proprietário da plataforma."; return; }
+    if (platformOwnerDataError) { status.textContent = "Não foi possível carregar os dados: " + platformOwnerDataError; return; }
+    if (!platformOwnerData) { status.textContent = "Carregando dados operacionais…"; return; }
+    status.textContent = "Consulta somente leitura · registros de todas as contas";
+    const labels = {
+      products: "Produtos", movements: "Movimentações", equipment: "Equipamentos", temperature_readings: "Aferições de temperatura",
+      equipment_temperature_monthly: "Temperaturas mensais", cleaning_checklists: "Limpezas", spreadsheet_checklists: "Checklists de planilha",
+      cooking_records: "Cozimento e reaquecimento", oil_checks: "Qualidade do óleo", grease_trap_cleanings: "Caixas de gordura",
+      sauce_count_sessions: "Contagens de molhos", stock_quote_sessions: "Cotações"
+    };
+    Object.keys(labels).forEach(table => {
+      const rows = platformOwnerData[table] || [];
+      const users = new Set(rows.map(row => row.user_id).filter(Boolean));
+      const line = document.createElement("div"); line.className = "owner-activity-row";
+      const left = document.createElement("span"); left.textContent = labels[table] + ": " + rows.length + " registro(s)";
+      const right = document.createElement("span"); right.textContent = users.size + " usuário(s)";
+      line.append(left, right); list.appendChild(line);
+    });
+  }
   async function resolvePlatformOwnerAccess() {
     isPlatformOwner = false;
     const link = document.getElementById("ownerNavLink");
@@ -1824,6 +1908,7 @@
       document.getElementById("ownerBlockedRestaurants").textContent = overview.blocked_restaurants ?? "0";
       renderOwnerRestaurants();
       renderOwnerActivity(overview.recent_activity || [], "ownerNetworkActivityList");
+      renderOwnerOperationalSummary();
       ownerStatus("Dados atualizados pelo Supabase.", "positive");
     } catch (error) {
       ownerStatus("Não foi possível carregar a Central: " + friendlyError(error), "negative");
@@ -2052,6 +2137,8 @@
     currentEmail = "";
     isSpreadsheetOwner = false;
     isPlatformOwner = false;
+    platformOwnerData = null;
+    platformOwnerDataError = "";
     document.getElementById("ownerNavLink").hidden = true;
     dataReady = false;
     movements = [];
@@ -2125,6 +2212,11 @@
       await loadCloud();
       dataReady = true;
       render();
+      if (isPlatformOwner && platformOwnerDataError) {
+        rich(document.getElementById("syncBannerText"), "{warn} Acompanhamento global indisponível: " + platformOwnerDataError);
+        syncBanner.hidden = false;
+      }
+      renderOwnerOperationalSummary();
       await migrateLocalData();
       render();
     } catch (error) {
@@ -2736,7 +2828,8 @@
       removeBtn.setAttribute("aria-label", "Remover produto " + product.name);
       removeBtn.addEventListener("click", () => removeProduct(product.name, removeBtn));
 
-      item.append(info, removeBtn);
+      item.append(info);
+      if (!isPlatformOwner) item.appendChild(removeBtn);
       groupEls[group].appendChild(item);
     });
 
@@ -3011,6 +3104,24 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // Abre o menu nativo de compartilhamento em celulares compatíveis.
+  // Em navegadores sem suporte, mantém o fluxo atual de baixar o PDF.
+  async function sharePdf(doc, filename) {
+    const blob = doc.output("blob");
+    if (navigator.share && navigator.canShare && typeof File !== "undefined") {
+      const file = new File([blob], filename, { type: "application/pdf" });
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: filename.replace(/\.pdf$/i, "") });
+          return;
+        } catch (error) {
+          if (error && error.name === "AbortError") return;
+        }
+      }
+    }
+    downloadBlob(blob, filename);
   }
 
   function toCsv(rows) {
@@ -3288,7 +3399,7 @@
         doc.text("Página " + i + " de " + pages, w - margin, h - 20, { align: "right" });
       }
 
-      doc.save("operatto_estoque_" + activeStockTab.toLowerCase() + "_" + localStamp() + ".pdf");
+      sharePdf(doc, "operatto_estoque_" + activeStockTab.toLowerCase() + "_" + localStamp() + ".pdf");
     } catch (error) {
       alert("Não foi possível gerar o PDF.");
     }
@@ -3444,6 +3555,7 @@
       const input = document.createElement("input");
       input.type = "number";
       input.step = "0.1";
+      input.disabled = isPlatformOwner;
       input.value = saved ? saved.temperature : "";
       input.placeholder = "Ex.: " + fmtNum1((eq.min + eq.max) / 2);
       input.setAttribute("aria-label", "Temperatura de " + eq.name);
@@ -3452,6 +3564,7 @@
 
       const noteInput = document.createElement("input");
       noteInput.type = "text";
+      noteInput.disabled = isPlatformOwner;
       noteInput.maxLength = 120;
       noteInput.placeholder = "Observação / ação corretiva (opcional)";
       noteInput.value = saved ? saved.note : "";
@@ -3492,7 +3605,8 @@
       removeBtn.setAttribute("aria-label", "Remover equipamento " + eq.name);
       removeBtn.addEventListener("click", () => removeEquipment(eq, removeBtn));
 
-      item.append(info, removeBtn);
+      item.append(info);
+      if (!isPlatformOwner) item.appendChild(removeBtn);
       list.appendChild(item);
       tempInputs.push({ eq: eq, input: input, noteInput: noteInput });
     });
@@ -3500,6 +3614,7 @@
 
   async function saveTemp() {
     if (!currentUser) return;
+    if (isPlatformOwner) return;
     if (!dataReady || !tempReady) {
       alert("As tabelas de temperatura ainda não estão disponíveis. Veja o aviso na tela.");
       return;
@@ -3813,7 +3928,7 @@
         doc.text("Página " + i + " de " + pages, w - margin, h - 20, { align: "right" });
       }
 
-      doc.save("operatto_afericao_" + date + ".pdf");
+      sharePdf(doc, "operatto_afericao_" + date + ".pdf");
     } catch (error) {
       alert("Não foi possível gerar o PDF.");
     }
@@ -4081,7 +4196,7 @@
         doc.text("Página " + i + " de " + pages, w - margin, h - 18, { align: "right" });
       }
 
-      doc.save("operatto_limpeza_" + mes + ".pdf");
+      sharePdf(doc, "operatto_limpeza_" + mes + ".pdf");
     } catch (error) {
       alert("Não foi possível gerar o PDF.");
     }
@@ -4121,7 +4236,7 @@
     const save = document.createElement("button"); save.type = "button"; save.textContent = "Salvar checklist no Supabase";
     const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn-edit"; pdf.textContent = "Gerar PDF";
     const status = document.createElement("div"); status.className = "sim"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
-    const ownerHistory = document.createElement("section"); ownerHistory.className = "section"; ownerHistory.hidden = !isSpreadsheetOwner; ownerHistory.style.marginTop = "22px";
+    const ownerHistory = document.createElement("section"); ownerHistory.className = "section"; ownerHistory.hidden = !(isSpreadsheetOwner || isPlatformOwner); ownerHistory.style.marginTop = "22px";
     const ownerHeading = document.createElement("h3"); ownerHeading.textContent = "Respostas de todos os usuários";
     const ownerHistoryStatus = document.createElement("div"); ownerHistoryStatus.className = "hint"; ownerHistoryStatus.textContent = "Carregando registros…";
     const ownerHistoryWrap = document.createElement("div"); ownerHistoryWrap.className = "table-wrap";
@@ -4190,12 +4305,18 @@
       ownerRecordDetail.append(heading, list);
     }
     async function loadOwnerChecklistHistory() {
-      if (!isSpreadsheetOwner) return;
+      if (!isSpreadsheetOwner && !isPlatformOwner) return;
       ownerHistory.hidden = false;
       ownerHistoryStatus.textContent = "Carregando respostas da equipe…";
       try {
-        const { data, error } = await supabaseClient.rpc("spreadsheet_checklists_owner_history", { p_checklist_key: name });
-        if (error) throw error;
+        let data;
+        if (isPlatformOwner && platformOwnerData) {
+          data = platformOwnerData.spreadsheet_checklists.filter(record => record.checklist_key === name);
+        } else {
+          const result = await supabaseClient.rpc("spreadsheet_checklists_owner_history", { p_checklist_key: name });
+          if (result.error) throw result.error;
+          data = result.data;
+        }
         ownerHistoryBody.replaceChildren(); ownerRecordDetail.replaceChildren();
         if (!data || !data.length) {
           ownerHistoryStatus.textContent = "Ainda não há respostas registradas neste checklist.";
@@ -4254,7 +4375,7 @@
       }
     }
     dateInput.addEventListener("change", loadFromSupabase);
-    pdf.addEventListener("click", () => {
+    pdf.addEventListener("click", async () => {
       const JsPDF = window.jspdf && window.jspdf.jsPDF;
       if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
       const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
@@ -4263,17 +4384,38 @@
       doc.setFontSize(16); doc.text(config.title, 40, 44);
       doc.setFontSize(10);
       doc.text("Data: " + new Date(date + "T00:00:00").toLocaleDateString("pt-BR"), 40, 64);
-      doc.text("Responsável: " + (responsible.value.trim() || "—"), 40, 80);
+      let reportHead = ["Item", "Resposta"];
+      let reportBody = config.items.map((item, i) => [item, rows[i].value || "Não preenchido"]);
+      if (isSpreadsheetOwner || isPlatformOwner) {
+        let data;
+        if (isPlatformOwner && platformOwnerData) data = platformOwnerData.spreadsheet_checklists.filter(record => record.checklist_key === name);
+        else {
+          const result = await supabaseClient.rpc("spreadsheet_checklists_owner_history", { p_checklist_key: name });
+          if (result.error) { alert("Não foi possível carregar as respostas da equipe: " + friendlyError(result.error)); return; }
+          data = result.data;
+        }
+        const teamRecords = (data || []).filter(record => record.checklist_date === date);
+        if (teamRecords.length) {
+          reportHead = ["Usuário", "Responsável", "Item", "Resposta"];
+          reportBody = teamRecords.flatMap(record => config.items.map((item, i) => [
+            record.email || record.user_id,
+            record.responsible || "—",
+            item,
+            (Array.isArray(record.responses) && record.responses[i]) || "Não preenchido"
+          ]));
+        }
+      }
+      doc.text(isSpreadsheetOwner ? "Respostas da equipe na data" : "Responsável: " + (responsible.value.trim() || "—"), 40, 80);
       doc.autoTable({
         startY: 96,
-        head: [["Item", "Resposta"]],
-        body: config.items.map((item, i) => [item, rows[i].value || "Não preenchido"]),
+        head: [reportHead],
+        body: reportBody,
         theme: "grid",
         styles: { fontSize: 9, cellPadding: 5 },
         headStyles: { fillColor: [38, 42, 48], textColor: [240, 241, 243] },
         margin: { left: 40, right: 40 }
       });
-      doc.save("operatto_checklist_" + name + "_" + date + ".pdf");
+      sharePdf(doc, "operatto_checklist_" + name + "_" + date + ".pdf");
     });
     save.addEventListener("click", async () => {
       if (!currentUserId) { status.textContent = "Entre na sua conta para salvar no Supabase."; status.className = "sim negative"; return; }
@@ -4858,8 +5000,8 @@
     } else {
       alerts.slice(0, 30).forEach(a => {
         const buttons = [];
-        if (a.product) buttons.push(actionBtn("{edit} Editar", "btn-edit", () => editProductModal(a.product)));
-        if (a.eq) buttons.push(actionBtn("{edit} Editar", "btn-edit", () => readingModal(a.eq, today, a.period, findReading(a.eq.id, today, a.period))));
+        if (a.product && !isPlatformOwner) buttons.push(actionBtn("{edit} Editar", "btn-edit", () => editProductModal(a.product)));
+        if (a.eq && !isPlatformOwner) buttons.push(actionBtn("{edit} Editar", "btn-edit", () => readingModal(a.eq, today, a.period, findReading(a.eq.id, today, a.period))));
         alertSec.appendChild(itemRow(a.title, [[a.line, a.cls]], buttons));
       });
       if (alerts.length > 30) alertSec.appendChild(mk("div", "hint", "…e mais " + (alerts.length - 30) + " alerta(s). Veja os detalhes nas outras abas."));
@@ -4998,10 +5140,11 @@
         ]);
       }
 
-      list.appendChild(itemRow(p.name, lines, [
+      const actions = isPlatformOwner ? [] : [
         actionBtn("{edit} Editar", "btn-edit", () => editProductModal(p)),
         actionBtn("{trash} Remover", "btn-remove", b => removeProduct(p.name, b))
-      ]));
+      ];
+      list.appendChild(itemRow(p.name, lines, isPlatformOwner ? [] : actions));
     });
   }
 
@@ -5061,24 +5204,28 @@
             " — " + fmtHour(r.measuredAt) + (r.employee ? " por " + r.employee : "");
           if (r.note) text += " | Obs: " + r.note;
           line.appendChild(mk("span", ok ? "positive" : "negative", text));
-          line.appendChild(actionBtn("{edit} Editar", "btn-edit", () => readingModal(eq, date, p, r)));
-          line.appendChild(actionBtn("{trash} Excluir", "btn-remove", () => deleteReading(r, eq)));
+          if (!isPlatformOwner) {
+            line.appendChild(actionBtn("{edit} Editar", "btn-edit", () => readingModal(eq, date, p, r)));
+            line.appendChild(actionBtn("{trash} Excluir", "btn-remove", () => deleteReading(r, eq)));
+          }
         } else {
           line.appendChild(mk("span", "warning", TEMP_PERIODS[p] + ": pendente"));
-          line.appendChild(actionBtn("{plus} Registrar", "btn-edit", () => readingModal(eq, date, p, null)));
+          if (!isPlatformOwner) line.appendChild(actionBtn("{plus} Registrar", "btn-edit", () => readingModal(eq, date, p, null)));
         }
         info.appendChild(line);
       });
 
       item.appendChild(info);
 
-      const act = mk("div", "item-actions");
-      act.appendChild(actionBtn("{edit} Equipamento", "btn-edit", () => editEquipModal(eq)));
-      act.appendChild(actionBtn("{trash} Remover", "btn-remove", async b => {
-        await removeEquipment(eq, b);
-        renderDashboard();
-      }));
-      item.appendChild(act);
+      if (!isPlatformOwner) {
+        const act = mk("div", "item-actions");
+        act.appendChild(actionBtn("{edit} Equipamento", "btn-edit", () => editEquipModal(eq)));
+        act.appendChild(actionBtn("{trash} Remover", "btn-remove", async b => {
+          await removeEquipment(eq, b);
+          renderDashboard();
+        }));
+        item.appendChild(act);
+      }
       sec.appendChild(item);
     });
 
@@ -5134,13 +5281,13 @@
         ? "Ajuste: " + (m.delta > 0 ? "+" : "") + m.delta + (m.unit ? " " + m.unit : "")
         : "Quantidade: " + m.quantity + (m.unit ? " " + m.unit : "");
 
-      list.appendChild(itemRow(
+        list.appendChild(itemRow(
         m.product + " — " + m.type.toUpperCase(),
         [
           [detail + " | Responsável: " + m.employee, "hint"],
           [new Date(m.date).toLocaleString("pt-BR"), "hint"]
         ],
-        [actionBtn("{trash} Excluir", "btn-remove", b => deleteMovement(m, b))]
+          isPlatformOwner ? [] : [actionBtn("{trash} Excluir", "btn-remove", b => deleteMovement(m, b))]
       ));
     });
   }
@@ -5311,10 +5458,15 @@
     cloudLoadingUid = uid;
     cloudLoading = (async () => {
       try {
-        const [checkRes, respRes] = await Promise.all([
-          supabaseClient.from("cleaning_checklists").select("*").eq("user_id", uid).order("log_date").order("sector"),
-          supabaseClient.from("cleaning_monthly_responsibles").select("*").eq("user_id", uid).order("month_ref")
-        ]);
+        const [checkRes, respRes] = isPlatformOwner && platformOwnerData
+          ? [
+              { data: platformOwnerData.cleaning_checklists, error: null },
+              { data: platformOwnerData.cleaning_monthly_responsibles, error: null }
+            ]
+          : await Promise.all([
+              supabaseClient.from("cleaning_checklists").select("*").eq("user_id", uid).order("log_date").order("sector"),
+              supabaseClient.from("cleaning_monthly_responsibles").select("*").eq("user_id", uid).order("month_ref")
+            ]);
         if (checkRes.error) throw checkRes.error;
         if (respRes.error) throw respRes.error;
         if (request !== cloudRequest || currentUserId !== uid) return false;
@@ -5323,6 +5475,8 @@
         (checkRes.data || []).forEach(row => {
           if (!setores[row.sector] || !/^\d{4}-\d{2}-\d{2}$/.test(row.log_date)) return;
           if (!cloudRecords[row.log_date]) cloudRecords[row.log_date] = {};
+          const existing = cloudRecords[row.log_date][row.sector];
+          if (existing && (Date.parse(existing.atualizadoEm || "") || 0) >= (Date.parse(row.saved_at || "") || 0)) return;
           cloudRecords[row.log_date][row.sector] = {
             itens: Array.isArray(row.items) ? row.items : [],
             salvo: !!row.completed,
@@ -5354,6 +5508,8 @@
 
         const cloudResponsibles = {};
         (respRes.data || []).forEach(row => {
+          const existing = cloudResponsibles[row.month_ref];
+          if (existing && (Date.parse(existing.atualizadoEm || "") || 0) >= (Date.parse(row.updated_at || "") || 0)) return;
           cloudResponsibles[row.month_ref] = { chefe: row.chefe || "", gerente: row.gerente || "", atualizadoEm: row.updated_at || null };
         });
         const localResponsibles = dados.responsaveis || {};
@@ -5744,7 +5900,8 @@ function ckRender() {
 
   // Tabela
   const box = ckEl("ckTableBox");
-  box.replaceChildren(cookTable(cookRecords, !final));
+  box.replaceChildren(cookTable(cookRecords, !final && !isPlatformOwner));
+  if (isPlatformOwner) ckEl("ckFoot").hidden = true;
 }
 
 async function cookLoadDate(date) {
@@ -5752,10 +5909,17 @@ async function cookLoadDate(date) {
   cookDate = date;
   ckEl("ckTableBox").replaceChildren(mk("div", "ck-empty", "Carregando..."));
   try {
-    const [rec, day] = await Promise.all([
-      supabaseClient.from("cooking_records").select("*").eq("log_date", date).order("record_time").order("created_at"),
-      supabaseClient.from("cooking_days").select("*").eq("log_date", date).maybeSingle()
-    ]);
+    let rec, day;
+    if (isPlatformOwner && platformOwnerData) {
+      rec = { data: platformOwnerData.cooking_records.filter(r => r.log_date === date), error: null };
+      const dayRows = platformOwnerData.cooking_days.filter(r => r.log_date === date);
+      day = { data: dayRows.find(r => r.finalized_at) || dayRows[0] || null, error: null };
+    } else {
+      [rec, day] = await Promise.all([
+        supabaseClient.from("cooking_records").select("*").eq("log_date", date).order("record_time").order("created_at"),
+        supabaseClient.from("cooking_days").select("*").eq("log_date", date).maybeSingle()
+      ]);
+    }
     if (rec.error) throw rec.error;
     if (day.error) throw day.error;
     if (req !== cookReq) return;
@@ -5996,7 +6160,7 @@ function cookPdf(date, list, day, mode) {
       document.body.appendChild(frame);
       setTimeout(() => { URL.revokeObjectURL(url); frame.remove(); }, 180000);
     } else {
-      doc.save("operatto_cozimento_reaquecimento_" + date + ".pdf");
+      sharePdf(doc, "operatto_cozimento_reaquecimento_" + date + ".pdf");
     }
   } catch (error) {
     alert("Não foi possível gerar o PDF.");
@@ -6012,10 +6176,16 @@ async function cookLoadMonth(month) {
   const from = month + "-01";
   const to = month + "-" + String(last).padStart(2, "0");
   try {
-    const [rec, days] = await Promise.all([
-      supabaseClient.from("cooking_records").select("*").gte("log_date", from).lte("log_date", to).order("record_time").order("created_at"),
-      supabaseClient.from("cooking_days").select("*").gte("log_date", from).lte("log_date", to)
-    ]);
+    let rec, days;
+    if (isPlatformOwner && platformOwnerData) {
+      rec = { data: platformOwnerData.cooking_records.filter(r => r.log_date >= from && r.log_date <= to), error: null };
+      days = { data: platformOwnerData.cooking_days.filter(r => r.log_date >= from && r.log_date <= to), error: null };
+    } else {
+      [rec, days] = await Promise.all([
+        supabaseClient.from("cooking_records").select("*").gte("log_date", from).lte("log_date", to).order("record_time").order("created_at"),
+        supabaseClient.from("cooking_days").select("*").gte("log_date", from).lte("log_date", to)
+      ]);
+    }
     if (rec.error) throw rec.error;
     if (days.error) throw days.error;
     const by = {};
@@ -6223,8 +6393,10 @@ async function olLoadDate(date) {
   olDate = date;
   olEl("olDate").value = date;
   try {
-    const { data, error } = await supabaseClient.from("oil_checks").select("*")
-      .eq("user_id", currentUserId).eq("log_date", date).order("machine");
+    const result = isPlatformOwner && platformOwnerData
+      ? { data: platformOwnerData.oil_checks.filter(r => r.log_date === date), error: null }
+      : await supabaseClient.from("oil_checks").select("*").eq("user_id", currentUserId).eq("log_date", date).order("machine");
+    const { data, error } = result;
     if (error) throw error;
     if (req !== olDayReq) return;
     olDayRows = (data || []).map(dbToOil);
@@ -6249,9 +6421,10 @@ async function olLoadMonth(month) {
   olEl("olHistory").replaceChildren(mk("div", "ck-empty", "Carregando..."));
   const range = olMonthRange(month);
   try {
-    const { data, error } = await supabaseClient.from("oil_checks").select("*")
-      .eq("user_id", currentUserId).gte("log_date", range.from).lte("log_date", range.to)
-      .order("log_date").order("machine");
+    const result = isPlatformOwner && platformOwnerData
+      ? { data: platformOwnerData.oil_checks.filter(r => r.log_date >= range.from && r.log_date <= range.to), error: null }
+      : await supabaseClient.from("oil_checks").select("*").eq("user_id", currentUserId).gte("log_date", range.from).lte("log_date", range.to).order("log_date").order("machine");
+    const { data, error } = result;
     if (error) throw error;
     if (req !== olMonthReq) return;
     olMonthRows = olSortMonth((data || []).map(dbToOil));
@@ -6432,12 +6605,14 @@ function olRenderHistory() {
     cell("Presença de resíduos", olYN(r.residue));
     cell("Troca de óleo", olYN(r.change));
     cell("Responsável", r.responsible);
-    const act = mk("div", "ck-rowact");
-    act.append(
-      actionBtn("{edit} Editar", "btn-edit", () => olEdit(r)),
-      actionBtn("{trash} Excluir", "btn-remove", () => olDelete(r))
-    );
-    cell("Ações", act, "ck-actcell");
+    if (!isPlatformOwner) {
+      const act = mk("div", "ck-rowact");
+      act.append(
+        actionBtn("{edit} Editar", "btn-edit", () => olEdit(r)),
+        actionBtn("{trash} Excluir", "btn-remove", () => olDelete(r))
+      );
+      cell("Ações", act, "ck-actcell");
+    }
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
@@ -6585,7 +6760,7 @@ function olPdf(mode) {
       document.body.appendChild(frame);
       setTimeout(() => { URL.revokeObjectURL(url); frame.remove(); }, 180000);
     } else {
-      doc.save("operatto_oleo_" + olMonth + ".pdf");
+      sharePdf(doc, "operatto_oleo_" + olMonth + ".pdf");
     }
   } catch (error) {
     alert("Não foi possível gerar o PDF.");
@@ -6686,6 +6861,16 @@ function d30Panel() {
 }
 
 async function d30Fetch(table, range, order) {
+  if (isPlatformOwner && platformOwnerData && platformOwnerData[table]) {
+    const rows = platformOwnerData[table].filter(row => row.log_date >= range.from && row.log_date <= range.to);
+    return rows.sort((a, b) => {
+      for (const key of order) {
+        const cmp = String(a[key] ?? "").localeCompare(String(b[key] ?? ""));
+        if (cmp) return cmp;
+      }
+      return 0;
+    });
+  }
   let q = supabaseClient.from(table).select("*").gte("log_date", range.from).lte("log_date", range.to).order("log_date");
   order.forEach(o => { q = q.order(o); });
   const { data, error } = await q;
@@ -6837,7 +7022,7 @@ async function d30Pdf(chosen) {
     doc.text("Operatto  -  Gestão com responsabilidade", margin, h - 18);
     doc.text("Página " + i + " de " + pages, w - margin, h - 18, { align: "right" });
   }
-  doc.save("operatto_checklists_30dias_" + range.to + ".pdf");
+  sharePdf(doc, "operatto_checklists_30dias_" + range.to + ".pdf");
 }
 </script>
 <script>
@@ -7103,9 +7288,10 @@ async function sauceLoadHistory(dateToOpen) {
   const box = sauceEl("sauceHistory");
   if (box) box.replaceChildren(mk("div", "hint", "Carregando histórico..."));
   try {
-    const { data, error } = await supabaseClient.from("sauce_count_sessions").select("*")
-      .eq("user_id", currentUserId).order("count_date", { ascending: false })
-      .order("created_at", { ascending: false }).limit(100);
+    const result = isPlatformOwner && platformOwnerData
+      ? { data: platformOwnerData.sauce_count_sessions.slice().sort((a, b) => (b.count_date + b.created_at).localeCompare(a.count_date + a.created_at)).slice(0, 500), error: null }
+      : await supabaseClient.from("sauce_count_sessions").select("*").eq("user_id", currentUserId).order("count_date", { ascending: false }).order("created_at", { ascending: false }).limit(100);
+    const { data, error } = result;
     if (error) throw error;
     sauceRecords = data || [];
     sauceRenderHistory();
@@ -7238,7 +7424,7 @@ function sauceGeneratePdf(record) {
   });
   const fileDate = String(date || localStamp()).replace(/[^0-9-]/g, "");
   // Salva o PDF pelo fluxo de download do navegador, para ficar nos arquivos do dispositivo.
-  doc.save("operatto_contagem_molhos_" + fileDate + ".pdf");
+  sharePdf(doc, "operatto_contagem_molhos_" + fileDate + ".pdf");
 }
 
 sauceEl("sauceDate").addEventListener("change", async event => {
@@ -7302,8 +7488,14 @@ async function sheetStockOpen() {
   sheetStockStatus("Carregando contagens...", "hint");
   try {
     const categories = Object.keys(SHEET_STOCK);
-    const results = await Promise.all(categories.map(category => supabaseClient.from("stock_quote_sessions").select("items")
-      .eq("user_id", currentUserId).eq("count_date", date.value).eq("category", category).maybeSingle()));
+    const results = isPlatformOwner && platformOwnerData
+      ? categories.map(category => {
+          const candidates = platformOwnerData.stock_quote_sessions.filter(row => row.count_date === date.value && row.category === category)
+            .sort((a, b) => String(b.updated_at || b.created_at || "").localeCompare(String(a.updated_at || a.created_at || "")));
+          return { data: candidates[0] ? { items: candidates[0].items } : null, error: null };
+        })
+      : await Promise.all(categories.map(category => supabaseClient.from("stock_quote_sessions").select("items")
+          .eq("user_id", currentUserId).eq("count_date", date.value).eq("category", category).maybeSingle()));
     results.forEach((result, i) => {
       if (result.error) throw result.error;
       const category = categories[i], savedItems = (result.data && Array.isArray(result.data.items) ? result.data.items : []);
@@ -7429,7 +7621,7 @@ function sheetStockPdf() {
     }))
   }));
   quotePdfDrawTables(doc, groups, date, currentUser);
-  doc.save("operatto_cotacao_" + date + ".pdf");
+  sharePdf(doc, "operatto_cotacao_" + date + ".pdf");
 }
 document.getElementById("sheetStockDate").addEventListener("change", () => {
   if (sheetStockDirty && !confirm("Descartar alterações sem salvar e carregar outra data?")) return;
@@ -7471,7 +7663,10 @@ function greaseLoadFormFromRow() {
 async function greaseLoadDate(date) {
   greaseDate = date; greaseTrap = Number(greaseEl("greaseTrap").value || 1);
   try {
-    const { data, error } = await supabaseClient.from("grease_trap_cleanings").select("*").eq("cleaning_date", date).order("grease_trap");
+    const result = isPlatformOwner && platformOwnerData
+      ? { data: platformOwnerData.grease_trap_cleanings.filter(r => r.cleaning_date === date), error: null }
+      : await supabaseClient.from("grease_trap_cleanings").select("*").eq("cleaning_date", date).order("grease_trap");
+    const { data, error } = result;
     if (error) throw error;
     greaseDayRows = data || []; greaseLoadFormFromRow();
   } catch (error) { greaseSetStatus("Não foi possível carregar os registros: " + friendlyError(error), "negative"); }
@@ -7480,7 +7675,11 @@ async function greaseLoadMonth(month) {
   greaseMonth = month; const p = month.split("-");
   const last = new Date(Number(p[0]), Number(p[1]), 0).getDate();
   try {
-    const { data, error } = await supabaseClient.from("grease_trap_cleanings").select("*").gte("cleaning_date", month + "-01").lte("cleaning_date", month + "-" + String(last).padStart(2, "0")).order("cleaning_date").order("grease_trap");
+    const from = month + "-01", to = month + "-" + String(last).padStart(2, "0");
+    const result = isPlatformOwner && platformOwnerData
+      ? { data: platformOwnerData.grease_trap_cleanings.filter(r => r.cleaning_date >= from && r.cleaning_date <= to), error: null }
+      : await supabaseClient.from("grease_trap_cleanings").select("*").gte("cleaning_date", from).lte("cleaning_date", to).order("cleaning_date").order("grease_trap");
+    const { data, error } = result;
     if (error) throw error;
     greaseMonthRows = data || []; greaseRenderHistory();
   } catch (error) { greaseEl("greaseHistory").textContent = "Não foi possível carregar o histórico: " + friendlyError(error); }
@@ -7576,7 +7775,7 @@ function greaseBuildPdf() {
   ];
   doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
   instructions.forEach(line => { doc.text("•  " + line, margin + 8, y, { maxWidth: gridW - 12 }); y += 12; });
-  doc.save("operatto_limpeza_caixa_gordura_" + greaseMonth + ".pdf");
+  sharePdf(doc, "operatto_limpeza_caixa_gordura_" + greaseMonth + ".pdf");
 }
 greaseEl("greaseDate").addEventListener("change", async () => {
   if (greaseDirty && !confirm("Descartar as alterações sem salvar e abrir outra data?")) { greaseEl("greaseDate").value = greaseDate; return; }
@@ -7654,8 +7853,11 @@ async function tempMonthLoad(month) {
   tempMonthRef = month; tempMEl("tempMonthPicker").value = month; tempMonthStatus("Carregando temperaturas...", "hint");
   const p = month.split("-"), last = new Date(Number(p[0]), Number(p[1]), 0).getDate();
   try {
-    const { data, error } = await supabaseClient.from("equipment_temperature_monthly").select("*")
-      .gte("reading_date", month + "-01").lte("reading_date", month + "-" + String(last).padStart(2, "0")).order("reading_date");
+    const from = month + "-01", to = month + "-" + String(last).padStart(2, "0");
+    const result = isPlatformOwner && platformOwnerData
+      ? { data: platformOwnerData.equipment_temperature_monthly.filter(r => r.reading_date >= from && r.reading_date <= to), error: null }
+      : await supabaseClient.from("equipment_temperature_monthly").select("*").gte("reading_date", from).lte("reading_date", to).order("reading_date");
+    const { data, error } = result;
     if (error) throw error;
     tempMonthRows = data || []; tempMonthValues = {};
     tempMonthRows.forEach(r => { tempMonthValues[tempMonthKey(r.reading_date, r.equipment_name)] = String(r.temperature); });
@@ -7720,7 +7922,7 @@ function tempMonthPdf() {
   ];
   const tx = w / 2 - 205, tw = 410, c1 = 282, c2 = 58, ph = 14;
   rows.forEach((r, i) => { const yy = y + i * ph; doc.setFillColor(i === 0 ? 230 : 255, i === 0 ? 230 : 255, i === 0 ? 230 : 255); doc.rect(tx, yy, c1, ph, "FD"); doc.rect(tx + c1, yy, c2, ph, "D"); doc.rect(tx + c1 + c2, yy, tw - c1 - c2, ph, "D"); doc.setFont("helvetica", i === 0 ? "bold" : "normal"); doc.setFontSize(6.2); doc.text(r[0], tx + 3, yy + 9); doc.text(r[1], tx + c1 + c2 / 2, yy + 9, { align: "center" }); doc.text(r[2], tx + c1 + c2 + 3, yy + 9); });
-  doc.save("operatto_controle_temperatura_" + tempMonthRef + ".pdf");
+  sharePdf(doc, "operatto_controle_temperatura_" + tempMonthRef + ".pdf");
 }
 async function temperatureMonthlyOpen() {
   const today = localStamp(), month = today.slice(0, 7);
@@ -7755,11 +7957,16 @@ async function quoteLoad(date, req) {
   status.textContent = "Carregando contagens salvas...";
   area.replaceChildren();
   try {
-    const stockRes = await supabaseClient.from("stock_quote_sessions").select("*").eq("user_id", currentUserId).eq("count_date", date);
+    const stockRes = isPlatformOwner && platformOwnerData
+      ? { data: platformOwnerData.stock_quote_sessions.filter(row => row.count_date === date), error: null }
+      : await supabaseClient.from("stock_quote_sessions").select("*").eq("user_id", currentUserId).eq("count_date", date);
     if (stockRes.error) throw stockRes.error;
     if (req !== quoteDashReq) return;
     const sessions = {};
-    (stockRes.data || []).forEach(s => { sessions[s.category] = s; });
+    (stockRes.data || []).forEach(s => {
+      const current = sessions[s.category];
+      if (!current || String(s.updated_at || s.created_at || "") > String(current.updated_at || current.created_at || "")) sessions[s.category] = s;
+    });
     const groups = [];
     let filled = 0, total = 0;
     Object.keys(SHEET_STOCK).forEach(category => {
@@ -7823,7 +8030,7 @@ function quoteGeneratePdf() {
   const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
   if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo e tente novamente."); return; }
   quotePdfDrawTables(doc, report.groups, report.date, currentUser);
-  doc.save("operatto_cotacao_" + report.date + ".pdf");
+  sharePdf(doc, "operatto_cotacao_" + report.date + ".pdf");
 }
 </script>
 
