@@ -1420,6 +1420,7 @@
   let currentUser = null;      // nome exibido
   let currentUserId = null;    // id no Supabase
   let currentEmail = "";
+  let isSpreadsheetOwner = false;
   let isPlatformOwner = false; // definido somente pela função protegida do Supabase
   let dataReady = false;       // só permite gravar depois de carregar tudo da nuvem
   let recoverEmailValue = "";
@@ -2042,6 +2043,7 @@
     currentUser = null;
     currentUserId = null;
     currentEmail = "";
+    isSpreadsheetOwner = false;
     isPlatformOwner = false;
     document.getElementById("ownerNavLink").hidden = true;
     dataReady = false;
@@ -2070,6 +2072,20 @@
     setTimeout(() => loginEmail.focus(), 50);
   }
 
+  async function resolveSpreadsheetOwnerAccess() {
+    isSpreadsheetOwner = false;
+    if (!currentUserId) return false;
+    try {
+      const { data, error } = await supabaseClient.rpc("spreadsheet_checklists_is_owner");
+      if (error) throw error;
+      isSpreadsheetOwner = data === true;
+    } catch (_) {
+      // Falha fechada: sem confirmação do banco, não mostra respostas de outras contas.
+      isSpreadsheetOwner = false;
+    }
+    return isSpreadsheetOwner;
+  }
+
   async function enterApp(user) {
     currentUserId = user.id;
     currentEmail = user.email || "";
@@ -2087,6 +2103,7 @@
     setMsg(loginError, "");
     renderAccount();
     await resolvePlatformOwnerAccess();
+    await resolveSpreadsheetOwnerAccess();
     showScreen("home");
 
     await syncFromCloud();
@@ -4096,6 +4113,15 @@
     const actions = document.createElement("div"); actions.className = "actions"; actions.style.marginTop = "12px";
     const save = document.createElement("button"); save.type = "button"; save.textContent = "Salvar checklist no Supabase";
     const status = document.createElement("div"); status.className = "sim"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
+    const ownerHistory = document.createElement("section"); ownerHistory.className = "section"; ownerHistory.hidden = !isSpreadsheetOwner; ownerHistory.style.marginTop = "22px";
+    const ownerHeading = document.createElement("h3"); ownerHeading.textContent = "Respostas de todos os usuários";
+    const ownerHistoryStatus = document.createElement("div"); ownerHistoryStatus.className = "hint"; ownerHistoryStatus.textContent = "Carregando registros…";
+    const ownerHistoryWrap = document.createElement("div"); ownerHistoryWrap.className = "table-wrap";
+    const ownerHistoryTable = document.createElement("table"); ownerHistoryTable.className = "dash-table";
+    ownerHistoryTable.innerHTML = "<thead><tr><th>Data</th><th>Usuário</th><th>Responsável</th><th>Não conformes</th><th></th></tr></thead>";
+    const ownerHistoryBody = document.createElement("tbody"); ownerHistoryTable.appendChild(ownerHistoryBody); ownerHistoryWrap.appendChild(ownerHistoryTable);
+    const ownerRecordDetail = document.createElement("div"); ownerRecordDetail.className = "owner-activity"; ownerRecordDetail.style.marginTop = "12px";
+    ownerHistory.append(ownerHeading, ownerHistoryStatus, ownerHistoryWrap, ownerRecordDetail);
     const dateInput = fields.querySelector("#sheetDate"), responsible = fields.querySelector("#sheetResponsible"); dateInput.value = today;
     let loadRequest = 0;
     function localKey(date) { return "operatto_sheet_checklist_v1_" + (currentEmail || "local") + "_" + name + "_" + date; }
@@ -4140,6 +4166,49 @@
       const responses = Array.isArray(record?.responses) ? record.responses : [];
       rows.forEach((select, i) => select.value = responses[i] || "");
     }
+    function showOwnerChecklistRecord(record) {
+      ownerRecordDetail.replaceChildren();
+      const heading = document.createElement("h4");
+      const dateLabel = new Date(record.checklist_date + "T00:00:00").toLocaleDateString("pt-BR");
+      heading.textContent = dateLabel + " · " + (record.email || record.user_id) + (record.responsible ? " · " + record.responsible : "");
+      const list = document.createElement("div"); list.className = "owner-activity";
+      const answers = Array.isArray(record.responses) ? record.responses : [];
+      config.items.forEach((item, index) => {
+        const row = document.createElement("div"); row.className = "owner-activity-row";
+        const itemLabel = document.createElement("span"); itemLabel.textContent = item;
+        const answer = document.createElement("span"); answer.textContent = answers[index] || "Não preenchido";
+        row.append(itemLabel, answer); list.appendChild(row);
+      });
+      ownerRecordDetail.append(heading, list);
+    }
+    async function loadOwnerChecklistHistory() {
+      if (!isSpreadsheetOwner) return;
+      ownerHistory.hidden = false;
+      ownerHistoryStatus.textContent = "Carregando respostas da equipe…";
+      try {
+        const { data, error } = await supabaseClient.rpc("spreadsheet_checklists_owner_history", { p_checklist_key: name });
+        if (error) throw error;
+        ownerHistoryBody.replaceChildren(); ownerRecordDetail.replaceChildren();
+        if (!data || !data.length) {
+          ownerHistoryStatus.textContent = "Ainda não há respostas registradas neste checklist.";
+          return;
+        }
+        ownerHistoryStatus.textContent = data.length >= 500 ? "Mostrando os 500 registros mais recentes." : data.length + " registro(s) encontrado(s).";
+        data.forEach(record => {
+          const tr = document.createElement("tr");
+          const date = document.createElement("td"); date.textContent = new Date(record.checklist_date + "T00:00:00").toLocaleDateString("pt-BR");
+          const user = document.createElement("td"); user.textContent = record.email || record.user_id;
+          const resp = document.createElement("td"); resp.textContent = record.responsible || "—";
+          const nonconform = document.createElement("td"); nonconform.textContent = String((Array.isArray(record.responses) ? record.responses : []).filter(x => x === "Não conforme").length);
+          const action = document.createElement("td"), view = document.createElement("button"); view.type = "button"; view.className = "btn-edit"; view.textContent = "Ver respostas";
+          view.addEventListener("click", () => showOwnerChecklistRecord(record)); action.appendChild(view);
+          tr.append(date, user, resp, nonconform, action); ownerHistoryBody.appendChild(tr);
+        });
+      } catch (error) {
+        ownerHistoryStatus.textContent = "Não foi possível carregar as respostas da equipe: " + friendlyError(error);
+      }
+    }
+
     async function loadFromSupabase() {
       const date = dateInput.value, request = ++loadRequest;
       if (!currentUserId) { applyRecord(null); status.textContent = "Entre na sua conta para carregar e salvar no Supabase."; status.className = "sim warning"; return; }
@@ -4196,8 +4265,9 @@
         status.className = "sim negative";
       } finally { save.disabled = false; }
     });
-    actions.appendChild(save); root.append(fields, tableWrap, actions, status);
+    actions.appendChild(save); root.append(fields, tableWrap, actions, status, ownerHistory);
     await loadFromSupabase();
+    await loadOwnerChecklistHistory();
   }
 
   function resetChecklistScreen() {
