@@ -712,7 +712,7 @@
   <div class="modules op-stock-grid" id="stockGroups"></div>
   </div>
 
-  <!-- Estoque: lacuna aberta (Bar, Molhos, Mercearia, Hortifruti ou Limpeza) -->
+  <!-- Estoque: lacuna aberta (Molhos ou Cotação) -->
   <div class="view" id="stockGroupView" hidden>
   <button type="button" class="back-btn" id="stockBackBtn"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg> Voltar ao Estoque</button>
   <h2 id="stockGroupTitle"></h2>
@@ -6512,16 +6512,22 @@ sauceEl("sauceSalesTab").addEventListener("click", () => {
 /* Contagem complementar baseada na planilha CMV Setembro 2026.
    Molhos permanece no módulo existente, sem alteração. */
 const SHEET_STOCK = {
-  "Estoque Seco": ["Açucar Sachê 400 unid","Açucar Cristal 5 kg","Aceto Balsanico 250ML","Adoçante Linea a Grama","Alcaparras Balde kg","Azeitona Preta S Caroço","Arroz 5 Kilos camil","Azeite de Dende","Azeite 500 ml","Azeite de 250ml (Unid.) Andorinha","Azeite de 5 litros","Batata Palito Levo Alimentos","Batata Palito J.C","Catchup sache","Champion Chef e Co","Cobertura de Chocolate","Farinha de Mandioca","Farinha de Trigo Primor","Leite de Coco Ducoco","Leite Integral","Maionese","Manteiga","Margarina Primor bd 15","Mostarda Cepera","Sal Mercado","Sal Sachê kg","Pimenta Mendes","Óleo de Algodão","Óleo Assai","Vinho Branco Seco","Queijo Parmessao Ralado Pct","Massa Pastel (Pct duplo)","Oregano 15 gramas","Pimenta Rosa","Castanha Xeren (kg)"],
-  "Embalagens": ["Canudo Bio 6mm","Copo descartável 500 ml","Copo descartável 300ml","Mexedor de café","Palito de Dente","Papel Toalha Quick","Talher Descartável","Colher Descartável","Bobina termica 80x40","Saco p/ Talher 500 unid","Saco Personalizado Peixe","Lacre delivery","Forro de Mesa","Emb. Pote para Molho unid","Emb.3 Divisórias D 118","Emb.3 g330","Emb. Moqueca k 151","Emb. Guanições K 49","Emb.Isopor raza","Molho de isopor","Emb. pote retangular 350 ml","Garrafa para Suco G"],
-  "Pescados e Carnes e Frango": ["Filé de Tilápia Bem Bom","Filé de Tilápia Pescalli","Filé de Tilápia Frescatto","Filé de Pescada Amarela M","Pescada amarela","Salmao Dellys","Camarão Premium 41,50","Filé Mingnon Fort Beef","Filé Mingnon açougue","Filé Peito frango","Queijo Mussarela pedaço","Queijo Mussarela Fatiada (kg)","Quejo Parmesão (kg)"],
-  "Petiscos": ["Bolinho Bacalhau Unidade","Bolinho de Tilápia Unidade","Bolinho de Carne Seca","Caldo de Bobó de Camarão","Caldo de Tilápia Unidade","Camarão Empanado","Quibe (25 uni.)","Recheio Pastel de Camarão","Recheio Pastel de Tilápia"],
-  "Sobremesas": ["Pudim Tradicional","Petit Gateau","Sorvete de creme Mex","Café (Capsulas)","Sorvete de Queijo (Litros)","Calda de Maracujá","Goiabada Cascão","Fruta Morango KG","Fruta Acerola KG"],
-  "Hortifrut": ["Hortelã","Gengibre","Limao kgs","Laranja","Morango","Banana Prata","Abobrinha","Chuchu","Cenoura","Coentro","Pepino Japonês","Salsinha","Rúcula","Alface Americana","Alface Roxa","Alface Crespa","Tomate Cereja","Vagem Americana","Cebola","Ovo","Batata inglesa","Tomate","Alho com Casca","Repolho unid","Brocolis Comum","Brocolis Japones","Couve Flor","Polpa de Maracujá Unid","Polpa de Abacaxi Unid"],
-  "Bebidas": ["Coca Cola","Coca Cola Ks","Coca Cola Ks Zero","Coca Cola Lata","Coca Cola Zero Lata","Fanta Laranja lata","Sprite Lata","Heineken 600 ml","Heineken Long Neck","Heineken long neck zero","Schweppes Citrus Normal","Schweppes Citruz Zero","Água sem Gás lindoya","Água com Gás Lindoya","Agua Sem gás Faccol","Agua com Gás Faccol","Guaraná Lata","Guaraná Zero Lata","Corona Long neck Cero","Corona Long neck","Corona 600ml","Soda limonada","Água Tônica Lata","Água Tônica zero Lata","H2OH Limão","H2OH Limoneto","Original 600 ml","Spaten long neck","Spaten 600ml","Stella long neck Pure gold","Stella long neck","Stella 600 ml","Antartica pilsen","Chopp (Litros)"],
-  "Destilados": ["Vodka Smirnoff (Dose)","Cachaça Seleta (Dose)","Cachaça 51","Gin Beefeater","Licor 43","Red Label","Xarope Monin L Fruit Coco","Xarope Monin Abacaxi","Xarope Monin Morango","Xarope Monin Tangerina","Xarope Monin Maçã Verde"],
-  "Vinhos": ["Espumante 1913 Prosecco","Esp. 1913 Sparkling Brut Rose","Espumante 1913 Prosecco 187 ml","Esp .1913 Brut Rose 187 ml","Casal da Seara Vinho Verde Branco","Vulcanici Pinot Grigio","Bellavista Chardonnay / Casas del maipo","4 Estaciones Summer Torrontés","Bellavista Rosé","4 Estaciones Spring Rosé","Esperança Tinto","Vila Ruiva","Vulcanici Mont. Abruzzo","Vulcanici Sangiovese Puglia","Chaka Sysah","Donoso Suave Cab. Sauvignon","Casas Del Maipo Cab. Sauvignon","Bellavista Carménère","Jean Bousquet Malbec","Malacara Bornarda","4 Estaciones Malbec PremiumAutumn","La Vid blend","Vasco Viejo Blend Branco meia","Vasco Viejo Blend Tinto meia","Bellavista Cabe.Sauvignon taça"],
-  "Bacio Di Latte": ["Bombom de Sorvete Bacio","Bombom de Pistacchio","Cone Ciocchino Pistacchio","Picole Gianduia com Cobertura","Picole Doce de Leite","Picole Cioccolato Belga","Picole Pistacchio","Picole Baccio com Cobertura","Picole Caramello Salgado","Picole Fragola"]
+  "Produtos": ["Açucar Sachê 400 unid","Açucar Cristal 5 kg","Aceto Balsanico 250ML","Adoçante Sachê","Alcaparras Balde kg","Arroz 5 Kg","Azeite de Dende","Azeite 250 ml","Azeite de 5 litros","Batata Palito","Catchup sache","Canudo Bio 6mm","Champignon","Cobertura de Chocolate","Copo descartável 500 ml","Copo descartável 300ml","Farinha de Mandioca","Farinha de Trigo","farinha panko","Guardanapo","Leite de Coco","Leite Integral","Maionese","Manteiga Paracatu","Margarina Balde 15 kg","Mostarda Cepera","Mexedor de café","Palito de Dente","Papel Toalha Quick","Sal","Sal Sachê kg","Talher Descartável","Colher Descartável","Pimenta Mendes","Óleo de Algodão","Óleo","Vinho Branco Seco","Café","Molho de tomate","Feijão","Macarrão"],
+  "Embalagens": ["Bobina termica 80x40","Saco p/ Talher 500 unid","Saco Delivery Personalizado","Lacre delivery","Forro de Mesa","Emb. Pote Molho (0,002)","Emb.3 Divi. D 118 (0,026)","Emb. Moqueca K151 (0,020)","Emb. Guarnições K49 (0,010)","Emb.3 G.330","Emb.Isopor Rasa","Molho de Isopor","Emb. pote retangular 350 ml","Garrafa para Suco G"],
+  "Pescados e Carnes": ["Camarão Cinza 41,50","File de Tilápia","File de Tilápia","File de Tilápia","File de pescada amarela","Pescada amarela em posta","Salmão","File Mignon","File de Peito de Frango","Carne funcionário"],
+  "Temperos diversos": ["Pimenta Reino (500g)","Gergelim Branco","Gergelim Preto","Mussarela Pedaço","Mussarela Fatiada","Massa Pastel","Castanha Xéren (KG)"],
+  "Petiscos": ["Bolinho Bacalhau Unidade","Quibe (25 uni.)","Bolinho de Tilápia Unidade","Pastel de Camarão Meia","Bolinho de Carne Seca","Pastel de Tilápia Meia","Caldo de Bobó de Camarão","Tarrafa Porcionada","Caldo de Tilápia Unidade","Pastel Trio Meia","Camarão Empanado","Pastel Queijo Meia"],
+  "Sobremesas": ["Pudim Tradicional","Fruta Morango","Petit Gateau","Fruta Acerola","Sorvete Creme","Polpa de Maracujá Un.","Café (Cápsulas)","Polpa de Abacaxi","Sorvete Queijo","Calda de Maracujá","Goiabada Cascão"],
+  "Hortifruti": ["Hortelã","Cebola","Gengibre","Ovo","Limão kgs","Batata inglesa","Laranja","Tomate","Morango","Alho com Casca","Banana Prata","Repolho unid","Abobrinha","Brocolis Comum","Chuchu","Cenoura","Pepino Japonês","Salsinha","Rúcula","Alface Americana","Alface Roxa","Alface Crespa","Tomate Cereja","Vagem Americana","Brocolis Japones","Couve Flor","Berinjela","Batata Doce","Mandioca","Jiló","Pimentão Verde","Quiabo","Beterraba","Abobora Japonesa"],
+  "Bebidas": ["Coca Cola Ks Zero","Coca Cola Ks","Coca Cola Lata","Coca Cola Zero Lata","Fanta Lata","Sprite Lata","Schweppes Citrus Lata","Schweppes citrus zero","Heineken 600 ml","Heineken Long Neck","Heineken long neck zero","Água sem Gás","Água com Gás","Guaraná Lata","Guaraná Zero Lata","Soda limonada","Água Tônica Lata","Água Tônica zero Lata","H2OH Limão","H2OH Limoneto","Original 600ml","Spaten long neck","Spaten 600ml","Stella long neck gold","Stella long neck","Stella 600 ml","Chopp (Litros)","Pilse (Proibida-DIA A DIA)","Vodka Smirnoff (Dose)","Cachaça Seleta (Dose)","Cachaça 51","Gin Beefeater","Licor 43","Xarope Monin Le Fruit Coco","Xarope Monin Abacaxi","Xarope Monin Morango","Xarope Monin Tangerina","Xarope Monin Maçã Verde","Gás para Chopp"],
+  "Vinhos": ["1913 Prosecco","1913 Sparkling Brut Rose","1913 Prosecco 187 ml","Casal da Seara Vinho Branco","Vulcanici Pinot Grigio","Bellavista Chardonnay","4 Estaciones Summer Torrontés","Bellavista Rosé","Chaka Sysah V. Vale Central","Donoso Suave Cab. Sauvignon","C. Del Maipo Cab. Sauvignon","Bellavista Carménère","Jean Bousquet Malbec","Malacara Bornarda","4 Estaciones Malbec P. Autumn","La Vid blend tinto","4 Estaciones Spring Rosé","Vasco Viejo B. Meia Branco","Esperança Tinto","Vasco Viejo B. Meia Tinto","Vila Ruiva","Bellavista Cab.Sauvignon","Vulcanici Mont. Abruzzo","Vulcanici Sangiovese Puglia"],
+  "Brago": ["Papel toalha cliente","Papel higiênico cliente","Sabonete cliente com cheiro","Sabonete bactericida","Álcool 70 salão Spray","Papel Toalha Produção","Wiper Branco"],
+  "Limpeza": ["Agua Sanitaria","Fita Durex Larga","Álcool 70","Perfex","Desinfetante","Detergente","Limpa coifa","Master grill","Sapólio cremoso","Esponja","Fibraco","Filme PVC","Isqueiro","Luva amarela","Luva verde","Luva vinil","Máscara descartável","Caneta Permanente","Bloco rascunho branco","Touca descartável","Saco lixo 100 lts Azul","Saco lixo 60 lts Preto","Saco t. 35/45","Etiqueta P. Manipulado","Saco bobina 20/30","Saco bobina 40/60","Bobina Açougue 40 cm","Bobina 35X50","Bucha de aço","Veja Multiuso","Pano de chão","Papel higiênico funcionário"],
+  "Bacio Di Latte": ["Bombom de Sorvete Bacio","Bombom de Pistacchio","Cone Ciocchino Pistacchio","Picole Gianduia com Cobertura","Picole Doce de Leite","Picole Cioccolato Belga","Picole Pistacchio","Picole Baccio com Cobertura","Picole Caramelo Salgado","Picole fragola"]
+};
+const SHEET_SUPPLIERS = {
+  "Produtos": ["D.B", "N.A", "GAR"],
+  "Pescados e Carnes": ["Grelhado", "Belle", "Moqueca"]
 };
 let sheetStockCategory = "";
 let sheetStockValues = {};
@@ -6543,8 +6549,17 @@ async function sheetStockOpen() {
       .eq("user_id", currentUserId).eq("count_date", date.value).eq("category", category).maybeSingle()));
     results.forEach((result, i) => {
       if (result.error) throw result.error;
-      sheetStockValues[categories[i]] = {};
-      (result.data && Array.isArray(result.data.items) ? result.data.items : []).forEach(item => { sheetStockValues[categories[i]][item.product] = item; });
+      const category = categories[i], savedItems = (result.data && Array.isArray(result.data.items) ? result.data.items : []);
+      sheetStockValues[category] = {};
+      const used = new Set();
+      SHEET_STOCK[category].forEach((product, index) => {
+        let found = savedItems.find((item, itemIndex) => !used.has(itemIndex) && item.source_index === index);
+        if (!found) {
+          const itemIndex = savedItems.findIndex((item, j) => !used.has(j) && item.product === product);
+          if (itemIndex >= 0) { used.add(itemIndex); found = savedItems[itemIndex]; }
+        } else used.add(savedItems.indexOf(found));
+        if (found) sheetStockValues[category][String(index)] = found;
+      });
     });
   } catch (error) { sheetStockStatus("Falha ao carregar: " + friendlyError(error), "negative"); return; }
   box.replaceChildren();
@@ -6554,19 +6569,26 @@ async function sheetStockOpen() {
     const heading = document.createElement("h2"); heading.textContent = category; section.appendChild(heading);
     const wrap = document.createElement("div"); wrap.className = "sauce-table-wrap";
     const table = document.createElement("table"); table.className = "sauce-table";
-    table.innerHTML = "<thead><tr><th>PRODUTOS</th><th style='text-align:center'>ESTOQUE</th><th style='text-align:center'>PEDIR</th></tr></thead>";
+    const suppliers = SHEET_SUPPLIERS[category] || [];
+    const fields = [{ key: "stock", label: "ESTOQUE" }, { key: "order", label: "PEDIR" }].concat(suppliers.map((label, i) => ({ key: "supplier_" + i, label })));
+    const thead = document.createElement("thead"), header = document.createElement("tr");
+    ["PRODUTOS"].concat(fields.map(f => f.label)).forEach(label => { const th = document.createElement("th"); th.textContent = label; th.style.textAlign = label === "PRODUTOS" ? "left" : "center"; header.appendChild(th); });
+    thead.appendChild(header); table.appendChild(thead);
     const body = document.createElement("tbody");
-    SHEET_STOCK[category].forEach(product => {
+    SHEET_STOCK[category].forEach((product, sourceIndex) => {
       const tr = document.createElement("tr"), name = document.createElement("td"); name.textContent = product; tr.appendChild(name);
-      ["stock", "order"].forEach(key => {
+      fields.forEach(field => {
+        const key = field.key;
         const cell = document.createElement("td"), input = document.createElement("input");
         input.type = "number"; input.min = "0"; input.step = "any";
-        const saved = (sheetStockValues[category] || {})[product] || {};
+        input.style.margin = "0"; input.style.textAlign = "center"; input.style.minWidth = "72px";
+        const valueKey = String(sourceIndex);
+        const saved = (sheetStockValues[category] || {})[valueKey] || {};
         input.value = saved[key] == null ? "" : saved[key];
-        input.setAttribute("aria-label", (key === "stock" ? "Estoque de " : "Pedir ") + product);
+        input.setAttribute("aria-label", field.label + " de " + product);
         input.addEventListener("input", () => {
-          if (!sheetStockValues[category][product]) sheetStockValues[category][product] = { product, stock: null, order: null };
-          sheetStockValues[category][product][key] = input.value === "" ? null : Number(input.value);
+          if (!sheetStockValues[category][valueKey]) sheetStockValues[category][valueKey] = { product, source_index: sourceIndex, stock: null, order: null };
+          sheetStockValues[category][valueKey][key] = input.value === "" ? null : Number(input.value);
           sheetStockDirty = true; sheetStockStatus("Há alterações sem salvar.", "warning");
         });
         cell.appendChild(input); tr.appendChild(cell);
@@ -6583,7 +6605,7 @@ async function sheetStockSave() {
   const btn = document.getElementById("sheetStockSave"); btn.disabled = true; sheetStockStatus("Salvando...", "hint");
   try {
     for (const category of Object.keys(SHEET_STOCK)) {
-      const items = SHEET_STOCK[category].map(product => (sheetStockValues[category] || {})[product] || { product, stock: null, order: null });
+      const items = SHEET_STOCK[category].map((product, source_index) => (sheetStockValues[category] || {})[String(source_index)] || { product, source_index, stock: null, order: null });
       const payload = { user_id: currentUserId, count_date: date, category, employee: currentUser || "", items, updated_at: new Date().toISOString() };
       const { error } = await supabaseClient.from("stock_quote_sessions").upsert(payload, { onConflict: "user_id,count_date,category" });
       if (error) throw error;
@@ -6607,11 +6629,11 @@ function sheetStockPdf() {
   Object.keys(SHEET_STOCK).forEach(category => {
     if (y > doc.internal.pageSize.getHeight() - 100) { doc.addPage(); y = 38; }
     doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.text(category.toUpperCase(), 40, y);
-    const suppliers = category === "Estoque Seco" ? ["D.B", "N.A", "GAR"] : category === "Pescados e Carnes e Frango" ? ["Grelhado", "Belle", "Moqueca"] : [];
+    const suppliers = SHEET_SUPPLIERS[category] || [];
     const head = [["PRODUTOS", "ESTOQUE", "PEDIR"].concat(suppliers)];
-    const body = SHEET_STOCK[category].map(product => {
-      const v = ((sheetStockValues[category] || {})[product]) || {};
-      return [product, v.stock == null ? "" : String(v.stock), v.order == null ? "" : String(v.order)].concat(suppliers.map(() => ""));
+    const body = SHEET_STOCK[category].map((product, sourceIndex) => {
+      const v = ((sheetStockValues[category] || {})[String(sourceIndex)]) || {};
+      return [product, v.stock == null ? "" : String(v.stock), v.order == null ? "" : String(v.order)].concat(suppliers.map((_, i) => v["supplier_" + i] == null ? "" : String(v["supplier_" + i])));
     });
     const styles = {};
     suppliers.forEach((_, i) => { styles[i + 3] = { halign: "center" }; });
@@ -6948,12 +6970,7 @@ let quoteDashDate = "";
 let quoteDashReq = 0;
 let quoteDashReport = null;
 function quoteDisplay(value) { return value === null || value === undefined || value === "" ? "" : String(value); }
-function quoteCategoryTitle(name) {
-  if (name === "Estoque Seco") return "PRODUTOS";
-  if (name === "Pescados e Carnes e Frango") return "PESCADOS E CARNES";
-  if (name === "Hortifrut") return "HORTIFRUTI";
-  return name.toUpperCase();
-}
+function quoteCategoryTitle(name) { return name.toUpperCase(); }
 async function quoteLoad(date, req) {
   const status = document.getElementById("quoteDashStatus");
   const area = document.getElementById("quoteDashReport");
@@ -6974,14 +6991,15 @@ async function quoteLoad(date, req) {
     let filled = 0, total = 0;
     Object.keys(SHEET_STOCK).forEach(category => {
       const session = sessions[category];
-      const byName = new Map(((session && session.items) || []).map(i => [i.product, i]));
-      const items = SHEET_STOCK[category].map(product => {
-        const stored = byName.get(product) || {};
+      const storedItems = (session && session.items) || [];
+      const byIndex = new Map(storedItems.filter(i => Number.isInteger(i.source_index)).map(i => [i.source_index, i]));
+      const items = SHEET_STOCK[category].map((product, index) => {
+        const stored = byIndex.get(index) || storedItems.find(i => i.product === product) || {};
         total++;
         if (stored.stock !== null && stored.stock !== undefined && stored.stock !== "") filled++;
-        return { product, stock: stored.stock, order: stored.order };
+        return { product, ...stored, stock: stored.stock, order: stored.order };
       });
-      groups.push({ category, items, complete: !!session && items.every(i => i.stock !== null && i.stock !== undefined && i.stock !== "") });
+      groups.push({ category, suppliers: SHEET_SUPPLIERS[category] || [], items, complete: !!session && items.every(i => i.stock !== null && i.stock !== undefined && i.stock !== "") });
     });
     const sauceSession = (sauceRes.data || [])[0] || null;
     const sauceByRow = new Map(((sauceSession && sauceSession.items) || []).map(i => [Number(i.source_row), i]));
@@ -6991,7 +7009,7 @@ async function quoteLoad(date, req) {
       if (stored.count_quantity !== null && stored.count_quantity !== undefined && stored.count_quantity !== "") filled++;
       return { product: p.name.trim(), stock: stored.count_quantity, order: stored.order_quantity };
     });
-    groups.splice(Math.min(2, groups.length), 0, { category: "Molhos", items: sauceItems, complete: !!sauceSession && sauceItems.every(i => i.stock !== null && i.stock !== undefined && i.stock !== "") });
+    groups.splice(Math.min(4, groups.length), 0, { category: "Molhos", suppliers: [], items: sauceItems, complete: !!sauceSession && sauceItems.every(i => i.stock !== null && i.stock !== undefined && i.stock !== "") });
     const complete = groups.every(g => g.complete);
     quoteDashReport = { date, groups, complete };
     status.textContent = complete
@@ -7003,10 +7021,10 @@ async function quoteLoad(date, req) {
       const wrap = document.createElement("div"); wrap.className = "table-wrap";
       const table = document.createElement("table"); table.className = "dash-table";
       const thead = document.createElement("thead"), hr = document.createElement("tr");
-      ["Produto", "Estoque", "Pedir"].forEach(label => { const th = document.createElement("th"); th.textContent = label; hr.appendChild(th); });
+      ["Produto", "Estoque", "Pedir"].concat(group.suppliers).forEach(label => { const th = document.createElement("th"); th.textContent = label; hr.appendChild(th); });
       thead.appendChild(hr); table.appendChild(thead);
       const tbody = document.createElement("tbody");
-      group.items.forEach(item => { const tr = document.createElement("tr"); [item.product, quoteDisplay(item.stock), quoteDisplay(item.order)].forEach((v, i) => { const td = document.createElement("td"); td.textContent = v; if (i > 0) td.style.textAlign = "right"; tr.appendChild(td); }); tbody.appendChild(tr); });
+      group.items.forEach(item => { const tr = document.createElement("tr"); [item.product, quoteDisplay(item.stock), quoteDisplay(item.order)].concat(group.suppliers.map((_, i) => quoteDisplay(item["supplier_" + i]))).forEach((v, i) => { const td = document.createElement("td"); td.textContent = v; if (i > 0) td.style.textAlign = "right"; tr.appendChild(td); }); tbody.appendChild(tr); });
       table.appendChild(tbody); wrap.appendChild(table); section.append(heading, wrap); area.appendChild(section);
     });
     document.getElementById("quoteDashPdf").disabled = !complete;
@@ -7049,9 +7067,9 @@ function quoteGeneratePdf() {
   report.groups.forEach(group => {
     if (y > doc.internal.pageSize.getHeight() - 100) { doc.addPage(); y = 38; }
     doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text(quoteCategoryTitle(group.category), margin, y);
-    const supplierCols = group.category === "Estoque Seco" ? ["D.B", "N.A", "GAR"] : group.category === "Pescados e Carnes e Frango" ? ["Grelhado", "Belle", "Moqueca"] : [];
+    const supplierCols = group.suppliers || [];
     const head = ["Produtos", "Estoque", "Pedir"].concat(supplierCols);
-    const body = group.items.map(item => [item.product, quoteDisplay(item.stock), quoteDisplay(item.order)].concat(supplierCols.map(() => "")));
+    const body = group.items.map(item => [item.product, quoteDisplay(item.stock), quoteDisplay(item.order)].concat(supplierCols.map((_, i) => quoteDisplay(item["supplier_" + i]))));
     const columnStyles = { 0: { cellWidth: 245 }, 1: { cellWidth: 70, halign: "center" }, 2: { cellWidth: 70, halign: "center" } };
     supplierCols.forEach((_, i) => { columnStyles[i + 3] = { cellWidth: supplierCols.length === 3 ? 105 : 110, halign: "center" }; });
     doc.autoTable({ startY: y + 5, theme: "grid", margin: { left: margin, right: margin, bottom: 34 }, head: [head], body, styles: { font: "helvetica", fontSize: 7.5, cellPadding: 3, lineColor: [80, 80, 80], lineWidth: 0.35, textColor: [25, 25, 25], valign: "middle" }, headStyles: { fillColor: [225, 225, 225], textColor: [20, 20, 20], fontStyle: "bold", fontSize: 7.5 }, columnStyles });
