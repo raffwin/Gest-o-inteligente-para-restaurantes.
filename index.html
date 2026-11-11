@@ -1228,7 +1228,7 @@
 
   <section class="section tab-panel" id="tab-planilha" role="tabpanel" hidden>
     <h2 id="sheetChecklistTitle"></h2>
-    <div class="hint" style="margin-bottom:12px">Marque cada item como Conforme ou Não conforme. Os registros ficam salvos neste navegador por checklist e data.</div>
+    <div class="hint" style="margin-bottom:12px">Marque cada item como Conforme ou Não conforme. Os registros são salvos no Supabase e ficam disponíveis na mesma conta em outros aparelhos.</div>
     <div id="sheetChecklistRoot"></div>
   </section>
 
@@ -4068,7 +4068,7 @@
   const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento e Reaquecimento", oleo: "{drop} Controle de Qualidade do Óleo", gordura: "{clean} Limpeza da Caixa de Gordura", gerencial: "{list} Gerencial", producao: "Produção da Cozinha", salao: "Salão", copa: "Copa", fechamento: "Abertura e Fechamento da Casa" };
   const SHEET_CHECKLISTS = {"producao":{"title":"Produção da Cozinha","items":["Açúcar 5 kg","Alcaparras balde","Arroz Camil 5 kg","Azeite dendê /Farofa Pronta","Azeite 5 litros Composto","Batata Palito","Champion","Farinha de trigo","Farinh panko","Leite de coco","Leite","Molho tartaro","Manteiga Paracatu","Margarina primor Bd 15 kg","Óleo","Óleo de Algodão","Papel toalha","Sal","Gergelim","Castanha caju xerém kgs","Mussarela fatiada","Bobina termica 80x40","Etiqueta Manipulação","Saco bobina 20/30","Emb. Pote para Molho unid","Emb.3 Divisórias D118","Emb. Moqueca K 151","Emb. Guanições K 49","Filé de Tilápia Bem Bom","Pescada em posta","File de pescada","Salmao","Camarão cinza 41/50","Filé Peito frango","Filé Mingnon","Bolinho de carne seca","Bolinho Bacalhau Unidade","Bolinho de Tilápia Unidade","Quibe Pacote 25 Unidade","Conferir Os Pasteis Pronto","Legumes na Manteiga","Legumes no Vapor","Batata Soute","Pure de Batata","Detergente","Chefe Grill chapa","Limpa coifa","Esponja Amarela","Isqueiro","Luva vinil","Mascara descartável","Perfex","Touca descartável"],"sections":[]},"salao":{"title":"Salão","items":["Açúcar sache","Adoçante sache","Azeite extra Virgem 250 ml","Bobina Termica","Caneta","Café capsula","Guardanapo Normal","Palito sache","Sal sache","Talher Descartável kit","Mexedor para Café","Álcool 70 %","Saco p/ Talher","Saco Personalizado","Lacre delivery","Perfex","Pimenta Mendes","Limpar Os Quadros","Limpar As Luminarias","Portas de Vidros","Limpar Balcão Frente","Limpar Aparadores","Limpar Letreiros","Limpar Adega"],"sections":[]},"copa":{"title":"Copa","items":["Açúcar Para suco","Canudo bio shake 8 mm","Cobertura de Chocolate","Copo descartável 500 ml","Copo descartável 300ml","Bobina termica 80x40","Bobina Picotada 20x30","Etiqueta Manipulação","Garrafa para Suco G","Caldo DE Tilapia","Pudim Tradicional","Petit Gateau","Café (Capsulas)","Fruta Morango KG","Fruta Acerola KG","Polpa de Maracujá Unid","Polpa de Abacaxi Unid","Sorvete de Creme","Sorvete de Queijo","Goiabada Cascão","Polpa de Maracujá Unid","Hortelã","Gengibre","Limao kgs","Laranja","Morango","Fazer Reposição Bebidas","Conferir o Gás do Chopp","Limpar Geladeira Refrigerante","Limpar Balcão Refrigerado","Limpar as Bancadas","Limpar Adega","Lavar a Lixeira"],"sections":[]},"fechamento":{"title":"Fechamento da Casa","items":["Abertura de loja","Abertura de caixa","Verificar fundo de caixa R$200,00","Verificar ifood e itens pausados","Verificar banheiros(Papel,sabão e limpeza)","Ligar TV fora","Ligar Ar condicionado","Verificar se o quibe subiu","Degustação (Ausencia do Antonio)","Verificar checklist salão","Verificar checklist Cozinha","Fechamento de loja","Cozinha","Fechamento gas","Fechamento Agua","Desligar microondas","Desligar banho Maria","Desligar Fritadeiras","Ferir a temperatura dos freezeres","limpar as bancadas","retirar e lavar as louças","Bar","Organizar o bar","Mandar todas as louças","Lavar os copos","limpar choppeira","Limpar maquina de café","Ferir a temperatura dos freezeres","desligar o microondas","Salao","Carregar máquinas","Pasta ANVISA","Desligar estufa","Desligar as luzes","Desligar as luzes dos banheiros"],"sections":["Abertura de loja","Salao","Salão","Fechamento de loja","Bar","Cozinha"]}};
 
-  function renderSheetChecklist(name) {
+  async function renderSheetChecklist(name) {
     const config = SHEET_CHECKLISTS[name];
     const root = document.getElementById("sheetChecklistRoot");
     const title = document.getElementById("sheetChecklistTitle");
@@ -4084,34 +4084,120 @@
     table.innerHTML = "<thead><tr><th>Item</th><th>Resposta</th></tr></thead>";
     const body = document.createElement("tbody");
     const rows = [];
-    config.items.forEach((item, index) => {
+    config.items.forEach(item => {
       const tr = document.createElement("tr");
       const itemCell = document.createElement("td"); itemCell.textContent = item;
       const responseCell = document.createElement("td");
       const select = document.createElement("select"); select.setAttribute("aria-label", "Resposta para " + item);
-      [ ["", "Selecione"], ["Conforme", "Conforme"], ["Não conforme", "Não conforme"] ].forEach(([value,label]) => { const option=document.createElement("option"); option.value=value; option.textContent=label; select.appendChild(option); });
-      responseCell.appendChild(select); tr.append(itemCell,responseCell); body.appendChild(tr); rows.push(select);
+      [["", "Selecione"], ["Conforme", "Conforme"], ["Não conforme", "Não conforme"]].forEach(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; select.appendChild(option); });
+      responseCell.appendChild(select); tr.append(itemCell, responseCell); body.appendChild(tr); rows.push(select);
     });
     table.appendChild(body); tableWrap.appendChild(table);
     const actions = document.createElement("div"); actions.className = "actions"; actions.style.marginTop = "12px";
-    const save = document.createElement("button"); save.type="button"; save.textContent="Salvar checklist";
-    const status = document.createElement("div"); status.className="sim"; status.setAttribute("role","status"); status.setAttribute("aria-live","polite");
-    const dateInput = fields.querySelector("#sheetDate"), responsible = fields.querySelector("#sheetResponsible"); dateInput.value=today;
-    function storageKey() { return "operatto_sheet_checklist_v1_" + (currentEmail || "local") + "_" + name + "_" + dateInput.value; }
-    function load() {
-      let saved={}; try { saved=JSON.parse(localStorage.getItem(storageKey()) || "{}"); } catch (_) {}
-      responsible.value=saved.responsible || "";
-      rows.forEach((select,i)=>select.value=(saved.responses || [])[i] || "");
-      status.textContent=saved.updatedAt ? "Checklist salvo neste navegador." : "";
+    const save = document.createElement("button"); save.type = "button"; save.textContent = "Salvar checklist no Supabase";
+    const status = document.createElement("div"); status.className = "sim"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
+    const dateInput = fields.querySelector("#sheetDate"), responsible = fields.querySelector("#sheetResponsible"); dateInput.value = today;
+    let loadRequest = 0;
+    function localKey(date) { return "operatto_sheet_checklist_v1_" + (currentEmail || "local") + "_" + name + "_" + date; }
+    function readLocal(date) { try { return JSON.parse(localStorage.getItem(localKey(date)) || "null"); } catch (_) { return null; } }
+    function cacheLocal(date, payload) { try { localStorage.setItem(localKey(date), JSON.stringify(payload)); } catch (_) {} }
+    async function migrateLocalRecords(uid) {
+      const prefix = "operatto_sheet_checklist_v1_" + (currentEmail || "local") + "_" + name + "_";
+      const localRows = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key || !key.startsWith(prefix)) continue;
+          const date = key.slice(prefix.length);
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+          let record; try { record = JSON.parse(localStorage.getItem(key) || "null"); } catch (_) { continue; }
+          if (!record || !Array.isArray(record.responses)) continue;
+          localRows.push({ date, record });
+        }
+      } catch (_) { return; }
+      if (!localRows.length) return;
+      const { data, error } = await supabaseClient.from("spreadsheet_checklists").select("checklist_date,updated_at")
+        .eq("user_id", uid).eq("checklist_key", name);
+      if (error) throw error;
+      if (currentUserId !== uid) return;
+      const remote = new Map((data || []).map(row => [row.checklist_date, Date.parse(row.updated_at || "") || 0]));
+      const uploads = localRows.filter(({ date, record }) => {
+        const localTime = Date.parse(record.updated_at || record.updatedAt || "") || 0;
+        return !remote.has(date) || localTime > remote.get(date);
+      }).map(({ date, record }) => ({
+        user_id: uid, checklist_key: name, checklist_date: date,
+        responsible: record.responsible || "", responses: record.responses,
+        updated_at: record.updated_at || record.updatedAt || new Date().toISOString()
+      }));
+      if (uploads.length) {
+        const result = await supabaseClient.from("spreadsheet_checklists").upsert(uploads,
+          { onConflict: "user_id,checklist_key,checklist_date" });
+        if (result.error) throw result.error;
+      }
     }
-    dateInput.addEventListener("change",load);
-    save.addEventListener("click",()=>{
-      if (!dateInput.value) { status.textContent="Informe a data do checklist."; return; }
-      const payload={responsible:responsible.value.trim(),responses:rows.map(select=>select.value),updatedAt:new Date().toISOString()};
-      try { localStorage.setItem(storageKey(),JSON.stringify(payload)); status.textContent="Checklist salvo neste navegador."; }
-      catch (_) { status.textContent="Não foi possível salvar. Verifique o espaço disponível no navegador."; }
+    function applyRecord(record) {
+      responsible.value = record?.responsible || "";
+      const responses = Array.isArray(record?.responses) ? record.responses : [];
+      rows.forEach((select, i) => select.value = responses[i] || "");
+    }
+    async function loadFromSupabase() {
+      const date = dateInput.value, request = ++loadRequest;
+      if (!currentUserId) { applyRecord(null); status.textContent = "Entre na sua conta para carregar e salvar no Supabase."; status.className = "sim warning"; return; }
+      status.textContent = "Carregando do Supabase…"; status.className = "sim";
+      try {
+        const uid = currentUserId;
+        await migrateLocalRecords(uid);
+        if (request !== loadRequest || currentUserId !== uid) return;
+        const { data, error } = await supabaseClient.from("spreadsheet_checklists").select("responsible,responses,updated_at")
+          .eq("user_id", currentUserId).eq("checklist_key", name).eq("checklist_date", date).maybeSingle();
+        if (request !== loadRequest || dateInput.value !== date) return;
+        if (error) throw error;
+        if (data) {
+          applyRecord(data); cacheLocal(date, data);
+          status.textContent = "Checklist carregado do Supabase."; status.className = "sim positive";
+        } else {
+          const local = readLocal(date); applyRecord(local);
+          if (local) {
+            const { error: migrationError } = await supabaseClient.from("spreadsheet_checklists").upsert({
+              user_id: currentUserId, checklist_key: name, checklist_date: date,
+              responsible: local.responsible || "", responses: Array.isArray(local.responses) ? local.responses : [],
+              updated_at: local.updated_at || local.updatedAt || new Date().toISOString()
+            }, { onConflict: "user_id,checklist_key,checklist_date" });
+            if (migrationError) throw migrationError;
+            status.textContent = "Rascunho local migrado para o Supabase."; status.className = "sim positive";
+          } else {
+            status.textContent = "Nenhum registro salvo nesta data."; status.className = "sim";
+          }
+        }
+      } catch (error) {
+        if (request !== loadRequest) return;
+        const local = readLocal(date); applyRecord(local);
+        status.textContent = "Falha ao carregar do Supabase. " + (local ? "Rascunho local carregado; tente salvar novamente." : friendlyError(error));
+        status.className = "sim negative";
+      }
+    }
+    dateInput.addEventListener("change", loadFromSupabase);
+    save.addEventListener("click", async () => {
+      if (!currentUserId) { status.textContent = "Entre na sua conta para salvar no Supabase."; status.className = "sim negative"; return; }
+      if (!dateInput.value) { status.textContent = "Informe a data do checklist."; status.className = "sim warning"; return; }
+      const date = dateInput.value;
+      const record = { responsible: responsible.value.trim(), responses: rows.map(select => select.value), updated_at: new Date().toISOString() };
+      cacheLocal(date, record);
+      save.disabled = true; status.textContent = "Salvando no Supabase…"; status.className = "sim";
+      try {
+        const { error } = await supabaseClient.from("spreadsheet_checklists").upsert({
+          user_id: currentUserId, checklist_key: name, checklist_date: date,
+          responsible: record.responsible, responses: record.responses, updated_at: record.updated_at
+        }, { onConflict: "user_id,checklist_key,checklist_date" });
+        if (error) throw error;
+        status.textContent = "Checklist salvo no Supabase."; status.className = "sim positive";
+      } catch (error) {
+        status.textContent = "Não foi possível salvar no Supabase. " + friendlyError(error) + " O rascunho continua neste aparelho.";
+        status.className = "sim negative";
+      } finally { save.disabled = false; }
     });
-    actions.appendChild(save); root.append(fields,tableWrap,actions,status); load();
+    actions.appendChild(save); root.append(fields, tableWrap, actions, status);
+    await loadFromSupabase();
   }
 
   function resetChecklistScreen() {
