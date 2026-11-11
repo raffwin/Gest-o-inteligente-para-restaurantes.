@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+]<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -176,6 +176,32 @@
     .dash-table tbody tr { cursor: pointer; }
     .dash-table tbody tr:hover { background: var(--hover); }
     .dash-table tfoot td { font-weight: 700; border-bottom: 0; }
+    .owner-head, .owner-section-head { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+    .owner-head { margin-bottom:18px; }
+    .owner-head h2 { margin:4px 0; font-size:24px; }
+    .owner-head p, .owner-section-head p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+    .owner-kicker { color:var(--accent-text); font-size:10px; font-weight:800; letter-spacing:.14em; }
+    .owner-section h3 { margin:0; font-size:15px; }
+    .owner-section h4 { font-size:13px; color:var(--muted); margin:8px 0; }
+    .owner-form { display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; margin-top:12px; }
+    .owner-form-actions { display:flex; align-items:end; gap:8px; }
+    .owner-form-actions button { width:auto; }
+    .owner-row-actions { display:flex; justify-content:flex-end; gap:6px; }
+    .owner-row-actions button { padding:6px 9px; font-size:12px; }
+    .owner-status-pill { display:inline-block; border:1px solid var(--border); border-radius:99px; padding:3px 9px; color:var(--accent-text); font-size:11px; }
+    .owner-status-pill.blocked { color:#FFB0B0; border-color:#70454A; background:#332326; }
+    .owner-activity { display:grid; gap:8px; }
+    .owner-activity-row { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--border); font-size:12px; }
+    .owner-activity-row span:last-child { color:var(--muted); white-space:nowrap; }
+    #ownerNavLink[hidden] { display:none; }
+    @media (max-width: 820px) {
+      .owner-form { grid-template-columns:1fr; }
+      .owner-form-actions { flex-direction:column; align-items:stretch; }
+      .owner-form-actions button { width:100%; }
+      .owner-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .owner-head { align-items:flex-start; }
+      .owner-row-actions { flex-wrap:wrap; }
+    }
     .modal-overlay { position: fixed; inset: 0; z-index: 2000; background: #000000b3; display: flex; align-items: flex-start; justify-content: center; padding: 16px; overflow-y: auto; }
     .modal-card { background: var(--surface); border: 1px solid var(--border); color: var(--text); width: 100%; max-width: 460px; border-radius: 9px; padding: 22px 20px; margin: auto; box-shadow: 0 24px 65px #0008; }
     .modal-card h2 { margin: 0 0 12px; font-size: 19px; font-weight: 700; }
@@ -607,6 +633,7 @@
     <a href="#" data-nav="stock"><svg viewBox="0 0 24 24"><path d="m3 7 9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/></svg>Estoque</a>
     <a href="#" data-nav="checklist"><svg viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11"/><path d="m3 5 1.5 1.5L7 4M3 12l1.5 1.5L7 11M3 19l1.5 1.5L7 18"/></svg>Checklists</a>
     <a href="#" data-nav="dashboard"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Dashboard</a>
+    <a href="#" data-nav="owner" id="ownerNavLink" hidden><svg viewBox="0 0 24 24"><path d="M3 20h18M5 20V8l7-5 7 5v12M9 20v-6h6v6M8 10h.01M16 10h.01"/></svg>Central do Proprietário</a>
     <a href="#" data-nav="home"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Menu e conta</a>
   </nav>
 
@@ -1232,6 +1259,41 @@
   <div id="dashContent"></div>
   </div>
   <!-- ===== Fim da tela: Dashboard ===== -->
+
+  <!-- ===== Central do Proprietário: acesso liberado somente após RPC verificada no Supabase ===== -->
+  <div class="view" id="ownerView" hidden>
+    <button type="button" class="back-btn" data-back><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg> Voltar ao menu</button>
+    <div class="owner-head"><div><div class="owner-kicker">ADMINISTRAÇÃO DA PLATAFORMA</div><h2>Central do Proprietário</h2><p>Visão global das organizações e restaurantes cadastrados.</p></div><button type="button" class="btn-edit" id="ownerRefreshBtn">Atualizar dados</button></div>
+    <div class="sim" id="ownerStatus" role="status" aria-live="polite"></div>
+    <div class="stats owner-stats">
+      <div class="card"><div class="card-label">Restaurantes</div><div class="card-value" id="ownerTotalRestaurants">—</div><div class="card-detail">Unidades cadastradas</div></div>
+      <div class="card"><div class="card-label">Usuários</div><div class="card-value" id="ownerTotalUsers">—</div><div class="card-detail">Contas na plataforma</div></div>
+      <div class="card"><div class="card-label">Ativos</div><div class="card-value" id="ownerActiveRestaurants">—</div><div class="card-detail">Unidades habilitadas</div></div>
+      <div class="card"><div class="card-label">Bloqueados</div><div class="card-value" id="ownerBlockedRestaurants">—</div><div class="card-detail">Acesso operacional suspenso</div></div>
+    </div>
+    <section class="section owner-section">
+      <div class="owner-section-head"><div><h3>Restaurantes</h3><p>Cadastre unidades e consulte seus usuários.</p></div><button type="button" id="ownerNewRestaurantBtn">Novo restaurante</button></div>
+      <div class="table-wrap"><table class="dash-table"><thead><tr><th>Organização</th><th>Restaurante</th><th>Status</th><th>Usuários</th><th>Ações</th></tr></thead><tbody id="ownerRestaurantsBody"><tr><td colspan="5">Carregando…</td></tr></tbody></table></div>
+    </section>
+    <section class="section owner-section" id="ownerRestaurantFormSection" hidden>
+      <h3 id="ownerFormTitle">Cadastrar restaurante</h3>
+      <form id="ownerRestaurantForm" class="owner-form">
+        <input type="hidden" id="ownerRestaurantId">
+        <div><label for="ownerOrganizationSelect">Organização existente</label><select id="ownerOrganizationSelect"><option value="">Criar nova organização</option></select></div>
+        <div><label for="ownerOrganizationName">Nome da organização</label><input id="ownerOrganizationName" type="text" maxlength="160" placeholder="Ex.: Grupo Operatto"></div>
+        <div><label for="ownerRestaurantName">Nome do restaurante</label><input id="ownerRestaurantName" type="text" maxlength="160" required></div>
+        <div class="owner-form-actions"><button type="submit" id="ownerSaveRestaurantBtn">Salvar restaurante</button><button type="button" class="btn-edit" id="ownerCancelRestaurantBtn">Cancelar</button></div>
+      </form>
+    </section>
+    <section class="section owner-section" id="ownerRestaurantDetail" hidden>
+      <div class="owner-section-head"><div><h3 id="ownerDetailTitle">Restaurante</h3><p id="ownerDetailSubtitle"></p></div><button type="button" class="btn-edit" id="ownerCloseDetailBtn">Fechar</button></div>
+      <h4>Usuários vinculados</h4>
+      <div class="table-wrap"><table class="dash-table"><thead><tr><th>E-mail</th><th>Nome</th><th>Função</th></tr></thead><tbody id="ownerUsersBody"></tbody></table></div>
+      <h4 style="margin-top:18px">Atividade administrativa</h4>
+      <div id="ownerActivityList" class="owner-activity"></div>
+      <div class="hint" style="margin-top:14px">A consulta aos módulos operacionais será habilitada após a etapa de associação dos registros existentes às unidades e revisão das políticas RLS.</div>
+    </section>
+  </div>
 </main>
 
 <footer>
@@ -1352,6 +1414,7 @@
   let currentUser = null;      // nome exibido
   let currentUserId = null;    // id no Supabase
   let currentEmail = "";
+  let isPlatformOwner = false; // definido somente pela função protegida do Supabase
   let dataReady = false;       // só permite gravar depois de carregar tudo da nuvem
   let lastResendAt = 0;
   let recoverEmailValue = "";
@@ -1670,9 +1733,10 @@
 
   // Troca a tela do app depois do login: "home" (menu), "stock" (estoque) ou "checklist"
   function showScreen(name) {
+    if (name === "owner" && !isPlatformOwner) name = "home";
     if (name === "stock") resetStockScreen();
     if (name === "checklist") resetChecklistScreen();
-    ["home", "stock", "checklist", "dashboard", "overview"].forEach(n => {
+    ["home", "stock", "checklist", "dashboard", "overview", "owner"].forEach(n => {
       document.getElementById(n + "View").hidden = n !== name;
     });
     const home = document.getElementById("homeView");
@@ -1688,12 +1752,13 @@
     }
     if (name === "dashboard") renderDashboard();
     if (name === "overview") renderOverview();
+    if (name === "owner") loadOwnerCenter();
     setNav(name);
     window.scrollTo(0, 0);
   }
 
   // Barra lateral: tela ativa, caminho no topo e menu no celular
-  const SCREEN_TITLES = { home: "Início", overview: "Visão geral", stock: "Estoque", checklist: "Checklists", dashboard: "Dashboard" };
+  const SCREEN_TITLES = { home: "Início", overview: "Visão geral", stock: "Estoque", checklist: "Checklists", dashboard: "Dashboard", owner: "Central do Proprietário" };
   function closeSidebar() {
     document.getElementById("sidebar").classList.remove("open");
     document.getElementById("scrim").classList.remove("open");
@@ -1703,6 +1768,162 @@
     document.querySelectorAll("#sideNav [data-nav]").forEach(a => a.classList.toggle("active", a.dataset.nav === name));
     closeSidebar();
   }
+
+  let ownerRestaurants = [];
+  function ownerStatus(message, kind) {
+    const el = document.getElementById("ownerStatus");
+    if (!el) return;
+    el.textContent = message || "";
+    el.className = "sim" + (kind ? " " + kind : "");
+  }
+  async function resolvePlatformOwnerAccess() {
+    isPlatformOwner = false;
+    const link = document.getElementById("ownerNavLink");
+    if (link) link.hidden = true;
+    if (!currentUserId) return false;
+    try {
+      const { data, error } = await supabaseClient.rpc("platform_is_owner");
+      if (error) throw error;
+      isPlatformOwner = data === true;
+    } catch (error) {
+      // Fail closed: erro ou ausência da função nunca concede acesso OWNER.
+      isPlatformOwner = false;
+    }
+    if (link) link.hidden = !isPlatformOwner;
+    return isPlatformOwner;
+  }
+  async function loadOwnerCenter() {
+    if (!isPlatformOwner) return;
+    ownerStatus("Carregando indicadores e restaurantes…", "hint");
+    try {
+      const [overviewRes, restaurantsRes] = await Promise.all([
+        supabaseClient.rpc("platform_owner_overview"),
+        supabaseClient.rpc("platform_owner_list_restaurants")
+      ]);
+      if (overviewRes.error) throw overviewRes.error;
+      if (restaurantsRes.error) throw restaurantsRes.error;
+      const overview = overviewRes.data || {};
+      ownerRestaurants = restaurantsRes.data || [];
+      document.getElementById("ownerTotalRestaurants").textContent = overview.total_restaurants ?? "0";
+      document.getElementById("ownerTotalUsers").textContent = overview.total_users ?? "0";
+      document.getElementById("ownerActiveRestaurants").textContent = overview.active_restaurants ?? "0";
+      document.getElementById("ownerBlockedRestaurants").textContent = overview.blocked_restaurants ?? "0";
+      renderOwnerRestaurants();
+      renderOwnerActivity(overview.recent_activity || []);
+      ownerStatus("Dados atualizados pelo Supabase.", "positive");
+    } catch (error) {
+      ownerStatus("Não foi possível carregar a Central: " + friendlyError(error), "negative");
+    }
+  }
+  function renderOwnerRestaurants() {
+    const body = document.getElementById("ownerRestaurantsBody");
+    const select = document.getElementById("ownerOrganizationSelect");
+    if (!body || !select) return;
+    body.replaceChildren();
+    const orgs = new Map();
+    ownerRestaurants.forEach(r => orgs.set(r.organization_id, r.organization_name));
+    select.replaceChildren(new Option("Criar nova organização", ""));
+    orgs.forEach((name, id) => select.add(new Option(name, id)));
+    if (!ownerRestaurants.length) {
+      const tr = document.createElement("tr"), td = document.createElement("td");
+      td.colSpan = 5; td.textContent = "Nenhum restaurante cadastrado."; tr.appendChild(td); body.appendChild(tr); return;
+    }
+    ownerRestaurants.forEach(r => {
+      const tr = document.createElement("tr");
+      [r.organization_name, r.name].forEach(value => { const td=document.createElement("td"); td.textContent=value || "—"; tr.appendChild(td); });
+      const statusCell = document.createElement("td"), pill = document.createElement("span");
+      pill.className = "owner-status-pill" + (r.status === "blocked" ? " blocked" : "");
+      pill.textContent = r.status === "blocked" ? "Bloqueado" : "Ativo"; statusCell.appendChild(pill); tr.appendChild(statusCell);
+      const members = document.createElement("td"); members.textContent = String(r.member_count ?? 0); tr.appendChild(members);
+      const actions = document.createElement("td"), wrap = document.createElement("div"); wrap.className="owner-row-actions";
+      const detail = document.createElement("button"); detail.type="button"; detail.className="btn-edit"; detail.textContent="Detalhes"; detail.addEventListener("click",()=>loadOwnerRestaurantDetail(r));
+      const edit = document.createElement("button"); edit.type="button"; edit.className="btn-edit"; edit.textContent="Editar"; edit.addEventListener("click",()=>editOwnerRestaurant(r));
+      const status = document.createElement("button"); status.type="button"; status.className="btn-edit"; status.textContent=r.status === "blocked" ? "Desbloquear" : "Bloquear";
+      status.addEventListener("click",()=>setOwnerRestaurantStatus(r, r.status === "blocked" ? "active" : "blocked"));
+      wrap.append(detail,edit,status); actions.appendChild(wrap); tr.appendChild(actions); body.appendChild(tr);
+    });
+  }
+  function renderOwnerActivity(rows) {
+    const root = document.getElementById("ownerActivityList");
+    if (!root) return;
+    root.replaceChildren();
+    if (!rows.length) { root.textContent = "Nenhuma atividade administrativa registrada."; return; }
+    rows.forEach(row => {
+      const line=document.createElement("div"); line.className="owner-activity-row";
+      const action=document.createElement("span"); action.textContent=String(row.action || "Atividade").replaceAll("_"," ");
+      const date=document.createElement("span"); date.textContent=row.created_at ? new Date(row.created_at).toLocaleString("pt-BR") : "";
+      line.append(action,date); root.appendChild(line);
+    });
+  }
+  function resetOwnerRestaurantForm() {
+    document.getElementById("ownerRestaurantForm").reset();
+    document.getElementById("ownerRestaurantId").value="";
+    document.getElementById("ownerFormTitle").textContent="Cadastrar restaurante";
+    document.getElementById("ownerOrganizationSelect").disabled=false;
+    document.getElementById("ownerRestaurantFormSection").hidden=true;
+  }
+  function editOwnerRestaurant(r) {
+    const section=document.getElementById("ownerRestaurantFormSection"); section.hidden=false;
+    document.getElementById("ownerFormTitle").textContent="Editar restaurante";
+    document.getElementById("ownerRestaurantId").value=r.id;
+    document.getElementById("ownerOrganizationSelect").value=r.organization_id;
+    document.getElementById("ownerOrganizationName").value=r.organization_name || "";
+    document.getElementById("ownerRestaurantName").value=r.name || "";
+    window.scrollTo(0,0);
+  }
+  async function setOwnerRestaurantStatus(r, status) {
+    const verb=status === "blocked" ? "bloquear" : "desbloquear";
+    if (!confirm("Confirma " + verb + " o acesso de " + r.name + "?")) return;
+    try {
+      const {error}=await supabaseClient.rpc("platform_owner_set_restaurant_status",{p_restaurant_id:r.id,p_status:status});
+      if(error) throw error;
+      await loadOwnerCenter();
+    } catch(error) { ownerStatus("Não foi possível alterar o status: " + friendlyError(error),"negative"); }
+  }
+  async function loadOwnerRestaurantDetail(r) {
+    const section=document.getElementById("ownerRestaurantDetail"); section.hidden=false;
+    document.getElementById("ownerDetailTitle").textContent=r.name;
+    document.getElementById("ownerDetailSubtitle").textContent=r.organization_name + " · " + (r.status === "blocked" ? "Bloqueado" : "Ativo");
+    const body=document.getElementById("ownerUsersBody"); body.replaceChildren();
+    const activities=document.getElementById("ownerActivityList"); activities.textContent="Carregando…";
+    try {
+      const [usersRes, summaryRes]=await Promise.all([
+        supabaseClient.rpc("platform_owner_restaurant_users",{p_restaurant_id:r.id}),
+        supabaseClient.rpc("platform_owner_restaurant_summary",{p_restaurant_id:r.id})
+      ]);
+      if(usersRes.error) throw usersRes.error;
+      if(summaryRes.error) throw summaryRes.error;
+      const users=usersRes.data || [];
+      if(!users.length) { const tr=document.createElement("tr"),td=document.createElement("td"); td.colSpan=3; td.textContent="Nenhum usuário vinculado."; tr.appendChild(td); body.appendChild(tr); }
+      users.forEach(user=>{ const tr=document.createElement("tr"); [user.email,user.display_name,user.role].forEach(value=>{const td=document.createElement("td");td.textContent=value || "—";tr.appendChild(td);});body.appendChild(tr); });
+      renderOwnerActivity(summaryRes.data?.activity || []);
+    } catch(error) { activities.textContent="Não foi possível consultar os dados da unidade: " + friendlyError(error); }
+    window.scrollTo(0,section.offsetTop);
+  }
+  document.getElementById("ownerRefreshBtn").addEventListener("click",loadOwnerCenter);
+  document.getElementById("ownerNewRestaurantBtn").addEventListener("click",()=>{
+    resetOwnerRestaurantForm(); document.getElementById("ownerRestaurantFormSection").hidden=false;
+    document.getElementById("ownerOrganizationSelect").disabled=false; window.scrollTo(0,document.getElementById("ownerRestaurantFormSection").offsetTop);
+  });
+  document.getElementById("ownerCancelRestaurantBtn").addEventListener("click",resetOwnerRestaurantForm);
+  document.getElementById("ownerCloseDetailBtn").addEventListener("click",()=>document.getElementById("ownerRestaurantDetail").hidden=true);
+  document.getElementById("ownerRestaurantForm").addEventListener("submit",async event=>{
+    event.preventDefault(); if(!isPlatformOwner) return;
+    const restaurantId=document.getElementById("ownerRestaurantId").value || null;
+    const organizationId=document.getElementById("ownerOrganizationSelect").value || null;
+    const organizationName=document.getElementById("ownerOrganizationName").value.trim();
+    const restaurantName=document.getElementById("ownerRestaurantName").value.trim();
+    const button=document.getElementById("ownerSaveRestaurantBtn"); button.disabled=true;
+    try {
+      const {error}=await supabaseClient.rpc("platform_owner_save_restaurant",{
+        p_restaurant_id:restaurantId,p_organization_id:organizationId,
+        p_organization_name:organizationName,p_restaurant_name:restaurantName
+      });
+      if(error) throw error;
+      resetOwnerRestaurantForm(); ownerStatus("Restaurante salvo.","positive"); await loadOwnerCenter();
+    } catch(error) { ownerStatus("Não foi possível salvar: " + friendlyError(error),"negative"); }
+    finally { button.disabled=false; }
+  });
   document.querySelectorAll("#sideNav [data-nav]").forEach(a => {
     a.addEventListener("click", e => {
       e.preventDefault();
@@ -1779,6 +2000,8 @@
     currentUser = null;
     currentUserId = null;
     currentEmail = "";
+    isPlatformOwner = false;
+    document.getElementById("ownerNavLink").hidden = true;
     dataReady = false;
     movements = [];
     balanceIndex = null;
@@ -1821,6 +2044,7 @@
     loginPass2.value = "";
     setMsg(loginError, "");
     renderAccount();
+    await resolvePlatformOwnerAccess();
     showScreen("home");
 
     await syncFromCloud();
