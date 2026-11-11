@@ -1487,6 +1487,13 @@
 
   function friendlyError(error) {
     const msg = String((error && error.message) || error || "").toLowerCase();
+    if ((msg.includes("spreadsheet_checklists") || msg.includes("spreadsheet checklists")) &&
+        (msg.includes("does not exist") || msg.includes("schema cache") || msg.includes("pgrst205"))) {
+      return "A tabela dos quatro checklists ainda não está no Supabase. Execute supabase_planilha_checklists.sql no SQL Editor e recarregue o app.";
+    }
+    if (msg.includes("row-level security") && msg.includes("spreadsheet_checklists")) {
+      return "O Supabase bloqueou o checklist. Execute/atualize supabase_planilha_checklists.sql para instalar as políticas RLS.";
+    }
     if (msg.includes("row-level security") && msg.includes("oil_checks")) return "O Supabase bloqueou a gravação do Controle de Qualidade do Óleo. Execute o arquivo supabase_oleo.sql no SQL Editor do projeto Supabase e tente novamente.";
     if (msg.includes("invalid login credentials")) return "E-mail ou senha incorretos.";
     if (msg.includes("email not confirmed")) return "Confirme seu e-mail (link enviado na criação da conta) antes de entrar.";
@@ -4112,6 +4119,7 @@
     table.appendChild(body); tableWrap.appendChild(table);
     const actions = document.createElement("div"); actions.className = "actions"; actions.style.marginTop = "12px";
     const save = document.createElement("button"); save.type = "button"; save.textContent = "Salvar checklist no Supabase";
+    const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn-edit"; pdf.textContent = "Gerar PDF";
     const status = document.createElement("div"); status.className = "sim"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
     const ownerHistory = document.createElement("section"); ownerHistory.className = "section"; ownerHistory.hidden = !isSpreadsheetOwner; ownerHistory.style.marginTop = "22px";
     const ownerHeading = document.createElement("h3"); ownerHeading.textContent = "Respostas de todos os usuários";
@@ -4246,6 +4254,27 @@
       }
     }
     dateInput.addEventListener("change", loadFromSupabase);
+    pdf.addEventListener("click", () => {
+      const JsPDF = window.jspdf && window.jspdf.jsPDF;
+      if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
+      const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+      if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo."); return; }
+      const date = dateInput.value || today;
+      doc.setFontSize(16); doc.text(config.title, 40, 44);
+      doc.setFontSize(10);
+      doc.text("Data: " + new Date(date + "T00:00:00").toLocaleDateString("pt-BR"), 40, 64);
+      doc.text("Responsável: " + (responsible.value.trim() || "—"), 40, 80);
+      doc.autoTable({
+        startY: 96,
+        head: [["Item", "Resposta"]],
+        body: config.items.map((item, i) => [item, rows[i].value || "Não preenchido"]),
+        theme: "grid",
+        styles: { fontSize: 9, cellPadding: 5 },
+        headStyles: { fillColor: [38, 42, 48], textColor: [240, 241, 243] },
+        margin: { left: 40, right: 40 }
+      });
+      doc.save("operatto_checklist_" + name + "_" + date + ".pdf");
+    });
     save.addEventListener("click", async () => {
       if (!currentUserId) { status.textContent = "Entre na sua conta para salvar no Supabase."; status.className = "sim negative"; return; }
       if (!dateInput.value) { status.textContent = "Informe a data do checklist."; status.className = "sim warning"; return; }
@@ -4265,7 +4294,7 @@
         status.className = "sim negative";
       } finally { save.disabled = false; }
     });
-    actions.appendChild(save); root.append(fields, tableWrap, actions, status, ownerHistory);
+    actions.append(save, pdf); root.append(fields, tableWrap, actions, status, ownerHistory);
     await loadFromSupabase();
     await loadOwnerChecklistHistory();
   }
