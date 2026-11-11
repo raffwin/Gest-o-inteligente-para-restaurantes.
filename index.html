@@ -1,3 +1,85 @@
+-- Leitura operacional global, somente para contas cadastradas como proprietárias.
+-- Execute no SQL Editor do Supabase depois de revisar a lista de tabelas.
+-- O resultado é paginado pela API; cada chamada recebe apenas uma tabela.
+
+create or replace function public.platform_owner_operational_rows(p_table text)
+returns table(row_data jsonb)
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog, public, auth
+as $function$
+declare
+  allowed_tables constant text[] := array[
+    'products',
+    'movements',
+    'settings',
+    'equipment',
+    'temperature_readings',
+    'equipment_temperature_monthly',
+    'cleaning_checklists',
+    'cleaning_monthly_responsibles',
+    'spreadsheet_checklists',
+    'cooking_records',
+    'cooking_days',
+    'oil_checks',
+    'grease_trap_cleanings',
+    'sauce_count_sessions',
+    'stock_quote_sessions'
+  ];
+begin
+  if auth.uid() is null
+     or lower(coalesce(auth.jwt() ->> 'email', '')) <> 'rafaelromulo322@gmail.com'
+     or not coalesce(public.platform_is_owner(), false) then
+    raise exception 'not authorized' using errcode = '42501';
+  end if;
+
+  if not (p_table = any(allowed_tables)) then
+    raise exception 'table not allowed' using errcode = '22023';
+  end if;
+
+  if to_regclass(format('public.%I', p_table)) is null then
+    return;
+  end if;
+
+  return query execute format(
+    'select to_jsonb(t) from public.%I as t order by to_jsonb(t)::text',
+    p_table
+  );
+end;
+$function$;
+
+revoke all on function public.platform_owner_operational_rows(text) from public;
+revoke all on function public.platform_owner_operational_rows(text) from anon;
+grant execute on function public.platform_owner_operational_rows(text) to authenticated;
+
+-- Lista todas as contas do Supabase para a aba de usuários do proprietário.
+create or replace function public.platform_owner_list_users()
+returns table(
+  user_id uuid,
+  email text,
+  display_name text,
+  created_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = pg_catalog, public, auth
+as $function$
+  select
+    u.id,
+    u.email,
+    coalesce(u.raw_user_meta_data ->> 'name', u.raw_user_meta_data ->> 'full_name', ''),
+    u.created_at
+  from auth.users as u
+  where lower(coalesce(auth.jwt() ->> 'email', '')) = 'rafaelromulo322@gmail.com'
+    and coalesce(public.platform_is_owner(), false)
+  order by u.created_at desc;
+$function$;
+
+revoke all on function public.platform_owner_list_users() from public;
+revoke all on function public.platform_owner_list_users() from anon;
+grant execute on function public.platform_owner_list_users() to authenticated;
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1271,13 +1353,17 @@
       <div class="card"><div class="card-label">Ativos</div><div class="card-value" id="ownerActiveRestaurants">—</div><div class="card-detail">Unidades habilitadas</div></div>
       <div class="card"><div class="card-label">Bloqueados</div><div class="card-value" id="ownerBlockedRestaurants">—</div><div class="card-detail">Acesso operacional suspenso</div></div>
     </div>
-    <section class="section owner-section">
+    <div class="tabs" id="ownerTabs" role="tablist" aria-label="Seções da Central do Proprietário">
+      <button type="button" class="tab active" data-owner-tab="restaurants" role="tab" aria-selected="true">Restaurantes</button>
+      <button type="button" class="tab" data-owner-tab="users" role="tab" aria-selected="false">Usuários</button>
+    </div>
+    <section class="section owner-section" data-owner-panel="restaurants">
       <div class="owner-section-head"><div><h3>Restaurantes</h3><p>Cadastre unidades e consulte seus usuários.</p></div><button type="button" id="ownerNewRestaurantBtn">Novo restaurante</button></div>
       <div class="table-wrap"><table class="dash-table"><thead><tr><th>Organização</th><th>Restaurante</th><th>Status</th><th>Usuários</th><th>Ações</th></tr></thead><tbody id="ownerRestaurantsBody"><tr><td colspan="5">Carregando…</td></tr></tbody></table></div>
     </section>
-    <section class="section owner-section"><h3>Atividade administrativa recente</h3><div id="ownerNetworkActivityList" class="owner-activity" style="margin-top:10px"></div></section>
+    <section class="section owner-section" data-owner-panel="restaurants"><h3>Atividade administrativa recente</h3><div id="ownerNetworkActivityList" class="owner-activity" style="margin-top:10px"></div></section>
     <section class="section owner-section"><h3>Acompanhamento operacional de todas as contas</h3><p class="hint">Dados consolidados para consulta e geração de relatórios.</p><div id="ownerOperationalStatus" class="hint"></div><div id="ownerOperationalCounts" class="owner-activity" style="margin-top:10px"></div></section>
-    <section class="section owner-section" id="ownerRestaurantFormSection" hidden>
+    <section class="section owner-section" id="ownerRestaurantFormSection" data-owner-panel="restaurants" hidden>
       <h3 id="ownerFormTitle">Cadastrar restaurante</h3>
       <form id="ownerRestaurantForm" class="owner-form">
         <input type="hidden" id="ownerRestaurantId">
@@ -1287,7 +1373,7 @@
         <div class="owner-form-actions"><button type="submit" id="ownerSaveRestaurantBtn">Salvar restaurante</button><button type="button" class="btn-edit" id="ownerCancelRestaurantBtn">Cancelar</button></div>
       </form>
     </section>
-    <section class="section owner-section" id="ownerRestaurantDetail" hidden>
+    <section class="section owner-section" id="ownerRestaurantDetail" data-owner-panel="restaurants" hidden>
       <div class="owner-section-head"><div><h3 id="ownerDetailTitle">Restaurante</h3><p id="ownerDetailSubtitle"></p></div><button type="button" class="btn-edit" id="ownerCloseDetailBtn">Fechar</button></div>
       <h4>Usuários vinculados</h4>
       <form id="ownerAddUserForm" class="owner-form" style="margin:10px 0 16px">
@@ -1299,6 +1385,18 @@
       <div class="table-wrap"><table class="dash-table"><thead><tr><th>E-mail</th><th>Nome</th><th>Função</th><th>Ação</th></tr></thead><tbody id="ownerUsersBody"></tbody></table></div>
       <h4 style="margin-top:18px">Atividade administrativa</h4>
       <div id="ownerActivityList" class="owner-activity"></div>
+    </section>
+    <section class="section owner-section" id="ownerAllUsersPanel" data-owner-panel="users" hidden>
+      <div class="owner-section-head"><div><h3>Usuários da plataforma</h3><p>Contas cadastradas e unidades às quais têm acesso.</p></div><button type="button" class="btn-edit" id="ownerRefreshUsersBtn">Atualizar usuários</button></div>
+      <div class="hint" style="margin:10px 0">Vincular adiciona uma conta já cadastrada a um restaurante. Remover acesso desfaz o vínculo com aquela unidade e preserva a conta e os dados.</div>
+      <form id="ownerGlobalAddUserForm" class="owner-form">
+        <div><label for="ownerGlobalUserEmail">E-mail da conta cadastrada</label><input id="ownerGlobalUserEmail" type="email" required autocomplete="off" placeholder="usuario@empresa.com"></div>
+        <div><label for="ownerGlobalUserRestaurant">Restaurante</label><select id="ownerGlobalUserRestaurant" required></select></div>
+        <div><label for="ownerGlobalUserRole">Função na unidade</label><select id="ownerGlobalUserRole"><option value="EMPLOYEE">Funcionário</option><option value="MANAGER">Gerente</option><option value="RESTAURANT_ADMIN">Administrador do restaurante</option></select></div>
+        <div class="owner-form-actions"><button type="submit" id="ownerGlobalAddUserBtn">Vincular usuário</button></div>
+      </form>
+      <div class="sim" id="ownerGlobalUsersStatus" role="status" aria-live="polite"></div>
+      <div class="table-wrap"><table class="dash-table"><thead><tr><th>E-mail</th><th>Nome</th><th>Restaurante</th><th>Função</th><th>Ação</th></tr></thead><tbody id="ownerAllUsersBody"><tr><td colspan="5">Carregando…</td></tr></tbody></table></div>
     </section>
   </div>
 </main>
@@ -1489,6 +1587,7 @@
   function friendlyError(error) {
     const msg = String((error && error.message) || error || "").toLowerCase();
     if (msg.includes("platform_owner_operational_rows")) return "A consulta global do proprietário ainda não foi instalada. Execute supabase_platform_owner_operational_data.sql no SQL Editor do Supabase.";
+    if (msg.includes("platform_owner_list_users")) return "A lista global de usuários ainda não foi instalada. Execute novamente supabase_platform_owner_operational_data.sql no SQL Editor do Supabase.";
     if ((msg.includes("spreadsheet_checklists") || msg.includes("spreadsheet checklists")) &&
         (msg.includes("does not exist") || msg.includes("schema cache") || msg.includes("pgrst205"))) {
       return "A tabela dos quatro checklists ainda não está no Supabase. Execute supabase_planilha_checklists.sql no SQL Editor e recarregue o app.";
@@ -1844,6 +1943,8 @@
 
   let ownerRestaurants = [];
   let ownerSelectedRestaurant = null;
+  let ownerAllUsers = [];
+  let ownerUserMemberships = [];
   function ownerStatus(message, kind) {
     const el = document.getElementById("ownerStatus");
     if (!el) return;
@@ -1873,6 +1974,82 @@
       const right = document.createElement("span"); right.textContent = users.size + " usuário(s)";
       line.append(left, right); list.appendChild(line);
     });
+  }
+  function setOwnerTab(name) {
+    document.querySelectorAll("#ownerTabs [data-owner-tab]").forEach(button => {
+      const active = button.dataset.ownerTab === name;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    document.querySelectorAll("[data-owner-panel]").forEach(panel => {
+      panel.hidden = panel.dataset.ownerPanel !== name;
+    });
+    if (name === "users") loadOwnerUsers();
+  }
+  function renderOwnerUsers() {
+    const body = document.getElementById("ownerAllUsersBody");
+    const select = document.getElementById("ownerGlobalUserRestaurant");
+    if (!body || !select) return;
+    select.replaceChildren(new Option("Selecione um restaurante", ""));
+    ownerRestaurants.forEach(r => select.add(new Option(r.name, r.id)));
+    body.replaceChildren();
+    if (!ownerAllUsers.length) {
+      const tr = document.createElement("tr"), td = document.createElement("td");
+      td.colSpan = 5; td.textContent = "Nenhuma conta cadastrada."; tr.appendChild(td); body.appendChild(tr); return;
+    }
+    ownerAllUsers.forEach(user => {
+      const memberships = ownerUserMemberships.filter(m => m.user_id === user.user_id);
+      const rows = memberships.length ? memberships : [null];
+      rows.forEach(membership => {
+        const tr = document.createElement("tr");
+        [user.email || "—", user.display_name || "—", membership ? membership.restaurant_name : "Sem vínculo", membership ? membership.role : "—"]
+          .forEach(value => { const td = document.createElement("td"); td.textContent = value; tr.appendChild(td); });
+        const action = document.createElement("td");
+        if (membership) {
+          const remove = document.createElement("button"); remove.type = "button"; remove.className = "btn-remove"; remove.textContent = "Remover acesso";
+          remove.addEventListener("click", () => removeGlobalUserAccess(user, membership)); action.appendChild(remove);
+        } else action.textContent = "—";
+        tr.appendChild(action); body.appendChild(tr);
+      });
+    });
+  }
+  async function loadOwnerUsers() {
+    if (!isPlatformOwner) return;
+    const status = document.getElementById("ownerGlobalUsersStatus");
+    const body = document.getElementById("ownerAllUsersBody");
+    if (status) status.textContent = "Carregando usuários e vínculos…";
+    if (body) body.replaceChildren();
+    try {
+      const [accountsRes, ...membershipResults] = await Promise.all([
+        supabaseClient.rpc("platform_owner_list_users"),
+        ...ownerRestaurants.map(restaurant => supabaseClient.rpc("platform_owner_restaurant_users", { p_restaurant_id: restaurant.id }))
+      ]);
+      if (accountsRes.error) throw accountsRes.error;
+      membershipResults.forEach(result => { if (result.error) throw result.error; });
+      ownerAllUsers = accountsRes.data || [];
+      ownerUserMemberships = membershipResults.flatMap((result, index) =>
+        (result.data || []).map(user => ({ ...user, restaurant_id: ownerRestaurants[index].id, restaurant_name: ownerRestaurants[index].name }))
+      );
+      renderOwnerUsers();
+      if (status) status.textContent = ownerAllUsers.length + " conta(s) encontrada(s).";
+    } catch (error) {
+      ownerAllUsers = []; ownerUserMemberships = [];
+      if (status) status.textContent = "Não foi possível carregar usuários: " + friendlyError(error);
+      if (body) { const tr=document.createElement("tr"), td=document.createElement("td"); td.colSpan=5; td.textContent="Falha ao carregar usuários."; tr.appendChild(td); body.appendChild(tr); }
+    }
+  }
+  async function removeGlobalUserAccess(user, membership) {
+    if (!isPlatformOwner) return;
+    const message = "Remover " + (user.email || "este usuário") + " de " + membership.restaurant_name + "? A conta e os registros serão preservados.";
+    if (!confirm(message)) return;
+    try {
+      const { error } = await supabaseClient.rpc("platform_owner_remove_restaurant_user", {
+        p_restaurant_id: membership.restaurant_id, p_user_id: user.user_id
+      });
+      if (error) throw error;
+      ownerStatus("Acesso removido de " + membership.restaurant_name + ". A conta foi preservada.", "positive");
+      await loadOwnerCenter();
+    } catch (error) { ownerStatus("Não foi possível remover o acesso: " + friendlyError(error), "negative"); }
   }
   async function resolvePlatformOwnerAccess() {
     isPlatformOwner = false;
@@ -1909,6 +2086,7 @@
       renderOwnerRestaurants();
       renderOwnerActivity(overview.recent_activity || [], "ownerNetworkActivityList");
       renderOwnerOperationalSummary();
+      await loadOwnerUsers();
       ownerStatus("Dados atualizados pelo Supabase.", "positive");
     } catch (error) {
       ownerStatus("Não foi possível carregar a Central: " + friendlyError(error), "negative");
@@ -2035,7 +2213,35 @@
     } catch(error) { ownerStatus("Não foi possível vincular: " + friendlyError(error),"negative"); }
     finally { button.disabled=false; }
   });
-  document.getElementById("ownerRefreshBtn").addEventListener("click",loadOwnerCenter);
+  document.getElementById("ownerRefreshBtn").addEventListener("click",async()=>{
+    await syncFromCloud();
+    await loadOwnerCenter();
+  });
+  document.querySelectorAll("#ownerTabs [data-owner-tab]").forEach(button => {
+    button.addEventListener("click", () => setOwnerTab(button.dataset.ownerTab));
+  });
+  document.getElementById("ownerRefreshUsersBtn").addEventListener("click", loadOwnerUsers);
+  document.getElementById("ownerGlobalAddUserForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!isPlatformOwner) return;
+    const email = document.getElementById("ownerGlobalUserEmail").value.trim();
+    const restaurantId = document.getElementById("ownerGlobalUserRestaurant").value;
+    const role = document.getElementById("ownerGlobalUserRole").value;
+    const button = document.getElementById("ownerGlobalAddUserBtn");
+    button.disabled = true;
+    try {
+      const { error } = await supabaseClient.rpc("platform_owner_add_restaurant_user", {
+        p_restaurant_id: restaurantId, p_email: email, p_role: role
+      });
+      if (error) throw error;
+      event.currentTarget.reset();
+      ownerStatus("Usuário vinculado ao restaurante.", "positive");
+      await loadOwnerCenter();
+      setOwnerTab("users");
+    } catch (error) {
+      document.getElementById("ownerGlobalUsersStatus").textContent = "Não foi possível vincular o usuário: " + friendlyError(error);
+    } finally { button.disabled = false; }
+  });
   document.getElementById("ownerNewRestaurantBtn").addEventListener("click",()=>{
     resetOwnerRestaurantForm(); document.getElementById("ownerRestaurantFormSection").hidden=false;
     document.getElementById("ownerOrganizationSelect").disabled=false; window.scrollTo(0,document.getElementById("ownerRestaurantFormSection").offsetTop);
