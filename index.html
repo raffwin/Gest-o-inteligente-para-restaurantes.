@@ -1394,6 +1394,7 @@
 
   function friendlyError(error) {
     const msg = String((error && error.message) || error || "").toLowerCase();
+    if (msg.includes("row-level security") && msg.includes("oil_checks")) return "O Supabase bloqueou a gravação do Controle de Qualidade do Óleo. Execute o arquivo supabase_oleo.sql no SQL Editor do projeto Supabase e tente novamente.";
     if (msg.includes("invalid login credentials")) return "E-mail ou senha incorretos.";
     if (msg.includes("email not confirmed")) return "Confirme seu e-mail (link enviado na criação da conta) antes de entrar.";
     if (msg.includes("already registered") || msg.includes("already been registered")) return "Esse e-mail já tem conta. Use \"Entrar\".";
@@ -6477,10 +6478,8 @@ function sauceGeneratePdf(record) {
     columnStyles: { 0: { cellWidth: 48, halign: "center" }, 1: { cellWidth: "auto", fontStyle: "bold" }, 2: { cellWidth: 68, halign: "center" }, 3: { cellWidth: 68, halign: "center" }, 4: { cellWidth: 68, halign: "center" } }
   });
   const fileDate = String(date || localStamp()).replace(/[^0-9-]/g, "");
-  const url = URL.createObjectURL(doc.output("blob"));
-  const preview = window.open(url, "_blank");
-  if (!preview) doc.save("operatto_contagem_molhos_" + fileDate + ".pdf");
-  else setTimeout(() => URL.revokeObjectURL(url), 60000);
+  // Salva o PDF pelo fluxo de download do navegador, para ficar nos arquivos do dispositivo.
+  doc.save("operatto_contagem_molhos_" + fileDate + ".pdf");
 }
 
 sauceEl("sauceDate").addEventListener("change", async event => {
@@ -6506,13 +6505,14 @@ sauceEl("saucePdfBtn").addEventListener("click", () => sauceGeneratePdf(null));
 </script>
 
 <script>
-/* Contagem complementar baseada na planilha CMV Setembro 2026.
-   Molhos permanece no módulo existente, sem alteração. */
+/* Cotação baseada no arquivo de cotação do repositório.
+   A lista de molhos deste formulário é independente do controle de molhos por código. */
 const SHEET_STOCK = {
   "Produtos": ["Açucar Sachê 400 unid","Açucar Cristal 5 kg","Aceto Balsanico 250ML","Adoçante Sachê","Alcaparras Balde kg","Arroz 5 Kg","Azeite de Dende","Azeite 250 ml","Azeite de 5 litros","Batata Palito","Catchup sache","Canudo Bio 6mm","Champignon","Cobertura de Chocolate","Copo descartável 500 ml","Copo descartável 300ml","Farinha de Mandioca","Farinha de Trigo","farinha panko","Guardanapo","Leite de Coco","Leite Integral","Maionese","Manteiga Paracatu","Margarina Balde 15 kg","Mostarda Cepera","Mexedor de café","Palito de Dente","Papel Toalha Quick","Sal","Sal Sachê kg","Talher Descartável","Colher Descartável","Pimenta Mendes","Óleo de Algodão","Óleo","Vinho Branco Seco","Café","Molho de tomate","Feijão","Macarrão"],
   "Embalagens": ["Bobina termica 80x40","Saco p/ Talher 500 unid","Saco Delivery Personalizado","Lacre delivery","Forro de Mesa","Emb. Pote Molho (0,002)","Emb.3 Divi. D 118 (0,026)","Emb. Moqueca K151 (0,020)","Emb. Guarnições K49 (0,010)","Emb.3 G.330","Emb.Isopor Rasa","Molho de Isopor","Emb. pote retangular 350 ml","Garrafa para Suco G"],
   "Pescados e Carnes": ["Camarão Cinza 41,50","File de Tilápia","File de Tilápia","File de Tilápia","File de pescada amarela","Pescada amarela em posta","Salmão","File Mignon","File de Peito de Frango","Carne funcionário"],
   "Temperos diversos": ["Pimenta Reino (500g)","Gergelim Branco","Gergelim Preto","Mussarela Pedaço","Mussarela Fatiada","Massa Pastel","Castanha Xéren (KG)"],
+  "Molhos": ["Molho Cremoso","Molho Camarão","Molho Gorgonzola","Molho Limão","Molho Maracuja","Estrogonofe Frango","Moqueca Cajú","Moqueca Capixaba","Moqueca Pescada","Molho Moquequinha","Pirão","Prom.","Prom.","Purê de Abóbora","Purê de Banana","Purê de Maçã","Req. Banana","Shitake","Parmegiana","Farinha de Pão Na Unidade","Mistura Crocante Pct. c/5","Teriyaki","Torradas Pacote","Calda de Maracujá","Geleia de Pimenta"],
   "Petiscos": ["Bolinho Bacalhau Unidade","Quibe (25 uni.)","Bolinho de Tilápia Unidade","Pastel de Camarão Meia","Bolinho de Carne Seca","Pastel de Tilápia Meia","Caldo de Bobó de Camarão","Tarrafa Porcionada","Caldo de Tilápia Unidade","Pastel Trio Meia","Camarão Empanado","Pastel Queijo Meia"],
   "Sobremesas": ["Pudim Tradicional","Fruta Morango","Petit Gateau","Fruta Acerola","Sorvete Creme","Polpa de Maracujá Un.","Café (Cápsulas)","Polpa de Abacaxi","Sorvete Queijo","Calda de Maracujá","Goiabada Cascão"],
   "Hortifruti": ["Hortelã","Cebola","Gengibre","Ovo","Limão kgs","Batata inglesa","Laranja","Tomate","Morango","Alho com Casca","Banana Prata","Repolho unid","Abobrinha","Brocolis Comum","Chuchu","Cenoura","Pepino Japonês","Salsinha","Rúcula","Alface Americana","Alface Roxa","Alface Crespa","Tomate Cereja","Vagem Americana","Brocolis Japones","Couve Flor","Berinjela","Batata Doce","Mandioca","Jiló","Pimentão Verde","Quiabo","Beterraba","Abobora Japonesa"],
@@ -6520,11 +6520,12 @@ const SHEET_STOCK = {
   "Vinhos": ["1913 Prosecco","1913 Sparkling Brut Rose","1913 Prosecco 187 ml","Casal da Seara Vinho Branco","Vulcanici Pinot Grigio","Bellavista Chardonnay","4 Estaciones Summer Torrontés","Bellavista Rosé","Chaka Sysah V. Vale Central","Donoso Suave Cab. Sauvignon","C. Del Maipo Cab. Sauvignon","Bellavista Carménère","Jean Bousquet Malbec","Malacara Bornarda","4 Estaciones Malbec P. Autumn","La Vid blend tinto","4 Estaciones Spring Rosé","Vasco Viejo B. Meia Branco","Esperança Tinto","Vasco Viejo B. Meia Tinto","Vila Ruiva","Bellavista Cab.Sauvignon","Vulcanici Mont. Abruzzo","Vulcanici Sangiovese Puglia"],
   "Brago": ["Papel toalha cliente","Papel higiênico cliente","Sabonete cliente com cheiro","Sabonete bactericida","Álcool 70 salão Spray","Papel Toalha Produção","Wiper Branco"],
   "Limpeza": ["Agua Sanitaria","Fita Durex Larga","Álcool 70","Perfex","Desinfetante","Detergente","Limpa coifa","Master grill","Sapólio cremoso","Esponja","Fibraco","Filme PVC","Isqueiro","Luva amarela","Luva verde","Luva vinil","Máscara descartável","Caneta Permanente","Bloco rascunho branco","Touca descartável","Saco lixo 100 lts Azul","Saco lixo 60 lts Preto","Saco t. 35/45","Etiqueta P. Manipulado","Saco bobina 20/30","Saco bobina 40/60","Bobina Açougue 40 cm","Bobina 35X50","Bucha de aço","Veja Multiuso","Pano de chão","Papel higiênico funcionário"],
-  "Bacio Di Latte": ["Bombom de Sorvete Bacio","Bombom de Pistacchio","Cone Ciocchino Pistacchio","Picole Gianduia com Cobertura","Picole Doce de Leite","Picole Cioccolato Belga","Picole Pistacchio","Picole Baccio com Cobertura","Picole Caramelo Salgado","Picole fragola"]
+  "Bacio Di Latte": ["Bombom de Sorvete Bacio","Bombom de Pistacchio","Cone Ciocchino Pistacchio","Picole Gianduia com Cobertura","Picole Doce de Leite","Picole Cioccolato Belga","Picole Pistacchio","Picole Caramelo Salgado","Picole fragola"]
 };
 const SHEET_SUPPLIERS = {
   "Produtos": ["D.B", "N.A", "GAR"],
-  "Pescados e Carnes": ["Grelhado", "Belle", "Moqueca"]
+  "Pescados e Carnes": ["Grelhado", "Belle", "Moqueca"],
+  "Bebidas": ["Faccol", "Coca", "Ambev", "Mercado"]
 };
 let sheetStockCategory = "";
 let sheetStockValues = {};
@@ -6975,12 +6976,8 @@ async function quoteLoad(date, req) {
   status.textContent = "Carregando contagens salvas...";
   area.replaceChildren();
   try {
-    const [stockRes, sauceRes] = await Promise.all([
-      supabaseClient.from("stock_quote_sessions").select("*").eq("user_id", currentUserId).eq("count_date", date),
-      supabaseClient.from("sauce_count_sessions").select("*").eq("user_id", currentUserId).eq("count_date", date).order("created_at", { ascending: false }).limit(1)
-    ]);
+    const stockRes = await supabaseClient.from("stock_quote_sessions").select("*").eq("user_id", currentUserId).eq("count_date", date);
     if (stockRes.error) throw stockRes.error;
-    if (sauceRes.error) throw sauceRes.error;
     if (req !== quoteDashReq) return;
     const sessions = {};
     (stockRes.data || []).forEach(s => { sessions[s.category] = s; });
@@ -6998,20 +6995,11 @@ async function quoteLoad(date, req) {
       });
       groups.push({ category, suppliers: SHEET_SUPPLIERS[category] || [], items, complete: !!session && items.every(i => i.stock !== null && i.stock !== undefined && i.stock !== "") });
     });
-    const sauceSession = (sauceRes.data || [])[0] || null;
-    const sauceByRow = new Map(((sauceSession && sauceSession.items) || []).map(i => [Number(i.source_row), i]));
-    const sauceItems = SAUCE_CATALOG.map(p => {
-      const stored = sauceByRow.get(p.row) || {};
-      total++;
-      if (stored.count_quantity !== null && stored.count_quantity !== undefined && stored.count_quantity !== "") filled++;
-      return { product: p.name.trim(), stock: stored.count_quantity, order: stored.order_quantity };
-    });
-    groups.splice(Math.min(4, groups.length), 0, { category: "Molhos", suppliers: [], items: sauceItems, complete: !!sauceSession && sauceItems.every(i => i.stock !== null && i.stock !== undefined && i.stock !== "") });
     const complete = groups.every(g => g.complete);
     quoteDashReport = { date, groups, complete };
     status.textContent = complete
       ? "Contagem completa: " + filled + " de " + total + " produtos. A cotação está pronta para gerar."
-      : "Contagem: " + filled + " de " + total + " produtos. Salve as contagens de todos os subgrupos, incluindo Molhos, para liberar o PDF completo.";
+      : "Contagem: " + filled + " de " + total + " produtos. Salve as contagens de todos os grupos da cotação para liberar o PDF completo.";
     groups.forEach(group => {
       const section = document.createElement("section"); section.className = "section";
       const heading = document.createElement("h2"); heading.textContent = quoteCategoryTitle(group.category) + " — " + group.items.length + " produtos";
