@@ -1,4 +1,4 @@
-]<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -1275,6 +1275,7 @@
       <div class="owner-section-head"><div><h3>Restaurantes</h3><p>Cadastre unidades e consulte seus usuários.</p></div><button type="button" id="ownerNewRestaurantBtn">Novo restaurante</button></div>
       <div class="table-wrap"><table class="dash-table"><thead><tr><th>Organização</th><th>Restaurante</th><th>Status</th><th>Usuários</th><th>Ações</th></tr></thead><tbody id="ownerRestaurantsBody"><tr><td colspan="5">Carregando…</td></tr></tbody></table></div>
     </section>
+    <section class="section owner-section"><h3>Atividade administrativa recente</h3><div id="ownerNetworkActivityList" class="owner-activity" style="margin-top:10px"></div></section>
     <section class="section owner-section" id="ownerRestaurantFormSection" hidden>
       <h3 id="ownerFormTitle">Cadastrar restaurante</h3>
       <form id="ownerRestaurantForm" class="owner-form">
@@ -1288,7 +1289,13 @@
     <section class="section owner-section" id="ownerRestaurantDetail" hidden>
       <div class="owner-section-head"><div><h3 id="ownerDetailTitle">Restaurante</h3><p id="ownerDetailSubtitle"></p></div><button type="button" class="btn-edit" id="ownerCloseDetailBtn">Fechar</button></div>
       <h4>Usuários vinculados</h4>
-      <div class="table-wrap"><table class="dash-table"><thead><tr><th>E-mail</th><th>Nome</th><th>Função</th></tr></thead><tbody id="ownerUsersBody"></tbody></table></div>
+      <form id="ownerAddUserForm" class="owner-form" style="margin:10px 0 16px">
+        <div><label for="ownerUserEmail">E-mail da conta já cadastrada</label><input id="ownerUserEmail" type="email" required autocomplete="off" placeholder="usuario@empresa.com"></div>
+        <div><label for="ownerUserRole">Função na unidade</label><select id="ownerUserRole"><option value="EMPLOYEE">Funcionário</option><option value="MANAGER">Gerente</option><option value="RESTAURANT_ADMIN">Administrador do restaurante</option></select></div>
+        <div class="owner-form-actions"><button type="submit" id="ownerAddUserBtn">Vincular usuário</button></div>
+      </form>
+      <div class="hint" style="margin-bottom:10px">A conta precisa existir no Supabase Auth antes de ser vinculada. Remover tira o acesso desta unidade e preserva a conta.</div>
+      <div class="table-wrap"><table class="dash-table"><thead><tr><th>E-mail</th><th>Nome</th><th>Função</th><th>Ação</th></tr></thead><tbody id="ownerUsersBody"></tbody></table></div>
       <h4 style="margin-top:18px">Atividade administrativa</h4>
       <div id="ownerActivityList" class="owner-activity"></div>
       <div class="hint" style="margin-top:14px">A consulta aos módulos operacionais será habilitada após a etapa de associação dos registros existentes às unidades e revisão das políticas RLS.</div>
@@ -1770,6 +1777,7 @@
   }
 
   let ownerRestaurants = [];
+  let ownerSelectedRestaurant = null;
   function ownerStatus(message, kind) {
     const el = document.getElementById("ownerStatus");
     if (!el) return;
@@ -1809,7 +1817,7 @@
       document.getElementById("ownerActiveRestaurants").textContent = overview.active_restaurants ?? "0";
       document.getElementById("ownerBlockedRestaurants").textContent = overview.blocked_restaurants ?? "0";
       renderOwnerRestaurants();
-      renderOwnerActivity(overview.recent_activity || []);
+      renderOwnerActivity(overview.recent_activity || [], "ownerNetworkActivityList");
       ownerStatus("Dados atualizados pelo Supabase.", "positive");
     } catch (error) {
       ownerStatus("Não foi possível carregar a Central: " + friendlyError(error), "negative");
@@ -1843,8 +1851,8 @@
       wrap.append(detail,edit,status); actions.appendChild(wrap); tr.appendChild(actions); body.appendChild(tr);
     });
   }
-  function renderOwnerActivity(rows) {
-    const root = document.getElementById("ownerActivityList");
+  function renderOwnerActivity(rows, targetId) {
+    const root = document.getElementById(targetId || "ownerActivityList");
     if (!root) return;
     root.replaceChildren();
     if (!rows.length) { root.textContent = "Nenhuma atividade administrativa registrada."; return; }
@@ -1881,6 +1889,7 @@
     } catch(error) { ownerStatus("Não foi possível alterar o status: " + friendlyError(error),"negative"); }
   }
   async function loadOwnerRestaurantDetail(r) {
+    ownerSelectedRestaurant = r;
     const section=document.getElementById("ownerRestaurantDetail"); section.hidden=false;
     document.getElementById("ownerDetailTitle").textContent=r.name;
     document.getElementById("ownerDetailSubtitle").textContent=r.organization_name + " · " + (r.status === "blocked" ? "Bloqueado" : "Ativo");
@@ -1894,12 +1903,47 @@
       if(usersRes.error) throw usersRes.error;
       if(summaryRes.error) throw summaryRes.error;
       const users=usersRes.data || [];
-      if(!users.length) { const tr=document.createElement("tr"),td=document.createElement("td"); td.colSpan=3; td.textContent="Nenhum usuário vinculado."; tr.appendChild(td); body.appendChild(tr); }
-      users.forEach(user=>{ const tr=document.createElement("tr"); [user.email,user.display_name,user.role].forEach(value=>{const td=document.createElement("td");td.textContent=value || "—";tr.appendChild(td);});body.appendChild(tr); });
+      if(!users.length) { const tr=document.createElement("tr"),td=document.createElement("td"); td.colSpan=4; td.textContent="Nenhum usuário vinculado."; tr.appendChild(td); body.appendChild(tr); }
+      users.forEach(user=>{
+        const tr=document.createElement("tr");
+        [user.email,user.display_name,user.role].forEach(value=>{const td=document.createElement("td");td.textContent=value || "—";tr.appendChild(td);});
+        const actionCell=document.createElement("td"), remove=document.createElement("button"); remove.type="button"; remove.className="btn-remove"; remove.textContent="Remover acesso";
+        remove.addEventListener("click",()=>removeOwnerRestaurantUser(user)); actionCell.appendChild(remove); tr.appendChild(actionCell); body.appendChild(tr);
+      });
       renderOwnerActivity(summaryRes.data?.activity || []);
     } catch(error) { activities.textContent="Não foi possível consultar os dados da unidade: " + friendlyError(error); }
     window.scrollTo(0,section.offsetTop);
   }
+  async function removeOwnerRestaurantUser(user) {
+    if (!isPlatformOwner || !ownerSelectedRestaurant) return;
+    if (!confirm("Remover " + (user.email || "este usuário") + " desta unidade? A conta no Supabase será preservada.")) return;
+    try {
+      const {error}=await supabaseClient.rpc("platform_owner_remove_restaurant_user",{
+        p_restaurant_id:ownerSelectedRestaurant.id,p_user_id:user.user_id
+      });
+      if(error) throw error;
+      ownerStatus("Acesso removido desta unidade.","positive");
+      await loadOwnerCenter();
+      await loadOwnerRestaurantDetail(ownerSelectedRestaurant);
+    } catch(error) { ownerStatus("Não foi possível remover o acesso: " + friendlyError(error),"negative"); }
+  }
+  document.getElementById("ownerAddUserForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(!isPlatformOwner || !ownerSelectedRestaurant) return;
+    const email=document.getElementById("ownerUserEmail").value.trim();
+    const role=document.getElementById("ownerUserRole").value;
+    const button=document.getElementById("ownerAddUserBtn"); button.disabled=true;
+    try {
+      const {error}=await supabaseClient.rpc("platform_owner_add_restaurant_user",{
+        p_restaurant_id:ownerSelectedRestaurant.id,p_email:email,p_role:role
+      });
+      if(error) throw error;
+      event.currentTarget.reset(); ownerStatus("Usuário vinculado à unidade.","positive");
+      await loadOwnerCenter();
+      await loadOwnerRestaurantDetail(ownerSelectedRestaurant);
+    } catch(error) { ownerStatus("Não foi possível vincular: " + friendlyError(error),"negative"); }
+    finally { button.disabled=false; }
+  });
   document.getElementById("ownerRefreshBtn").addEventListener("click",loadOwnerCenter);
   document.getElementById("ownerNewRestaurantBtn").addEventListener("click",()=>{
     resetOwnerRestaurantForm(); document.getElementById("ownerRestaurantFormSection").hidden=false;
