@@ -1402,7 +1402,6 @@
   const TEMP_PERIODS = { 1: "1ª aferição (manhã)", 2: "2ª aferição (tarde)" };
   const EXPIRY_ALERT_DAYS = 7;
   const DEFAULT_TARGET_FACTOR = 2;
-  const RESEND_SECONDS = 60;
   const PAGE_SIZE = 1000;
 
   // Meses e título dos PDFs de checklist: "TABELA ANVISA - MÊS DE ANO"
@@ -1423,7 +1422,6 @@
   let currentEmail = "";
   let isPlatformOwner = false; // definido somente pela função protegida do Supabase
   let dataReady = false;       // só permite gravar depois de carregar tudo da nuvem
-  let lastResendAt = 0;
   let recoverEmailValue = "";
   let resetViaLink = false;    // true = a pessoa chegou pelo link do e-mail (não precisa digitar código)
   let countInputs = [];        // campos de contagem exibidos na lista (usados pelo "Salvar tudo")
@@ -2196,12 +2194,6 @@
   document.getElementById("resetBackBtn").addEventListener("click", () => showLogin());
 
   async function requestCode(email, messageEl) {
-    const wait = Math.ceil((RESEND_SECONDS * 1000 - (Date.now() - lastResendAt)) / 1000);
-    if (lastResendAt && wait > 0) {
-      setMsg(messageEl, "Aguarde " + wait + " s para pedir um novo código.");
-      return false;
-    }
-
     const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + window.location.pathname
     });
@@ -2209,7 +2201,6 @@
       setMsg(messageEl, friendlyError(error));
       return false;
     }
-    lastResendAt = Date.now();
     return true;
   }
 
