@@ -727,10 +727,6 @@
         </div>
         <div class="sauce-date"><label for="sauceDate">Data da contagem</label><input id="sauceDate" type="date"></div>
       </div>
-      <div class="tabs" role="tablist" aria-label="Molhos">
-        <button type="button" class="tab active" id="sauceCountTab" aria-selected="true">Contagem</button>
-        <button type="button" class="tab" id="sauceSalesTab" aria-selected="false">Vendas</button>
-      </div>
       <div class="sauce-table-wrap">
         <table class="sauce-table">
           <thead id="sauceItemsHead"><tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr></thead>
@@ -6186,15 +6182,9 @@ function sauceDefaultValues(items) {
 function sauceRenderItems() {
   const body = sauceEl("sauceItems");
   if (!body) return;
-  sauceEl("sauceItemsHead").innerHTML = sauceMode === "sales"
-    ? '<tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">VENDAS</th></tr>'
-    : '<tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr>';
-  sauceEl("sauceCountTab").classList.toggle("active", sauceMode === "count");
-  sauceEl("sauceCountTab").setAttribute("aria-selected", sauceMode === "count" ? "true" : "false");
-  sauceEl("sauceSalesTab").classList.toggle("active", sauceMode === "sales");
-  sauceEl("sauceSalesTab").setAttribute("aria-selected", sauceMode === "sales" ? "true" : "false");
-  sauceEl("sauceSaveBtn").textContent = sauceMode === "sales" ? "Salvar vendas" : "Salvar contagem";
-  sauceEl("saucePdfBtn").textContent = sauceMode === "sales" ? "PDF de vendas" : "Gerar PDF";
+  sauceEl("sauceItemsHead").innerHTML = '<tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th><th style="text-align:center">VENDAS</th></tr>';
+  sauceEl("sauceSaveBtn").textContent = "Salvar contagem";
+  sauceEl("saucePdfBtn").textContent = "Gerar PDF";
   body.replaceChildren();
   SAUCE_CATALOG.forEach(product => {
     const values = sauceValues[product.row] || { count: "", order: "", sales: "" };
@@ -6205,21 +6195,6 @@ function sauceRenderItems() {
     const name = document.createElement("td");
     name.textContent = product.name;
 
-    if (sauceMode === "sales") {
-      const salesCell = document.createElement("td");
-      const salesInput = document.createElement("input");
-      salesInput.className = "sauce-order";
-      salesInput.type = "number"; salesInput.min = "0"; salesInput.step = "1"; salesInput.inputMode = "numeric";
-      salesInput.placeholder = "—"; salesInput.value = values.sales;
-      salesInput.setAttribute("aria-label", "Vendas de " + product.name);
-      salesInput.addEventListener("input", () => {
-        if (!sauceValues[product.row]) sauceValues[product.row] = { count: "", order: "", sales: "" };
-        sauceValues[product.row].sales = salesInput.value; sauceDirty = true;
-        sauceSetStatus("Há alterações sem salvar.", "warning");
-      });
-      salesCell.appendChild(salesInput);
-      row.append(code, name, salesCell); body.appendChild(row); return;
-    }
     const countCell = document.createElement("td");
     countCell.className = "sauce-qty";
     const countControl = document.createElement("div");
@@ -6277,7 +6252,20 @@ function sauceRenderItems() {
       sauceSetStatus("Há alterações sem salvar.", "warning");
     });
     orderCell.appendChild(orderInput);
-    row.append(code, name, countCell, orderCell);
+    const salesCell = document.createElement("td");
+    const salesInput = document.createElement("input");
+    salesInput.className = "sauce-order";
+    salesInput.type = "number"; salesInput.min = "0"; salesInput.step = "1"; salesInput.inputMode = "numeric";
+    salesInput.placeholder = "—"; salesInput.value = values.sales;
+    salesInput.setAttribute("aria-label", "Vendas de " + product.name);
+    salesInput.addEventListener("input", () => {
+      if (!sauceValues[product.row]) sauceValues[product.row] = { count: "", order: "", sales: "" };
+      sauceValues[product.row].sales = salesInput.value;
+      sauceDirty = true;
+      sauceSetStatus("Há alterações sem salvar.", "warning");
+    });
+    salesCell.appendChild(salesInput);
+    row.append(code, name, countCell, orderCell, salesCell);
     body.appendChild(row);
   });
 }
@@ -6451,30 +6439,26 @@ function sauceGeneratePdf(record) {
   doc.text("Emitido em: " + new Date().toLocaleString("pt-BR"), width - margin, 98, { align: "right" });
   doc.text("Versão da planilha: 10.2026", width - margin, 82, { align: "right" });
   const byRow = new Map(items.map(item => [Number(item.source_row), item]));
-  const salesMode = sauceMode === "sales";
   doc.autoTable({
     startY: 112,
     theme: "grid",
     margin: { left: margin, right: margin, bottom: 40 },
-    head: [salesMode ? ["COD.", "MOLHO", "VENDAS"] : ["COD.", "MOLHO", "CONTAGEM", "PEDIDO"]],
+    head: [["COD.", "MOLHO", "CONTAGEM", "PEDIDO", "VENDAS"]],
     body: SAUCE_CATALOG.map(product => {
       const item = byRow.get(product.row) || {};
-      return salesMode
-        ? [product.code == null ? "" : String(product.code), product.name, item.sales_quantity == null ? "" : String(item.sales_quantity)]
-        : [product.code == null ? "" : String(product.code), product.name,
-          item.count_quantity == null ? "" : String(item.count_quantity),
-          item.order_quantity == null ? "" : String(item.order_quantity)];
+      return [product.code == null ? "" : String(product.code), product.name,
+        item.count_quantity == null ? "" : String(item.count_quantity),
+        item.order_quantity == null ? "" : String(item.order_quantity),
+        item.sales_quantity == null ? "" : String(item.sales_quantity)];
     }),
     styles: { font: "helvetica", fontSize: 8.5, cellPadding: 5, lineColor: [190, 195, 202], lineWidth: 0.5, textColor: [35, 39, 45], valign: "middle" },
     headStyles: { fillColor: [150, 150, 150], textColor: [25, 28, 32], fontStyle: "bold", fontSize: 8 },
-    columnStyles: salesMode
-      ? { 0: { cellWidth: 48, halign: "center" }, 1: { cellWidth: "auto", fontStyle: "bold" }, 2: { cellWidth: 74, halign: "center" } }
-      : { 0: { cellWidth: 48, halign: "center" }, 1: { cellWidth: "auto", fontStyle: "bold" }, 2: { cellWidth: 74, halign: "center" }, 3: { cellWidth: 68, halign: "center" } }
+    columnStyles: { 0: { cellWidth: 48, halign: "center" }, 1: { cellWidth: "auto", fontStyle: "bold" }, 2: { cellWidth: 68, halign: "center" }, 3: { cellWidth: 68, halign: "center" }, 4: { cellWidth: 68, halign: "center" } }
   });
   const fileDate = String(date || localStamp()).replace(/[^0-9-]/g, "");
   const url = URL.createObjectURL(doc.output("blob"));
   const preview = window.open(url, "_blank");
-  if (!preview) doc.save("operatto_" + (salesMode ? "vendas_molhos_" : "contagem_molhos_") + fileDate + ".pdf");
+  if (!preview) doc.save("operatto_contagem_molhos_" + fileDate + ".pdf");
   else setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
@@ -6498,14 +6482,6 @@ sauceEl("sauceDate").addEventListener("change", async event => {
 });
 sauceEl("sauceSaveBtn").addEventListener("click", sauceSave);
 sauceEl("saucePdfBtn").addEventListener("click", () => sauceGeneratePdf(null));
-sauceEl("sauceCountTab").addEventListener("click", () => {
-  if (sauceMode === "count") return;
-  sauceMode = "count"; sauceRenderItems();
-});
-sauceEl("sauceSalesTab").addEventListener("click", () => {
-  if (sauceMode === "sales") return;
-  sauceMode = "sales"; sauceRenderItems();
-});
 </script>
 
 <script>
