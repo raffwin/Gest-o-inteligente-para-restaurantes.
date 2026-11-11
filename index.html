@@ -6612,6 +6612,50 @@ async function sheetStockSave() {
   } catch (error) { sheetStockStatus("Não foi possível salvar: " + friendlyError(error), "negative"); }
   btn.disabled = false;
 }
+function quotePdfDrawTables(doc, groups, date, responsible) {
+  const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
+  const margin = 24, gap = 14, colW = (pageW - margin * 2 - gap) / 2;
+  const xs = [margin, margin + colW + gap], startY = 55, bottom = pageH - 24;
+  let ys = [startY, startY];
+  function drawHeader() {
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(25, 28, 32);
+    doc.text("COTAÇÃO", margin, 23);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(80, 84, 90);
+    doc.text("Data: " + fmtDate(date) + "   |   Responsável: " + (responsible || ""), margin, 37);
+  }
+  drawHeader();
+  groups.forEach(group => {
+    const suppliers = group.suppliers || [], items = group.items || [];
+    const estimate = 20 + items.length * 10.5;
+    let col = ys[0] <= ys[1] ? 0 : 1;
+    if (ys[col] + estimate > bottom) {
+      const other = 1 - col;
+      if (ys[other] + estimate <= bottom) col = other;
+      else { doc.addPage(); drawHeader(); ys = [startY, startY]; col = 0; }
+    }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor(25, 28, 32);
+    doc.text(String(group.category).toUpperCase(), xs[col], ys[col] + 8);
+    const head = [["PRODUTOS", "ESTOQUE", "PEDIR"].concat(suppliers)];
+    const body = items.map(item => [item.product, quoteDisplay(item.stock), quoteDisplay(item.order), ...suppliers.map((_, i) => quoteDisplay(item["supplier_" + i]))]);
+    const columnStyles = { 1: { cellWidth: 38, halign: "center" }, 2: { cellWidth: 38, halign: "center" } };
+    suppliers.forEach((_, i) => { columnStyles[i + 3] = { cellWidth: 30, halign: "center" }; });
+    doc.autoTable({
+      startY: ys[col] + 12, theme: "grid", tableWidth: colW,
+      margin: { left: xs[col], right: pageW - xs[col] - colW, top: startY, bottom: 22 },
+      head, body,
+      styles: { font: "helvetica", fontSize: 6.2, cellPadding: { top: 1.5, bottom: 1.5, left: 2.5, right: 2.5 }, lineColor: [125, 125, 125], lineWidth: 0.3, textColor: [25, 25, 25], valign: "middle", overflow: "linebreak" },
+      headStyles: { fillColor: [240, 190, 20], textColor: [20, 20, 20], fontStyle: "bold", fontSize: 6.2, halign: "center" },
+      columnStyles
+    });
+    ys[col] = doc.lastAutoTable.finalY + 7;
+  });
+  const pages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.setTextColor(105, 110, 116);
+    doc.text("Operatto", margin, pageH - 10);
+    doc.text("Página " + i + " de " + pages, pageW - margin, pageH - 10, { align: "right" });
+  }
+}
 function sheetStockPdf() {
   if (!sheetStockCategory) { sheetStockStatus("Abra um subgrupo antes de gerar o PDF.", "warning"); return; }
   const JsPDF = window.jspdf && window.jspdf.jsPDF;
@@ -6619,28 +6663,13 @@ function sheetStockPdf() {
   const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
   if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo e tente novamente."); return; }
   const date = document.getElementById("sheetStockDate").value;
-  doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.text("COTAÇÃO", 40, 42);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-  doc.text("Cotação: " + fmtDate(date) + " à " + fmtDate(date), 40, 62);
-  doc.text("Data: " + fmtDate(date) + "   |   Responsável: " + (currentUser || ""), 40, 78);
-  let y = 94;
-  Object.keys(SHEET_STOCK).forEach(category => {
-    if (y > doc.internal.pageSize.getHeight() - 100) { doc.addPage(); y = 38; }
-    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.text(category.toUpperCase(), 40, y);
-    const suppliers = SHEET_SUPPLIERS[category] || [];
-    const head = [["PRODUTOS", "ESTOQUE", "PEDIR"].concat(suppliers)];
-    const body = SHEET_STOCK[category].map((product, sourceIndex) => {
-      const v = ((sheetStockValues[category] || {})[String(sourceIndex)]) || {};
-      return [product, v.stock == null ? "" : String(v.stock), v.order == null ? "" : String(v.order)].concat(suppliers.map((_, i) => v["supplier_" + i] == null ? "" : String(v["supplier_" + i])));
-    });
-    const styles = {};
-    suppliers.forEach((_, i) => { styles[i + 3] = { halign: "center" }; });
-    doc.autoTable({ startY: y + 5, theme: "grid", margin: { left: 40, right: 40, bottom: 35 }, head, body,
-      styles: { font: "helvetica", fontSize: 7, cellPadding: 3, lineColor: [90, 90, 90], lineWidth: 0.4, textColor: [25, 25, 25], valign: "middle" },
-      headStyles: { fillColor: [225, 225, 225], textColor: [20, 20, 20], fontStyle: "bold" },
-      columnStyles: Object.assign({ 0: { cellWidth: 250 }, 1: { cellWidth: 66, halign: "center" }, 2: { cellWidth: 66, halign: "center" } }, styles) });
-    y = doc.lastAutoTable.finalY + 13;
-  });
+  const groups = Object.keys(SHEET_STOCK).map(category => ({
+    category, suppliers: SHEET_SUPPLIERS[category] || [],
+    items: SHEET_STOCK[category].map((product, sourceIndex) => ({
+      product, ...(((sheetStockValues[category] || {})[String(sourceIndex)]) || {})
+    }))
+  }));
+  quotePdfDrawTables(doc, groups, date, currentUser);
   doc.save("operatto_cotacao_" + date + ".pdf");
 }
 document.getElementById("sheetStockDate").addEventListener("change", () => {
@@ -7043,25 +7072,7 @@ function quoteGeneratePdf() {
   if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
   const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
   if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo e tente novamente."); return; }
-  const margin = 34, w = doc.internal.pageSize.getWidth();
-  doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.text("COTAÇÃO", w / 2, 25, { align: "center" });
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-  doc.text("Cotação: " + fmtDate(report.date) + " à " + fmtDate(report.date), margin, 43);
-  doc.text("Responsável: " + (currentUser || ""), w - margin, 43, { align: "right" });
-  let y = 57;
-  report.groups.forEach(group => {
-    if (y > doc.internal.pageSize.getHeight() - 100) { doc.addPage(); y = 38; }
-    doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text(quoteCategoryTitle(group.category), margin, y);
-    const supplierCols = group.suppliers || [];
-    const head = ["Produtos", "Estoque", "Pedir"].concat(supplierCols);
-    const body = group.items.map(item => [item.product, quoteDisplay(item.stock), quoteDisplay(item.order)].concat(supplierCols.map((_, i) => quoteDisplay(item["supplier_" + i]))));
-    const columnStyles = { 0: { cellWidth: 245 }, 1: { cellWidth: 70, halign: "center" }, 2: { cellWidth: 70, halign: "center" } };
-    supplierCols.forEach((_, i) => { columnStyles[i + 3] = { cellWidth: supplierCols.length === 3 ? 105 : 110, halign: "center" }; });
-    doc.autoTable({ startY: y + 5, theme: "grid", margin: { left: margin, right: margin, bottom: 34 }, head: [head], body, styles: { font: "helvetica", fontSize: 7.5, cellPadding: 3, lineColor: [80, 80, 80], lineWidth: 0.35, textColor: [25, 25, 25], valign: "middle" }, headStyles: { fillColor: [225, 225, 225], textColor: [20, 20, 20], fontStyle: "bold", fontSize: 7.5 }, columnStyles });
-    y = doc.lastAutoTable.finalY + 13;
-  });
-  const pages = doc.internal.getNumberOfPages(), h = doc.internal.pageSize.getHeight();
-  for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.text("Operatto", margin, h - 14); doc.text("Página " + i + " de " + pages, w - margin, h - 14, { align: "right" }); }
+  quotePdfDrawTables(doc, report.groups, report.date, currentUser);
   doc.save("operatto_cotacao_" + report.date + ".pdf");
 }
 </script>
