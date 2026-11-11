@@ -183,6 +183,16 @@
 
     /* ----- Menu inicial e categorias ----- */
     .op-intro { margin-bottom: 24px; }
+    @keyframes homeRise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    #homeView.home-animate .op-intro { animation: homeRise .55s cubic-bezier(.2,.75,.25,1) both; }
+    @keyframes logoReveal { 0% { opacity: 0; transform: scale(.72) rotate(-18deg); } 65% { opacity: 1; transform: scale(1.08) rotate(4deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
+    body.home-screen .brand .logo { animation: logoReveal .8s cubic-bezier(.2,.75,.25,1) both; }
+    #homeView.home-animate .modules .module { animation: homeRise .55s cubic-bezier(.2,.75,.25,1) both; }
+    #homeView.home-animate .modules .module:nth-child(1) { animation-delay: .08s; }
+    #homeView.home-animate .modules .module:nth-child(2) { animation-delay: .16s; }
+    #homeView.home-animate .modules .module:nth-child(3) { animation-delay: .24s; }
+    #homeView.home-animate .modules .module:nth-child(4) { animation-delay: .32s; }
+    #homeView.home-animate #accountSection { animation: homeRise .55s cubic-bezier(.2,.75,.25,1) .4s both; }
     .op-intro h2 { margin: 0; font-size: 25px; font-weight: 700; }
     .op-intro p { margin: 7px 0 0; font-size: 13px; color: var(--muted); }
     .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 18px; }
@@ -421,7 +431,7 @@
 
     .ico { width: 1.15em; height: 1.15em; vertical-align: -0.2em; margin-right: .4em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
     .status .ico, .hint .ico, .sim .ico { margin-right: .3em; }
-    @media (prefers-reduced-motion: reduce) { .enter, .login-card { animation: none; } button { transition: none; } }
+    @media (prefers-reduced-motion: reduce) { .enter, .login-card, #homeView.home-animate *, #homeView.home-animate, body.home-screen .brand .logo { animation: none !important; } button { transition: none; } }
     @media (max-width: 900px) {
       .sidebar { width: 210px; }
       .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1639,6 +1649,17 @@
     ["home", "stock", "checklist", "dashboard", "overview"].forEach(n => {
       document.getElementById(n + "View").hidden = n !== name;
     });
+    const home = document.getElementById("homeView");
+    home.classList.remove("home-animate");
+    document.body.classList.toggle("home-screen", name === "home");
+    if (name === "home") {
+      const logo = document.querySelector(".brand .logo");
+      logo.style.animation = "none";
+      void logo.offsetWidth;
+      logo.style.animation = "";
+      void home.offsetWidth;
+      home.classList.add("home-animate");
+    }
     if (name === "dashboard") renderDashboard();
     if (name === "overview") renderOverview();
     setNav(name);
