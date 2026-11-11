@@ -1254,6 +1254,7 @@
     <button type="button" class="tab" role="tab" data-dtab="cozimento"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/></svg> Cozimento e Reaquecimento</button>
     <button type="button" class="tab" role="tab" data-dtab="historico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></svg> Histórico</button>
     <button type="button" class="tab" role="tab" data-dtab="cotacao"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v17H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg> Cotação</button>
+    <button type="button" class="tab" role="tab" data-dtab="registros" id="dashRecordsTab" hidden>Registros</button>
   </div>
 
   <div id="dashContent"></div>
@@ -1678,6 +1679,9 @@
           "grease_trap_cleanings", "sauce_count_sessions", "stock_quote_sessions"];
         const tableRows = await Promise.all(tableNames.map(fetchPlatformOwnerRows));
         platformOwnerData = Object.fromEntries(tableNames.map((name, i) => [name, tableRows[i]]));
+        const usersRes = await supabaseClient.rpc("platform_owner_list_users");
+        if (usersRes.error) throw usersRes.error;
+        platformOwnerData.users = usersRes.data || [];
         platformOwnerDataError = "";
       } catch (ownerError) {
         // Sem a migration ou sem confirmação de OWNER, preserva o acesso normal da própria conta.
@@ -1972,7 +1976,9 @@
   async function resolvePlatformOwnerAccess() {
     isPlatformOwner = false;
     const link = document.getElementById("ownerNavLink");
+    const recordsTab = document.getElementById("dashRecordsTab");
     if (link) link.hidden = true;
+    if (recordsTab) recordsTab.hidden = true;
     if (!currentUserId) return false;
     try {
       const { data, error } = await supabaseClient.rpc("platform_is_owner");
@@ -1983,6 +1989,7 @@
       isPlatformOwner = false;
     }
     if (link) link.hidden = !isPlatformOwner;
+    if (recordsTab) recordsTab.hidden = !isPlatformOwner;
     return isPlatformOwner;
   }
   async function loadOwnerCenter() {
@@ -2264,6 +2271,8 @@
     platformOwnerData = null;
     platformOwnerDataError = "";
     document.getElementById("ownerNavLink").hidden = true;
+    document.getElementById("dashRecordsTab").hidden = true;
+    if (dashTab === "registros") dashTab = "resumo";
     dataReady = false;
     movements = [];
     balanceIndex = null;
@@ -4632,6 +4641,19 @@
   let dashSearch = "";
   let dashTempDate = "";
   let dashMovGroup = "";
+  let dashRecordsModule = "all";
+  let dashRecordsFrom = "";
+  let dashRecordsTo = "";
+  let dashRecordsPage = 0;
+  const DASH_RECORD_MODULES = [
+    ["products", "Produtos"], ["movements", "Movimentações"], ["settings", "Configurações"],
+    ["equipment", "Equipamentos"], ["temperature_readings", "Aferições de temperatura"],
+    ["equipment_temperature_monthly", "Temperaturas mensais"], ["cleaning_checklists", "Limpeza"],
+    ["cleaning_monthly_responsibles", "Responsáveis da limpeza"], ["spreadsheet_checklists", "Checklists de planilha"],
+    ["cooking_records", "Cozimento e reaquecimento"], ["cooking_days", "Fechamento de cozimento"],
+    ["oil_checks", "Qualidade do óleo"], ["grease_trap_cleanings", "Caixas de gordura"],
+    ["sauce_count_sessions", "Contagens de molhos"], ["stock_quote_sessions", "Cotações"]
+  ];
 
   function mk(tag, cls, text) {
     const e = document.createElement(tag);
@@ -5011,7 +5033,143 @@
     else if (dashTab === "limpeza") renderDashLimpeza(box);
     else if (dashTab === "cozimento") renderDashCozimento(box);
     else if (dashTab === "cotacao") renderDashQuote(box);
+    else if (dashTab === "registros") renderDashRecords(box);
     else renderDashHistory(box);
+  }
+
+  function dashRecordDate(row) {
+    return String(row.log_date || row.reading_date || row.cleaning_date || row.count_date || row.checklist_date || row.created_at || row.updated_at || row.finalized_at || "");
+  }
+  function dashRecordDateLabel(value) {
+    if (!value) return "—";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return fmtDate(value);
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString("pt-BR");
+  }
+  function dashRecordSummary(row) {
+    return Object.entries(row).filter(([key]) => !["id", "user_id", "created_by"].includes(key))
+      .map(([key, value]) => key + ": " + (value && typeof value === "object" ? JSON.stringify(value) : String(value ?? "—")))
+      .join(" · ");
+  }
+  function dashAllOwnerRecords() {
+    if (!platformOwnerData) return [];
+    const users = new Map((platformOwnerData.users || []).map(user => [user.user_id, user]));
+    return DASH_RECORD_MODULES.flatMap(([table, label]) => (platformOwnerData[table] || []).map(row => ({
+      table,
+      label,
+      row,
+      date: dashRecordDate(row),
+      user: users.get(row.user_id),
+      account: users.get(row.user_id)?.email || row.user_id || "—",
+      responsible: row.employee || row.responsible || row.finalized_by || "—",
+      summary: dashRecordSummary(row)
+    }))).sort((a, b) => b.date.localeCompare(a.date));
+  }
+  function renderDashRecords(box) {
+    if (!isPlatformOwner) {
+      box.appendChild(mk("section", "section hint", "A aba Registros é exclusiva da Central do Proprietário."));
+      return;
+    }
+    if (!platformOwnerData) {
+      box.appendChild(mk("section", "section warning", "Não foi possível carregar os registros globais. " + (platformOwnerDataError || "Atualize os dados ou confira a migração do Supabase.")));
+      return;
+    }
+    const all = dashAllOwnerRecords();
+    const filtered = all.filter(item => {
+      if (dashRecordsModule !== "all" && item.table !== dashRecordsModule) return false;
+      const day = item.date.slice(0, 10);
+      if (dashRecordsFrom && (!day || day < dashRecordsFrom)) return false;
+      if (dashRecordsTo && (!day || day > dashRecordsTo)) return false;
+      return true;
+    });
+    const controls = mk("section", "section");
+    controls.appendChild(mk("h2", "", "Registros de todos os usuários"));
+    controls.appendChild(mk("div", "hint", "Consulta consolidada somente para leitura. O PDF inclui todos os registros do filtro selecionado."));
+    const row = mk("div", "row");
+    const moduleWrap = mk("div"); moduleWrap.appendChild(mk("label", "", "Módulo"));
+    const moduleSelect = document.createElement("select");
+    moduleSelect.add(new Option("Todos os módulos", "all"));
+    DASH_RECORD_MODULES.forEach(([key, label]) => moduleSelect.add(new Option(label, key)));
+    moduleSelect.value = dashRecordsModule;
+    moduleSelect.addEventListener("change", () => { dashRecordsModule = moduleSelect.value; dashRecordsPage = 0; renderDashboard(); });
+    moduleWrap.appendChild(moduleSelect);
+    const fromWrap = mk("div"); fromWrap.appendChild(mk("label", "", "De"));
+    const fromInput = document.createElement("input"); fromInput.type = "date"; fromInput.value = dashRecordsFrom;
+    fromInput.addEventListener("change", () => { dashRecordsFrom = fromInput.value; dashRecordsPage = 0; renderDashboard(); });
+    fromWrap.appendChild(fromInput);
+    const toWrap = mk("div"); toWrap.appendChild(mk("label", "", "Até"));
+    const toInput = document.createElement("input"); toInput.type = "date"; toInput.value = dashRecordsTo;
+    toInput.addEventListener("change", () => { dashRecordsTo = toInput.value; dashRecordsPage = 0; renderDashboard(); });
+    toWrap.appendChild(toInput);
+    row.append(moduleWrap, fromWrap, toWrap);
+    controls.appendChild(row);
+    const actions = mk("div", "actions"); actions.style.marginTop = "8px";
+    const pdfButton = actionBtn("{file} Gerar PDF dos registros", "", () => exportDashRecordsPdf(filtered));
+    pdfButton.disabled = filtered.length === 0;
+    const refreshButton = actionBtn("{clock} Atualizar registros", "btn-edit", async button => {
+      button.disabled = true;
+      await syncFromCloud();
+      if (!document.getElementById("dashboardView").hidden && dashTab === "registros") renderDashboard();
+    });
+    actions.append(pdfButton, refreshButton); controls.appendChild(actions);
+    controls.appendChild(mk("div", "hint", filtered.length + " registro(s) encontrado(s)."));
+    box.appendChild(controls);
+
+    const pageSize = 100;
+    const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+    dashRecordsPage = Math.min(dashRecordsPage, pageCount - 1);
+    const start = dashRecordsPage * pageSize;
+    const page = filtered.slice(start, start + pageSize);
+    const wrap = mk("section", "section");
+    const tableWrap = mk("div", "table-wrap");
+    const table = mk("table", "dash-table");
+    const thead = document.createElement("thead"), headRow = document.createElement("tr");
+    ["Data", "Usuário", "Módulo", "Responsável", "Registro"].forEach(label => headRow.appendChild(mk("th", "", label)));
+    thead.appendChild(headRow); table.appendChild(thead);
+    const tbody = document.createElement("tbody");
+    page.forEach(item => {
+      const tr = document.createElement("tr");
+      [dashRecordDateLabel(item.date), item.account, item.label, item.responsible, item.summary].forEach((value, index) => {
+        const td = document.createElement("td"); td.textContent = value;
+        if (index === 4) { td.style.whiteSpace = "normal"; td.style.minWidth = "320px"; }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    if (!page.length) {
+      const tr = document.createElement("tr"), td = document.createElement("td"); td.colSpan = 5; td.textContent = "Nenhum registro encontrado para esse filtro."; tr.appendChild(td); tbody.appendChild(tr);
+    }
+    table.appendChild(tbody); tableWrap.appendChild(table); wrap.appendChild(tableWrap);
+    const paging = mk("div", "owner-section-head"); paging.style.marginTop = "12px";
+    paging.appendChild(mk("span", "hint", "Página " + (dashRecordsPage + 1) + " de " + pageCount + " · exibindo até 100 registros por página"));
+    const pageButtons = mk("div", "owner-row-actions");
+    const previous = actionBtn("Anterior", "btn-edit", () => { dashRecordsPage--; renderDashboard(); });
+    previous.disabled = dashRecordsPage <= 0;
+    const next = actionBtn("Próxima", "btn-edit", () => { dashRecordsPage++; renderDashboard(); });
+    next.disabled = dashRecordsPage >= pageCount - 1;
+    pageButtons.append(previous, next); paging.appendChild(pageButtons); wrap.appendChild(paging);
+    box.appendChild(wrap);
+  }
+  function exportDashRecordsPdf(items) {
+    if (!items.length) return;
+    const JsPDF = window.jspdf && window.jspdf.jsPDF;
+    if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
+    const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+    if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo."); return; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.text("OPERATTO — REGISTROS DE TODOS OS USUÁRIOS", 36, 36);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.text("Gerado em " + new Date().toLocaleString("pt-BR") + " · " + items.length + " registro(s)", 36, 52);
+    doc.autoTable({
+      startY: 64,
+      theme: "grid",
+      head: [["Data", "Usuário", "Módulo", "Responsável", "Registro"]],
+      body: items.map(item => [dashRecordDateLabel(item.date), item.account, item.label, item.responsible, item.summary]),
+      styles: { font: "helvetica", fontSize: 7, cellPadding: 3, overflow: "linebreak", valign: "top" },
+      headStyles: { fillColor: [38, 42, 48], textColor: [240, 241, 243] },
+      columnStyles: { 0: { cellWidth: 75 }, 1: { cellWidth: 130 }, 2: { cellWidth: 105 }, 3: { cellWidth: 100 }, 4: { cellWidth: "auto" } },
+      margin: { left: 36, right: 36, bottom: 36 }
+    });
+    sharePdf(doc, "operatto_registros_usuarios_" + localStamp() + ".pdf");
   }
 
   function renderDashSummary(box) {
