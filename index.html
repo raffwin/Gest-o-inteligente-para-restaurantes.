@@ -271,7 +271,7 @@
     #sauceRoot .sauce-date { width: 190px; }
     #sauceRoot .sauce-date input { margin-top: 5px; }
     #sauceRoot .sauce-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 7px; }
-    #sauceRoot .sauce-table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 12px; }
+    #sauceRoot .sauce-table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 13px; }
     #sauceRoot .sauce-table th { background: #262A30; color: var(--muted); text-align: left; font-size: 10px; letter-spacing: .5px; padding: 11px 10px; }
     #sauceRoot .sauce-table td { border-top: 1px solid var(--border); padding: 8px 10px; vertical-align: middle; }
     #sauceRoot .sauce-code { width: 58px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -740,7 +740,7 @@
       </div>
       <div class="sauce-table-wrap">
         <table class="sauce-table">
-          <thead id="sauceItemsHead"><tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">VENDAS</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr></thead>
+          <thead id="sauceItemsHead"><tr><th>MOLHO</th><th style="text-align:center">VENDAS</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr></thead>
           <tbody id="sauceItems"><tr><td colspan="4" class="loading">Carregando...</td></tr></tbody>
         </table>
       </div>
@@ -6386,33 +6386,47 @@ async function d30Pdf(chosen) {
    Catálogo e nomes copiados da aba PLANILHA NOVA, versão 10.2026.
    Cada registro fica no Supabase, com RLS por usuário autenticado. */
 const SAUCE_CATALOG = [
-  { row: 4, code: 17, name: "SAQ. CAM. CREMOSO" },
-  { row: 5, code: 16, name: "SAQ. CAMARÃO" },
-  { row: 6, code: null, name: "SAQ. GORGONZOLA " },
-  { row: 7, code: 24, name: "SAQ. LIMÃO" },
-  { row: 8, code: 60, name: "SAQ. MARACUJÁ COM SEMENTES" },
-  { row: 9, code: 61, name: "SAQ. ESTROGONOFE DE FRANGO" },
-  { row: 10, code: 28, name: "SAQ. MOQ. CAJU" },
-  { row: 11, code: 27, name: "SAQ. MOQ. CAPIXABA" },
-  { row: 12, code: 29, name: "SAQ. MOQ. DE COCO" },
-  { row: 13, code: 30, name: "SAQ. MOQ. PESCADA" },
-  { row: 14, code: 48, name: "SAQ. MOQUEQUINHA" },
-  { row: 15, code: 53, name: "SAQ. MOSTARDA E MEL" },
-  { row: 16, code: 54, name: "SAQ. PIRÃO" },
-  { row: 17, code: 218, name: "SAQ. PROMO MOLHO BRANCO COM ESPEC." },
-  { row: 18, code: null, name: "SAQ. PROMO MOLHO POMODORO" },
-  { row: 19, code: null, name: "SAQ. PURÊ DE ABÓBORA" },
-  { row: 20, code: 31, name: "SAQ. PURÊ DE BANANA" },
-  { row: 21, code: 32, name: "SAQ. PURÊ DE MAÇÃ" },
-  { row: 22, code: 197, name: "SAQ. REQ. BANANA" },
-  { row: 23, code: 189, name: "SAQ. SHITAKE" },
-  { row: 24, code: 199, name: "SAQ. TOMATE P/PARMEGIANA " },
-  { row: 25, code: 63, name: "SAQ. PROMO MISTURA PANKO" },
-  { row: 26, code: null, name: "SAQ. FARINHA DE ROSCA 1KG" },
-  { row: 27, code: 208, name: "SAQ. MISTURA TILÁPIA CROCANTE" },
-  { row: 28, code: null, name: "SAQ. TERIYAKI 900gr" },
-  { row: 29, code: null, name: "SAQ. TORRADA PARA CALDO" },
-  { row: 30, code: null, name: "GELEIA DE PIMENTA 300G " }
+  { row: 4, name: "SAQ. CAM. CREMOSO" },
+  { row: 5, name: "SAQ. CAMARÃO" },
+  { row: 6, name: "SAQ. GORGONZOLA" },
+  { row: 7, name: "SAQ. LIMÃO" },
+  { row: 8, name: "SAQ. MARACUJÁ COM SEMENTES" },
+  { row: 9, name: "SAQ. ESTROGONOFE DE FRANGO" },
+  { row: 10, name: "SAQ. MOQ. CAJU" },
+  { row: 11, name: "SAQ. MOQ. CAPIXABA" },
+  { row: 12, name: "SAQ. MOQ. DE COCO" },
+  { row: 13, name: "SAQ. MOQ. PESCADA" },
+  { row: 14, name: "SAQ. MOQUEQUINHA" },
+  { row: 15, name: "SAQ. MOSTARDA E MEL" },
+  { row: 16, name: "SAQ. PIRÃO" },
+  { row: 17, name: "SAQ. PROMO MOLHO BRANCO COM ESPEC." },
+  { row: 18, name: "SAQ. PROMO MOLHO POMODORO" },
+  { row: 19, name: "SAQ. PURÊ DE ABÓBORA" },
+  { row: 20, name: "SAQ. PURÊ DE BANANA" },
+  { row: 21, name: "SAQ. PURÊ DE MAÇÃ" },
+  { row: 22, name: "SAQ. REQ. BANANA" },
+  { row: 23, name: "SAQ. SHITAKE" },
+  { row: 24, name: "SAQ. TOMATE P/PARMEGIANA" },
+  { row: 25, name: "SAQ. PROMO MISTURA PANKO" },
+  { row: 26, name: "SAQ. FARINHA DE ROSCA 1KG" },
+  { row: 27, name: "SAQ. MISTURA TILÁPIA CROCANTE" },
+  { row: 28, name: "SAQ. TERIYAKI 900gr" },
+  { row: 29, name: "SAQ. TORRADA PARA CALDO" },
+  { row: 30, name: "GEL. DE PIMENTA" },
+  { row: 31, name: "BOL. DE CARNE SECA" },
+  { row: 32, name: "BOL. BACALHAU" },
+  { row: 33, name: "BOL. TILÁPIA" },
+  { row: 34, name: "CALDO DE BOBÓ" },
+  { row: 35, name: "CALDO DE TILÁPIA" },
+  { row: 36, name: "QUIBÃO" },
+  { row: 37, name: "REC. DE CAMARÃO" },
+  { row: 38, name: "REC. DE TILÁPIA" },
+  { row: 39, name: "Pastel de queijo" },
+  { row: 40, name: "Tarrafa" },
+  { row: 41, name: "Copo 300 ml" },
+  { row: 42, name: "Copo 500 ml" },
+  { row: 43, name: "Lacre Pers. Peixe" },
+  { row: 44, name: "Trio meia" }
 ];
 let sauceValues = {};
 let sauceSession = null;
@@ -6450,16 +6464,13 @@ function sauceDefaultValues(items) {
 function sauceRenderItems() {
   const body = sauceEl("sauceItems");
   if (!body) return;
-  sauceEl("sauceItemsHead").innerHTML = '<tr><th>CÓD.</th><th>MOLHO</th><th style="text-align:center">VENDAS</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr>';
+  sauceEl("sauceItemsHead").innerHTML = '<tr><th>MOLHO</th><th style="text-align:center">VENDAS</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr>';
   sauceEl("sauceSaveBtn").textContent = "Salvar contagem";
   sauceEl("saucePdfBtn").textContent = "Gerar PDF";
   body.replaceChildren();
   SAUCE_CATALOG.forEach(product => {
     const values = sauceValues[product.row] || { count: "", order: "", sales: "" };
     const row = document.createElement("tr");
-    const code = document.createElement("td");
-    code.className = "sauce-code";
-    code.textContent = product.code == null ? "—" : String(product.code);
     const name = document.createElement("td");
     name.textContent = product.name;
 
@@ -6533,7 +6544,7 @@ function sauceRenderItems() {
       sauceSetStatus("Há alterações sem salvar.", "warning");
     });
     salesCell.appendChild(salesInput);
-    row.append(code, name, salesCell, countCell, orderCell);
+    row.append(name, salesCell, countCell, orderCell);
     body.appendChild(row);
   });
 }
@@ -6541,7 +6552,7 @@ function sauceCollectItems() {
   const items = [];
   for (const product of SAUCE_CATALOG) {
     const values = sauceValues[product.row] || { count: "", order: "", sales: "" };
-    const item = { source_row: product.row, category: "MOLHO", product_code: product.code, product_name: product.name };
+    const item = { source_row: product.row, category: "MOLHO", product_name: product.name };
     for (const [key, raw] of [["count_quantity", values.count], ["order_quantity", values.order], ["sales_quantity", values.sales]]) {
       if (raw == null || String(raw).trim() === "") { item[key] = null; continue; }
       const value = Number(raw);
@@ -6711,17 +6722,17 @@ function sauceGeneratePdf(record) {
     startY: 112,
     theme: "grid",
     margin: { left: margin, right: margin, bottom: 40 },
-    head: [["COD.", "MOLHO", "VENDAS", "CONTAGEM", "PEDIDO"]],
+    head: [["MOLHO", "VENDAS", "CONTAGEM", "PEDIDO"]],
     body: SAUCE_CATALOG.map(product => {
       const item = byRow.get(product.row) || {};
-      return [product.code == null ? "" : String(product.code), product.name,
+      return [product.name,
         item.sales_quantity == null ? "" : String(item.sales_quantity),
         item.count_quantity == null ? "" : String(item.count_quantity),
         item.order_quantity == null ? "" : String(item.order_quantity)];
     }),
     styles: { font: "helvetica", fontSize: 8.5, cellPadding: 5, lineColor: [190, 195, 202], lineWidth: 0.5, textColor: [35, 39, 45], valign: "middle" },
     headStyles: { fillColor: [150, 150, 150], textColor: [25, 28, 32], fontStyle: "bold", fontSize: 8 },
-    columnStyles: { 0: { cellWidth: 48, halign: "center" }, 1: { cellWidth: "auto", fontStyle: "bold" }, 2: { cellWidth: 68, halign: "center" }, 3: { cellWidth: 68, halign: "center" }, 4: { cellWidth: 68, halign: "center" } }
+    columnStyles: { 0: { cellWidth: "auto", fontStyle: "bold" }, 1: { cellWidth: 78, halign: "center" }, 2: { cellWidth: 78, halign: "center" }, 3: { cellWidth: 78, halign: "center" } }
   });
   const fileDate = String(date || localStamp()).replace(/[^0-9-]/g, "");
   // Salva o PDF pelo fluxo de download do navegador, para ficar nos arquivos do dispositivo.
