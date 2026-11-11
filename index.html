@@ -1230,6 +1230,17 @@
 </div>
 
 <script>
+/*
+  MAPA DO ARQUIVO ÚNICO (a ordem dos scripts é intencional):
+  1. Núcleo: autenticação, sincronização, estoque, temperatura e dashboard.
+  2. Módulos: limpeza, cozimento, óleo, relatórios, molhos, cotação e gordura.
+  3. Os módulos expõem APIs no window quando o núcleo precisa chamá-los.
+
+  ISOLAMENTO ATUAL: os dados de nuvem pertencem ao usuário autenticado (currentUserId).
+  Uma futura organização por restaurante precisará de vínculo usuário-restaurante,
+  escopo restaurant_id e políticas RLS correspondentes no backend. Este arquivo não
+  implementa essa mudança nem substitui a segurança do Supabase.
+*/
   // Chaves antigas do navegador (usadas só para migrar dados para o banco)
   const STORAGE_KEY = "operatto_movements";
   const PRODUCTS_KEY = "operatto_products";
@@ -1323,6 +1334,7 @@
 
   // Dados em memória (espelho do que está no Supabase)
   let movements = [];
+  let balanceIndex = null;
   let catalog = [];
   let settings = { targetFactor: DEFAULT_TARGET_FACTOR };
   let currentUser = null;      // nome exibido
@@ -1533,6 +1545,7 @@
 
     catalog = productRows.map(dbToProduct);
     movements = movementRows.map(dbToMovement);
+    balanceIndex = null;
 
     const factor = settingsRes.data && Number(settingsRes.data.target_factor);
     settings = { targetFactor: Number.isFinite(factor) && factor >= 1 ? factor : DEFAULT_TARGET_FACTOR };
@@ -1756,6 +1769,7 @@
     currentEmail = "";
     dataReady = false;
     movements = [];
+    balanceIndex = null;
     catalog = [];
     equipments = [];
     readings = [];
@@ -2089,14 +2103,18 @@
 
   function getBalance(name) {
     const key = name.toLowerCase();
-    let total = 0;
-    movements.forEach(m => {
-      if (m.product.toLowerCase() !== key) return;
-      if (m.type === "entrada") total += m.quantity;
-      else if (m.type === "ajuste") total += Number(m.delta) || 0;
-      else total -= m.quantity;
-    });
-    return round(total);
+    if (!balanceIndex) {
+      balanceIndex = new Map();
+      movements.forEach(m => {
+        const productKey = m.product.toLowerCase();
+        let delta = 0;
+        if (m.type === "entrada") delta = m.quantity;
+        else if (m.type === "ajuste") delta = Number(m.delta) || 0;
+        else delta = -m.quantity;
+        balanceIndex.set(productKey, (balanceIndex.get(productKey) || 0) + delta);
+      });
+    }
+    return round(balanceIndex.get(key) || 0);
   }
 
   function targetOf(product) {
@@ -2161,6 +2179,7 @@
         .single();
       if (error) throw error;
       movements.push(dbToMovement(data));
+      balanceIndex = null;
     } catch (error) {
       alert("Não foi possível salvar a contagem: " + friendlyError(error));
       if (saveBtn) saveBtn.disabled = false;
@@ -2233,6 +2252,7 @@
           .select();
         if (error) throw error;
         data.forEach(r => movements.push(dbToMovement(r)));
+        balanceIndex = null;
       }
     } catch (error) {
       setSaveStatus("{x} Não foi possível salvar: " + friendlyError(error), "negative");
@@ -2594,6 +2614,7 @@
 
     catalog = catalog.filter(p => p.name.toLowerCase() !== key);
     movements = movements.filter(m => m.product.toLowerCase() !== key);
+    balanceIndex = null;
     render();
   }
 
@@ -3777,6 +3798,7 @@
     if (name === "oleo" && typeof olOpen === "function") olOpen();
     if (name === "temperatura" && typeof temperatureMonthlyOpen === "function") temperatureMonthlyOpen();
     if (name === "gordura" && typeof greaseOpen === "function") greaseOpen();
+    if (name === "limpeza" && window.operattoLimpeza && typeof window.operattoLimpeza.abrir === "function") window.operattoLimpeza.abrir();
     document.querySelectorAll("#checklistOpenView .tab-panel").forEach(p => {
       const show = p.id === "tab-" + name;
       p.hidden = !show;
@@ -4034,6 +4056,7 @@
         Object.assign(product, dbToProduct(upd.data));
         if (name !== oldName) {
           movements.forEach(m => { if (m.product === oldName) m.product = name; });
+          balanceIndex = null;
         }
 
         const delta = round(newSaldo - getBalance(name));
@@ -4053,6 +4076,7 @@
             .single();
           if (ins.error) throw ins.error;
           movements.push(dbToMovement(ins.data));
+          balanceIndex = null;
         }
       } catch (error) {
         try { await loadCloud(); } catch (e) {}
@@ -4180,6 +4204,7 @@
     }
 
     movements = movements.filter(x => x.id !== m.id);
+    balanceIndex = null;
     render();
   }
 
@@ -4804,14 +4829,10 @@
     mostrarSetores();
   });
 
-  // Ao abrir o checklist de limpeza, relê os dados da conta atual
-  document.querySelectorAll('.module[data-check="limpeza"]').forEach(b => {
-    b.addEventListener("click", () => { ler(); mostrarSetores(); });
-  });
-
-  // Usado pelo Dashboard (tabela mensal e PDF)
+  // Interfaces consumidas pelo núcleo e pelo Dashboard.
   window.operattoLimpeza = {
     setores: setores,
+    abrir: () => { ler(); mostrarSetores(); },
     registros: () => { ler(); return dados.registros; },
     responsaveis: mes => { ler(); return (dados.responsaveis && dados.responsaveis[mes]) || { chefe: "", gerente: "" }; },
     salvarResponsaveis: (mes, valores) => {
@@ -6172,7 +6193,6 @@ let sauceSession = null;
 let sauceRecords = [];
 let sauceBusy = false;
 let sauceDirty = false;
-let sauceMode = "count";
 
 function sauceEl(id) { return document.getElementById(id); }
 function sauceSetStatus(text, cls) {
