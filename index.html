@@ -5046,10 +5046,72 @@
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString("pt-BR");
   }
-  function dashRecordSummary(row) {
-    return Object.entries(row).filter(([key]) => !["id", "user_id", "created_by"].includes(key))
-      .map(([key, value]) => key + ": " + (value && typeof value === "object" ? JSON.stringify(value) : String(value ?? "—")))
-      .join(" · ");
+  function dashRecordSummary(row, table) {
+    const filled = value => value !== null && value !== undefined && value !== "";
+    const countFilled = values => (Array.isArray(values) ? values : []).filter(filled).length;
+    const yesNo = value => value === true ? "Sim" : value === false ? "Não" : "Não informado";
+    const entries = Array.isArray(row.items) ? row.items : [];
+    if (table === "cleaning_checklists") {
+      const c = entries.filter(v => v === "C").length, nc = entries.filter(v => v === "NC").length;
+      return (row.sector || "Setor não informado") + " · " + countFilled(entries) + " de " + entries.length + " itens preenchidos · " + c + " conformes · " + nc + " não conformes";
+    }
+    if (table === "spreadsheet_checklists") {
+      const responses = Array.isArray(row.responses) ? row.responses : [];
+      const bad = responses.filter(v => /não conforme|\bnc\b/i.test(String(v || ""))).length;
+      return (row.checklist_key || "Checklist") + " · " + countFilled(responses) + " de " + responses.length + " respostas · " + bad + " não conformes";
+    }
+    if (table === "sauce_count_sessions") {
+      const used = entries.filter(i => i && [i.count_quantity, i.order_quantity, i.sales_quantity].some(filled));
+      return used.length + " produto(s) com dados · " + (row.count_date ? dashRecordDateLabel(row.count_date) : "data não informada");
+    }
+    if (table === "stock_quote_sessions") {
+      const used = entries.filter(i => i && [i.stock, i.order, i.supplier_0, i.supplier_1, i.supplier_2, i.supplier_3].some(filled));
+      return (row.category || "Cotação") + " · " + used.length + " produto(s) preenchido(s) de " + entries.length;
+    }
+    if (table === "cooking_records") return [row.product, row.condition, filled(row.temperature) ? row.temperature + " °C" : "Temperatura não informada", row.status === "C" ? "Conforme" : row.status === "NC" ? "Não conforme" : "Situação não informada"].filter(Boolean).join(" · ");
+    if (table === "cooking_days") return row.finalized_at ? "Controle finalizado" + (row.finalized_by ? " por " + row.finalized_by : "") : "Controle em aberto";
+    if (table === "oil_checks") return "Fritadeira " + (row.machine || "—") + " · fumaça: " + yesNo(row.smoke) + " · resíduos: " + yesNo(row.residue) + " · troca: " + yesNo(row.oil_change);
+    if (table === "grease_trap_cleanings") return "Caixa " + (row.grease_trap || "—") + " · " + (row.frequency || "frequência não informada") + " · " + (Array.isArray(row.checks) && row.checks.includes("NC") ? "Não conforme" : "Conforme");
+    if (table === "equipment_temperature_monthly") return [row.sector, row.equipment_name, filled(row.temperature) ? row.temperature + " °C" : "Temperatura não informada"].filter(Boolean).join(" · ");
+    if (table === "temperature_readings") return [row.equipment_name || row.equipment_id, row.period ? row.period + "ª aferição" : "", filled(row.temperature) ? row.temperature + " °C" : "Temperatura não informada"].filter(Boolean).join(" · ");
+    if (table === "products") return [row.name || row.product_name, row.category, row.unit].filter(Boolean).join(" · ") || "Produto";
+    if (table === "movements") return [row.product_name || row.product, row.type || row.movement_type, filled(row.quantity) ? "quantidade " + row.quantity : ""].filter(Boolean).join(" · ") || "Movimentação de estoque";
+    if (table === "equipment") return [row.name, row.type, filled(row.min_temp) || filled(row.max_temp) ? "faixa " + (row.min_temp ?? "—") + " a " + (row.max_temp ?? "—") + " °C" : ""].filter(Boolean).join(" · ") || "Equipamento";
+    if (table === "cleaning_monthly_responsibles") return [row.month_ref, row.chef, row.manager].filter(Boolean).join(" · ") || "Responsáveis mensais";
+    if (table === "settings") return "Fator da meta: " + (row.target_factor ?? row.targetFactor ?? "não informado");
+    return Object.entries(row).filter(([key, value]) => !["id", "user_id", "created_by", "created_at", "updated_at", "saved_at", "items", "responses", "checks"].includes(key) && filled(value) && typeof value !== "object")
+      .slice(0, 4).map(([key, value]) => key.replace(/_/g, " ") + ": " + String(value)).join(" · ") || "Registro salvo";
+  }
+  function dashRecordDetails(item) {
+    const row = item.row;
+    const label = key => key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    const scalar = (key, value) => {
+      if (["id", "user_id", "created_by", "created_at", "updated_at", "saved_at"].includes(key)) return "";
+      if (value === null || value === undefined || value === "") return "";
+      if (typeof value === "boolean") value = value ? "Sim" : "Não";
+      if (typeof value === "object") return "";
+      return label(key) + ": " + String(value);
+    };
+    const lines = Object.entries(row).map(([key, value]) => scalar(key, value)).filter(Boolean);
+    const names = item.table === "sauce_count_sessions" || item.table === "stock_quote_sessions";
+    if (names && Array.isArray(row.items)) {
+      const filled = row.items.filter(i => i && (names && item.table === "sauce_count_sessions"
+        ? [i.count_quantity, i.order_quantity, i.sales_quantity].some(v => v !== null && v !== undefined && v !== "")
+        : Object.keys(i).some(k => k.startsWith("supplier_") && i[k] !== null && i[k] !== "") || [i.stock, i.order].some(v => v !== null && v !== undefined && v !== "")));
+      lines.push("Produtos preenchidos:");
+      filled.forEach(i => {
+        if (item.table === "sauce_count_sessions") lines.push("• " + (i.product_name || "Produto") + " — contagem: " + (i.count_quantity ?? "—") + ", pedido: " + (i.order_quantity ?? "—") + ", vendas: " + (i.sales_quantity ?? "—"));
+        else lines.push("• " + (i.product || "Produto") + " — estoque: " + (i.stock ?? "—") + ", pedir: " + (i.order ?? "—") + Object.keys(i).filter(k => k.startsWith("supplier_") && i[k] !== null && i[k] !== "").map(k => ", " + k.replace("supplier_", "fornecedor ") + ": " + i[k]).join(""));
+      });
+      if (!filled.length) lines.push("Nenhum produto preenchido.");
+    } else if (Array.isArray(row.items)) {
+      lines.push("Itens: " + row.items.filter(Boolean).length + " de " + row.items.length + " preenchidos (" + row.items.filter(v => v === "C").length + " conformes, " + row.items.filter(v => v === "NC").length + " não conformes).");
+    } else if (Array.isArray(row.responses)) {
+      lines.push("Respostas: " + row.responses.filter(Boolean).length + " de " + row.responses.length + " preenchidas.");
+    } else if (Array.isArray(row.checks)) {
+      lines.push("Etapas: " + row.checks.filter(Boolean).length + " preenchidas; " + row.checks.filter(v => v === "NC").length + " não conformes.");
+    }
+    return lines.join("\n") || item.summary;
   }
   function dashAllOwnerRecords() {
     if (!platformOwnerData) return [];
@@ -5062,7 +5124,7 @@
       user: users.get(row.user_id),
       account: users.get(row.user_id)?.email || row.user_id || "—",
       responsible: row.employee || row.responsible || row.finalized_by || "—",
-      summary: dashRecordSummary(row)
+      summary: dashRecordSummary(row, table)
     }))).sort((a, b) => b.date.localeCompare(a.date));
   }
   function renderDashRecords(box) {
@@ -5124,20 +5186,27 @@
     const tableWrap = mk("div", "table-wrap");
     const table = mk("table", "dash-table");
     const thead = document.createElement("thead"), headRow = document.createElement("tr");
-    ["Data", "Usuário", "Módulo", "Responsável", "Registro"].forEach(label => headRow.appendChild(mk("th", "", label)));
+    ["Data", "Usuário", "Módulo", "Responsável", "Resumo", "Detalhes"].forEach(label => headRow.appendChild(mk("th", "", label)));
     thead.appendChild(headRow); table.appendChild(thead);
     const tbody = document.createElement("tbody");
     page.forEach(item => {
       const tr = document.createElement("tr");
       [dashRecordDateLabel(item.date), item.account, item.label, item.responsible, item.summary].forEach((value, index) => {
         const td = document.createElement("td"); td.textContent = value;
-        if (index === 4) { td.style.whiteSpace = "normal"; td.style.minWidth = "320px"; }
+        if (index === 4) { td.style.whiteSpace = "normal"; td.style.minWidth = "220px"; }
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
+      const details = document.createElement("tr"); details.hidden = true;
+      const detailsCell = document.createElement("td"); detailsCell.colSpan = 6;
+      const detailText = document.createElement("pre"); detailText.textContent = dashRecordDetails(item); detailText.style.cssText = "white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 'DM Sans',sans-serif;margin:4px 0;color:var(--muted)";
+      detailsCell.appendChild(detailText); details.appendChild(detailsCell); tbody.appendChild(details);
+      const actionCell = document.createElement("td");
+      const toggle = actionBtn("Ver detalhes", "btn-edit", button => { details.hidden = !details.hidden; button.textContent = details.hidden ? "Ver detalhes" : "Ocultar"; });
+      actionCell.appendChild(toggle); tr.appendChild(actionCell);
     });
     if (!page.length) {
-      const tr = document.createElement("tr"), td = document.createElement("td"); td.colSpan = 5; td.textContent = "Nenhum registro encontrado para esse filtro."; tr.appendChild(td); tbody.appendChild(tr);
+      const tr = document.createElement("tr"), td = document.createElement("td"); td.colSpan = 6; td.textContent = "Nenhum registro encontrado para esse filtro."; tr.appendChild(td); tbody.appendChild(tr);
     }
     table.appendChild(tbody); tableWrap.appendChild(table); wrap.appendChild(tableWrap);
     const paging = mk("div", "owner-section-head"); paging.style.marginTop = "12px";
@@ -5163,7 +5232,7 @@
       startY: 64,
       theme: "grid",
       head: [["Data", "Usuário", "Módulo", "Responsável", "Registro"]],
-      body: items.map(item => [dashRecordDateLabel(item.date), item.account, item.label, item.responsible, item.summary]),
+      body: items.map(item => [dashRecordDateLabel(item.date), item.account, item.label, item.responsible, item.summary + "\n" + dashRecordDetails(item)]),
       styles: { font: "helvetica", fontSize: 7, cellPadding: 3, overflow: "linebreak", valign: "top" },
       headStyles: { fillColor: [38, 42, 48], textColor: [240, 241, 243] },
       columnStyles: { 0: { cellWidth: 75 }, 1: { cellWidth: 130 }, 2: { cellWidth: 105 }, 3: { cellWidth: 100 }, 4: { cellWidth: "auto" } },
