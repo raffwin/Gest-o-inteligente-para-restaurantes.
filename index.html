@@ -1700,6 +1700,16 @@
     return all;
   }
 
+  // Na conta proprietária, usa o registro mais recente; em empate, prioriza a própria conta.
+  window.operattoOwnerPreferredRecord = function (rows, timeField) {
+    if (!Array.isArray(rows) || !rows.length) return null;
+    return rows.slice().sort((a, b) => {
+      const timeDiff = (Date.parse(b[timeField] || b.updated_at || b.saved_at || b.created_at || "") || 0) -
+        (Date.parse(a[timeField] || a.updated_at || a.saved_at || a.created_at || "") || 0);
+      return timeDiff || (Number(b.user_id === currentUserId) - Number(a.user_id === currentUserId));
+    })[0];
+  };
+
   async function loadCloud() {
     let [productRows, movementRows, settingsRes] = await Promise.all([
       fetchAll("products", "created_at"),
@@ -4548,13 +4558,25 @@
         const uid = currentUserId;
         await migrateLocalRecords(uid);
         if (request !== loadRequest || currentUserId !== uid) return;
-        const { data, error } = await supabaseClient.from("spreadsheet_checklists").select("responsible,responses,updated_at")
-          .eq("user_id", currentUserId).eq("checklist_key", name).eq("checklist_date", date).maybeSingle();
+        let data, error;
+        if (isPlatformOwner && platformOwnerData) {
+          const matching = platformOwnerData.spreadsheet_checklists.filter(record =>
+            record.checklist_key === name && record.checklist_date === date);
+          const selected = window.operattoOwnerPreferredRecord(matching, "updated_at");
+          data = selected || null;
+          error = null;
+        } else {
+          const result = await supabaseClient.from("spreadsheet_checklists").select("responsible,responses,updated_at")
+            .eq("user_id", currentUserId).eq("checklist_key", name).eq("checklist_date", date).maybeSingle();
+          data = result.data; error = result.error;
+        }
         if (request !== loadRequest || dateInput.value !== date) return;
         if (error) throw error;
         if (data) {
           applyRecord(data); cacheLocal(date, data);
-          status.textContent = "Checklist carregado do Supabase."; status.className = "sim positive";
+          const sourceUser = isPlatformOwner && data.user_id && data.user_id !== currentUserId
+            ? (data.email || "outro usuário da equipe") : "sua conta";
+          status.textContent = "Checklist carregado de " + sourceUser + "."; status.className = "sim positive";
         } else {
           const local = readLocal(date); applyRecord(local);
           if (local) {
@@ -4596,7 +4618,9 @@
           if (result.error) { alert("Não foi possível carregar as respostas da equipe: " + friendlyError(result.error)); return; }
           data = result.data;
         }
-        const teamRecords = (data || []).filter(record => record.checklist_date === date);
+        const matchingTeamRecords = (data || []).filter(record => record.checklist_date === date);
+        const latestTeamRecord = window.operattoOwnerPreferredRecord(matchingTeamRecords, "updated_at");
+        const teamRecords = latestTeamRecord ? [latestTeamRecord] : [];
         if (teamRecords.length) {
           reportHead = ["Usuário", "Responsável", "Item", "Resposta"];
           reportBody = teamRecords.flatMap(record => config.items.map((item, i) => [
@@ -5903,12 +5927,20 @@
           if (!setores[row.sector] || !/^\d{4}-\d{2}-\d{2}$/.test(row.log_date)) return;
           if (!cloudRecords[row.log_date]) cloudRecords[row.log_date] = {};
           const existing = cloudRecords[row.log_date][row.sector];
-          if (existing && (Date.parse(existing.atualizadoEm || "") || 0) >= (Date.parse(row.saved_at || "") || 0)) return;
+          const existingTime = Date.parse(existing && existing.atualizadoEm || "") || 0;
+          const rowTime = Date.parse(row.saved_at || "") || 0;
+          const existingOwn = existing && existing.user_id === uid;
+          const rowOwn = row.user_id === uid;
+          if (existing && (existingTime > rowTime || existingTime === rowTime && existingOwn && !rowOwn)) return;
           cloudRecords[row.log_date][row.sector] = {
             itens: Array.isArray(row.items) ? row.items : [],
             salvo: !!row.completed,
             dataSalvamento: row.completed ? (row.saved_at || null) : null,
-            atualizadoEm: row.saved_at || null
+            atualizadoEm: row.saved_at || null,
+            user_id: row.user_id || null,
+            user_email: isPlatformOwner && platformOwnerData
+              ? ((platformOwnerData.users || []).find(user => user.user_id === row.user_id) || {}).email || ""
+              : ""
           };
         });
 
@@ -5916,7 +5948,7 @@
         const recordsToSync = [];
         Object.keys(localRecords).forEach(date => Object.keys(localRecords[date] || {}).forEach(sector => {
           const row = localRecords[date][sector];
-          if (!setores[sector] || !row || !Array.isArray(row.itens) || (!row.itens.some(Boolean) && !row.salvo)) return;
+          if (!setores[sector] || !row || (row.user_id && row.user_id !== uid) || !Array.isArray(row.itens) || (!row.itens.some(Boolean) && !row.salvo)) return;
           const remote = cloudRecords[date] && cloudRecords[date][sector];
           const localTime = Date.parse(row.atualizadoEm || row.dataSalvamento || "") || 0;
           const remoteTime = Date.parse(remote && (remote.atualizadoEm || remote.dataSalvamento) || "") || 0;
@@ -6004,14 +6036,18 @@
   }
   function respostas() { const r = registro(atual, false); return (r && r.itens) || []; }
   // Setor salvo fica bloqueado para evitar alteração acidental.
-  function bloqueado(k) { const r = registro(k, false); return !!(r && r.salvo); }
+  function bloqueado(k) { const r = registro(k, false); return !!(r && r.salvo && (!r.user_id || r.user_id === currentUserId)); }
 
   function atualizarProgresso() {
     const total = setores[atual].itens.length;
     const preenchidos = respostas().filter(Boolean).length;
+    const atualRecord = registro(atual, false);
+    const sharedBy = atualRecord && atualRecord.user_id && atualRecord.user_id !== currentUserId
+      ? " · Preenchido por " + (atualRecord.user_email || "outro usuário") + "; ao editar, será salva sua cópia"
+      : "";
     rich(progresso, bloqueado(atual)
-      ? "{lock} Checklist de " + dataLegivel(dataAtiva()) + " concluído."
-      : dataLegivel(dataAtiva()) + ": " + preenchidos + " de " + total + " itens conferidos");
+      ? "{lock} Checklist de " + dataLegivel(dataAtiva()) + " concluído." + sharedBy
+      : dataLegivel(dataAtiva()) + ": " + preenchidos + " de " + total + " itens conferidos" + sharedBy);
     const salvar = root.querySelector("#lcSalvar");
     if (salvar) salvar.hidden = bloqueado(atual);
   }
@@ -6077,6 +6113,8 @@
     if (bloqueado(atual) || cloudSyncing) return;
     const r = registro(atual, true);
     r.itens[index] = valor;
+    r.user_id = currentUserId;
+    r.user_email = currentEmail || "";
     r.salvo = false;
     r.atualizadoEm = new Date().toISOString();
     persistir();
@@ -6136,6 +6174,8 @@
       return;
     }
     const r = registro(atual, true);
+    r.user_id = currentUserId;
+    r.user_email = currentEmail || "";
     r.salvo = true;
     r.dataSalvamento = new Date().toISOString();
     r.atualizadoEm = r.dataSalvamento;
@@ -6887,7 +6927,7 @@ function olBlankDraft(n) {
 
 function olFillDrafts() {
   OL_MACHINES.forEach(n => {
-    const rec = olDayRows.find(r => r.machine === n);
+    const rec = window.operattoOwnerPreferredRecord(olDayRows.filter(r => r.machine === n), "updatedAt");
     olDraft[n] = rec
       ? { smoke: rec.smoke, residue: rec.residue, change: rec.change, responsible: rec.responsible }
       : olBlankDraft(n);
@@ -6976,7 +7016,7 @@ function olRenderMachines() {
 
 function olCard(n) {
   const d = olDraft[n];
-  const rec = olDayRows.find(r => r.machine === n);
+  const rec = window.operattoOwnerPreferredRecord(olDayRows.filter(r => r.machine === n), "updatedAt");
   const card = mk("div", "ol-card");
   card.dataset.machine = String(n);
 
@@ -7180,7 +7220,10 @@ function olBuildPdf(month, rows, unit) {
 
   // Corpo: dois registros por dia
   const byKey = {};
-  rows.forEach(r => { byKey[r.date + "#" + r.machine] = r; });
+  rows.forEach(r => {
+    const key = r.date + "#" + r.machine;
+    byKey[key] = window.operattoOwnerPreferredRecord([byKey[key], r].filter(Boolean), "updatedAt");
+  });
   const body = [];
   for (let d = 1; d <= range.days; d++) {
     const date = month + "-" + String(d).padStart(2, "0");
@@ -8149,7 +8192,7 @@ function greaseRenderSteps() {
   });
 }
 function greaseLoadFormFromRow() {
-  const row = greaseDayRows.find(r => Number(r.grease_trap) === Number(greaseTrap));
+  const row = window.operattoOwnerPreferredRecord(greaseDayRows.filter(r => Number(r.grease_trap) === Number(greaseTrap)), "updated_at");
   greaseChecks = row && Array.isArray(row.checks) ? row.checks.slice(0, GREASE_STEPS.length) : Array(GREASE_STEPS.length).fill("");
   while (greaseChecks.length < GREASE_STEPS.length) greaseChecks.push("");
   greaseEl("greaseResponsible").value = row ? row.responsible : (currentUser || "");
@@ -8190,7 +8233,7 @@ function greaseRenderHistory() {
   head.appendChild(hr); table.appendChild(head);
   const body = document.createElement("tbody");
   [1, 2].forEach(n => { const tr = document.createElement("tr"); const label = document.createElement("td"); label.textContent = "Caixa " + n; tr.appendChild(label);
-    for (let d = 1; d <= days; d++) { const td = document.createElement("td"); const date = greaseMonth + "-" + String(d).padStart(2, "0"); const row = greaseMonthRows.find(x => x.cleaning_date === date && Number(x.grease_trap) === n); td.textContent = row ? "X" : ""; if (row && row.checks && row.checks.includes("NC")) td.className = "negative"; tr.appendChild(td); }
+    for (let d = 1; d <= days; d++) { const td = document.createElement("td"); const date = greaseMonth + "-" + String(d).padStart(2, "0"); const row = window.operattoOwnerPreferredRecord(greaseMonthRows.filter(x => x.cleaning_date === date && Number(x.grease_trap) === n), "updated_at"); td.textContent = row ? "X" : ""; if (row && row.checks && row.checks.includes("NC")) td.className = "negative"; tr.appendChild(td); }
     body.appendChild(tr);
   });
   table.appendChild(body); box.appendChild(table);
@@ -8357,7 +8400,12 @@ async function tempMonthLoad(month) {
     const { data, error } = result;
     if (error) throw error;
     tempMonthRows = data || []; tempMonthValues = {};
-    tempMonthRows.forEach(r => { tempMonthValues[tempMonthKey(r.reading_date, r.equipment_name)] = String(r.temperature); });
+    const keys = new Set(tempMonthRows.map(r => tempMonthKey(r.reading_date, r.equipment_name)));
+    keys.forEach(key => {
+      const split = key.indexOf("|"), date = key.slice(0, split), name = key.slice(split + 1);
+      const row = window.operattoOwnerPreferredRecord(tempMonthRows.filter(r => r.reading_date === date && r.equipment_name === name), "updated_at");
+      if (row) tempMonthValues[key] = String(row.temperature);
+    });
     tempMonthChanged.clear(); tempMonthDraw(); tempMonthStatus("");
   } catch (error) { tempMonthRows = []; tempMonthValues = {}; tempMonthDraw(); tempMonthStatus("Não foi possível carregar: " + friendlyError(error), "negative"); }
 }
