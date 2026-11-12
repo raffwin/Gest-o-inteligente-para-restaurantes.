@@ -1164,7 +1164,7 @@
         </div>
         <div class="ck-savebar"><span class="ck-save" id="ckMonthlyPdfStatus" aria-live="polite"></span></div>
       </section>
-      <div class="ck-legend">C = Conforme &nbsp;|&nbsp; NC = Não conforme. Os registros são salvos automaticamente. Depois de finalizado, o dia fica bloqueado.</div>
+      <div class="ck-legend">C = Conforme &nbsp;|&nbsp; NC = Não conforme. Os registros são salvos automaticamente. A finalização identifica o dia, mas não impede alterações posteriores.</div>
     </div>
   </div>
   </section>
@@ -6129,7 +6129,8 @@ function dbToCook(r) {
     responsible: r.responsible,
     condition: cookCond(r.condition),
     status: r.status,
-    createdAt: r.created_at
+    createdAt: r.created_at,
+    updatedAt: r.updated_at || r.created_at
   };
 }
 
@@ -6246,20 +6247,20 @@ function ckRender() {
   const notice = ckEl("ckNotice");
   notice.hidden = !final;
   if (final) {
-    rich(notice, "{lock} Controle finalizado em " + cookWhen(cookDay.finalizedAt) + (cookDay.finalizedBy ? " por " + cookDay.finalizedBy : "") +
-      ". Este dia está bloqueado: não é possível adicionar, editar ou excluir registros.");
+      rich(notice, "{lock} Controle finalizado em " + cookWhen(cookDay.finalizedAt) + (cookDay.finalizedBy ? " por " + cookDay.finalizedBy : "") +
+      ". Você ainda pode adicionar, editar ou excluir registros deste dia.");
   }
 
-  // Formulário só com o dia aberto
-  ckEl("ckForm").hidden = final;
+  // O status finalizado permanece como histórico, sem bloquear alterações.
+  ckEl("ckForm").hidden = false;
   ckEl("ckFoot").hidden = final;
-  ckEl("ckFinalize").disabled = cookBusy || cookRecords.length === 0;
+  ckEl("ckFinalize").disabled = cookBusy || cookRecords.length === 0 || final;
   ckEl("ckPdf").disabled = cookBusy;
   ckEl("ckPrint").disabled = cookBusy;
 
   // Tabela
   const box = ckEl("ckTableBox");
-  box.replaceChildren(cookTable(cookRecords, !final && !isPlatformOwner));
+  box.replaceChildren(cookTable(cookRecords, !isPlatformOwner));
   if (isPlatformOwner) ckEl("ckFoot").hidden = true;
 }
 
@@ -6332,7 +6333,7 @@ function cookSuggest() {
 
 async function cookAdd(e) {
   e.preventDefault();
-  if (cookBusy || cookIsFinal(cookDay)) return;
+  if (cookBusy) return;
   const f = ckEl("ckForm");
   const temp = parseFloat(String(f.ckTemp.value).replace(",", "."));
   const cond = cookCond(f.ckCond.value);
@@ -6379,7 +6380,6 @@ async function cookAdd(e) {
 }
 
 function cookEditModal(r) {
-  if (cookIsFinal(cookDay)) return;
   openModal("Editar registro", [
     { key: "product", label: "Produto", value: r.product, maxLength: 120, required: true },
     { key: "condition", label: "Condição", type: "select", value: r.condition, options: COOK_CONDS.map(c => ({ value: c, label: c })) },
@@ -6406,7 +6406,6 @@ function cookEditModal(r) {
 }
 
 async function cookDelete(r) {
-  if (cookIsFinal(cookDay)) return;
   if (!confirm("Excluir o registro de \"" + r.product + "\" (" + r.condition + ")?")) return;
   try {
     const { error } = await supabaseClient.from("cooking_records").delete().eq("id", r.id);
@@ -6423,7 +6422,7 @@ async function cookDelete(r) {
 
 async function cookFinalize() {
   if (cookBusy || cookIsFinal(cookDay) || cookRecords.length === 0) return;
-  const msg = "Finalizar o controle de cozimento e reaquecimento de " + fmtDate(cookDate) + "?\n\nDepois de finalizado, nenhum registro deste dia poderá ser adicionado, editado ou excluído.";
+  const msg = "Marcar o controle de cozimento e reaquecimento de " + fmtDate(cookDate) + " como finalizado?\n\nVocê ainda poderá adicionar, editar ou excluir registros depois.";
   if (!confirm(msg)) return;
 
   cookBusy = true;
@@ -6543,6 +6542,14 @@ async function cookMonthlyPdf() {
       if (recordsResult.error) throw recordsResult.error;
       records = (recordsResult.data || []).map(dbToCook);
     }
+    const latestByDate = new Map();
+    records.forEach(record => {
+      const existing = latestByDate.get(record.date);
+      const stamp = Date.parse(record.updatedAt || record.createdAt || (record.date + "T" + (record.time || "00:00")));
+      const existingStamp = existing ? Date.parse(existing.updatedAt || existing.createdAt || (existing.date + "T" + (existing.time || "00:00"))) : -Infinity;
+      if (!existing || stamp >= existingStamp) latestByDate.set(record.date, record);
+    });
+    records = Array.from(latestByDate.values()).sort((a, b) => a.date.localeCompare(b.date));
     const doc = cookBuildPdf(month, records, null, "CONTROLE MENSAL DE COZIMENTO E REAQUECIMENTO");
     if (!doc) return;
     sharePdf(doc, "operatto_cozimento_mensal_" + month + ".pdf");
