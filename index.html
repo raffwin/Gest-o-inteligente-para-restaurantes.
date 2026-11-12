@@ -1188,12 +1188,12 @@
       <div class="ol-savebar"><span class="ol-save" id="olSaveStatus" aria-live="polite"></span></div>
 
       <div class="ol-panel">
-        <h3 class="ol-h">Histórico e PDF</h3>
+        <h3 class="ol-h">Histórico e PDF mensal do controle de óleo</h3>
         <div class="ol-tools">
           <div class="ol-field"><label for="olMonth">Mês de referência</label><input id="olMonth" type="month"></div>
           <div class="ol-field ol-f-unit"><label for="olUnit">Unidade (aparece no PDF)</label><input id="olUnit" type="text" maxlength="80" placeholder="Nome da unidade"></div>
           <div class="ol-btns">
-            <button type="button" class="ol-ghost" id="olPdf">Gerar PDF</button>
+            <button type="button" class="ol-ghost" id="olPdf">Gerar PDF mensal</button>
             <button type="button" class="ol-ghost" id="olPrint">Imprimir</button>
           </div>
         </div>
@@ -1535,7 +1535,7 @@
     if (msg.includes("error sending") || msg.includes("sending recovery") || msg.includes("sending confirmation")) return "O Supabase não conseguiu enviar o e-mail. Confira a configuração de e-mail (SMTP) no painel do Supabase.";
     if (msg.includes("session missing") || msg.includes("session_not_found")) return "O link de recuperação expirou ou já foi usado. Peça um novo.";
     if (msg.includes("condition") && (msg.includes("column") || msg.includes("schema cache"))) return "O banco ainda não tem a coluna Condição. Rode o arquivo supabase_cozimento_reaquecimento.sql no SQL Editor do Supabase e recarregue a página.";
-    if (msg.includes("cozimento_dia_finalizado")) return "Este dia já foi finalizado e não pode mais ser alterado.";
+    if (msg.includes("cozimento_dia_finalizado") || msg.includes("cozimento_dia_ja_finalizado")) return "O Supabase ainda está bloqueando este dia. Execute supabase_cozimento_edicao_livre.sql no SQL Editor do Supabase para liberar novos registros e alterações.";
     if (msg.includes("cozimento_data_futura")) return "Não é possível usar uma data futura.";
     if (msg.includes("cozimento_sem_registros")) return "Adicione pelo menos um registro antes de finalizar o dia.";
     if (msg.includes("cozimento_sem_responsavel")) return "Informe quem está finalizando o dia.";
