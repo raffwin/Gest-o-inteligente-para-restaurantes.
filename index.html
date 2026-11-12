@@ -6838,8 +6838,9 @@ async function olLoadUnit() {
   try {
     const { data } = await supabaseClient.auth.getUser();
     const meta = (data && data.user && data.user.user_metadata) || {};
-    olUnit = String(meta.unit || "").trim();
+    olUnit = String(meta.unit || "SUDOESTE").trim();
   } catch (error) { /* mantém o valor atual */ }
+  if (!olUnit) olUnit = "SUDOESTE";
   olEl("olUnit").value = olUnit;
 }
 
@@ -7061,24 +7062,12 @@ function olBuildPdf(month, rows, unit) {
   const tw = w - margin * 2;
 
   // Cabeçalho do formulário
-  doc.setTextColor(25, 28, 33);
-  doc.setFont("helvetica", "bold");
+  doc.setTextColor(25, 25, 25);
+  doc.setFont("times", "bold");
   doc.setFontSize(14);
-  doc.text("CONTROLE DE QUALIDADE DO ÓLEO DE FRITURA", w / 2, 40, { align: "center" });
-
-  doc.setDrawColor(60, 66, 75);
-  doc.setLineWidth(0.8);
-  doc.rect(margin, 52, tw, 22);
-  doc.line(margin + tw * 0.6, 52, margin + tw * 0.6, 74);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
-  doc.text("UNIDADE:", margin + 6, 66);
-  doc.setFont("helvetica", "normal");
-  doc.text(unit || "", margin + 56, 66, { maxWidth: tw * 0.6 - 62 });
-  doc.setFont("helvetica", "bold");
-  doc.text("MÊS DE REFERÊNCIA:", margin + tw * 0.6 + 6, 66);
-  doc.setFont("helvetica", "normal");
-  doc.text(olMonthName(month).toUpperCase(), margin + tw * 0.6 + 104, 66, { maxWidth: tw * 0.4 - 108 });
+  doc.text("CONTROLE DE QUALIDADE DO ÓLEO DE FRITURA", w / 2, 28, { align: "center" });
+  doc.setFontSize(11);
+  doc.text("UNIDADE: " + (unit || "SUDOESTE").toUpperCase(), w / 2, 45, { align: "center" });
 
   // Corpo: dois registros por dia
   const byKey = {};
@@ -7088,16 +7077,21 @@ function olBuildPdf(month, rows, unit) {
     const date = month + "-" + String(d).padStart(2, "0");
     OL_MACHINES.forEach(n => {
       const r = byKey[date + "#" + n];
-      const line = ["Fritadeira " + n, r ? olYN(r.smoke) : "", r ? olYN(r.residue) : "", r ? olYN(r.change) : "", r ? r.responsible : ""];
-      if (n === 1) line.unshift({ content: String(d).padStart(2, "0"), rowSpan: 2, styles: { halign: "center", valign: "middle", fontStyle: "bold" } });
-      body.push(line);
+      const machine = n === 1 ? "FRITADEIRA I" : "FRITADEIRA II";
+      const values = [machine, r ? olYN(r.smoke) : "", r ? olYN(r.residue) : "", r ? olYN(r.change) : ""];
+      if (n === 1) body.push([
+        { content: String(d).padStart(2, "0"), rowSpan: 2, styles: { halign: "center", valign: "middle", fontStyle: "bold" } },
+        ...values,
+        { content: r ? r.responsible : "", rowSpan: 2, styles: { halign: "center", valign: "middle" } }
+      ]);
+      else body.push([...values]);
     });
   }
 
   // Ajusta a altura das linhas para o mês inteiro caber em uma folha A4
-  const startY = 84;
-  const bottom = h - 54;
-  const headH = 24;
+  const startY = 62;
+  const bottom = h - 28;
+  const headH = 53;
   const rowH = Math.min(15, Math.floor(((bottom - startY - headH) / body.length) * 10) / 10 - 0.2);
   const fs = Math.min(8.5, rowH * 0.62);
   const padV = Math.max(0.6, (rowH - fs * 1.15) / 2);
@@ -7105,38 +7099,35 @@ function olBuildPdf(month, rows, unit) {
   doc.autoTable({
     startY: startY,
     theme: "grid",
-    margin: { left: margin, right: margin, top: startY, bottom: 54 },
+    margin: { left: margin, right: margin, top: startY, bottom: 28 },
     tableWidth: tw,
-    head: [["DATA", "MAQUINÁRIO", "PRESENÇA DE FUMAÇA", "PRESENÇA DE RESÍDUOS", "TROCA DE ÓLEO", "RESPONSÁVEL"]],
+    head: [
+      [{ content: "CONTROLE DE QUALIDADE DO ÓLEO PARA FRITURA DE IMERSÃO", colSpan: 6, styles: { halign: "center", fontStyle: "bold", fontSize: 8, minCellHeight: 14 } }],
+      [{ content: "MÊS: " + MESES_PT[Number(month.slice(5, 7)) - 1].toUpperCase(), colSpan: 6, styles: { halign: "left", fontStyle: "bold", fontSize: 7.5, minCellHeight: 12 } }],
+      ["DATA", "MAQUINÁRIO", "PRESENÇA DE\nFUMAÇA", "PRESENÇA DE\nRESÍDUOS", "TROCA DE\nÓLEO", "RESPONSÁVEL"]
+    ],
     body: body,
-    styles: { font: "helvetica", fontSize: fs, cellPadding: { top: padV, bottom: padV, left: 4, right: 4 }, minCellHeight: rowH, lineColor: [70, 76, 85], lineWidth: 0.5, textColor: [25, 28, 33], valign: "middle", overflow: "ellipsize" },
-    headStyles: { fillColor: [38, 42, 48], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 7.5, halign: "center", valign: "middle", minCellHeight: headH, cellPadding: 3 },
+    styles: { font: "times", fontSize: fs, cellPadding: { top: padV, bottom: padV, left: 3, right: 3 }, minCellHeight: rowH, lineColor: [55, 55, 55], lineWidth: 0.45, textColor: [25, 25, 25], valign: "middle", overflow: "ellipsize", halign: "center" },
+    headStyles: { fillColor: [255, 255, 255], textColor: [25, 25, 25], fontStyle: "bold", fontSize: 7, halign: "center", valign: "middle", cellPadding: 2, lineColor: [55, 55, 55], lineWidth: 0.45 },
     columnStyles: {
       0: { cellWidth: 38 },
-      1: { cellWidth: 72 },
-      2: { cellWidth: 92, halign: "center" },
-      3: { cellWidth: 92, halign: "center" },
-      4: { cellWidth: 78, halign: "center" }
+      1: { cellWidth: 91 },
+      2: { cellWidth: 91 },
+      3: { cellWidth: 98 },
+      4: { cellWidth: 76 }
     },
     didParseCell: function (data) {
-      if (data.section !== "body") return;
-      if (Math.floor(data.row.index / 2) % 2 === 1) data.cell.styles.fillColor = [238, 241, 245];
-      if ([2, 3, 4].includes(data.column.index) && data.cell.raw === "Sim") data.cell.styles.fontStyle = "bold";
+      if (data.section === "head") {
+        data.cell.styles.fillColor = [255, 255, 255];
+        if (data.row.index === 2) {
+          data.cell.styles.minCellHeight = 26;
+          data.cell.styles.overflow = "linebreak";
+          data.cell.styles.fontSize = 6.7;
+        }
+      }
+      if (data.section === "body" && data.column.index === 1) data.cell.styles.halign = "left";
     }
   });
-
-  // Rodapé: identificação do responsável e crédito
-  doc.setDrawColor(60, 66, 75);
-  doc.setLineWidth(0.6);
-  doc.line(margin, h - 34, margin + 230, h - 34);
-  doc.line(margin + 280, h - 34, margin + 510, h - 34);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
-  doc.setTextColor(90, 96, 106);
-  doc.text("Responsável pela verificação", margin, h - 25);
-  doc.text("Visto do gerente", margin + 280, h - 25);
-  doc.setFontSize(7);
-  doc.text("Operatto", w - margin, h - 14, { align: "right" });
   return doc;
 }
 
