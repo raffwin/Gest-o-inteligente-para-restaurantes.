@@ -271,6 +271,10 @@
     #operatto-limpeza .lc-date-control label { color: var(--muted); font-size: 12px; }
     #operatto-limpeza .lc-date-control input { width: 190px; margin: 4px 0 0; }
     #operatto-limpeza .lc-date-control button { padding: 9px 13px; }
+    #operatto-limpeza .lc-pdf-control { display: flex; align-items: end; gap: 9px; flex-wrap: wrap; margin: 0 0 14px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; }
+    #operatto-limpeza .lc-pdf-control label { color: var(--muted); font-size: 12px; }
+    #operatto-limpeza .lc-pdf-control input { width: 190px; margin: 4px 0 0; }
+    #operatto-limpeza .lc-pdf-control button { padding: 9px 13px; }
     #operatto-limpeza .lc-sync-status { min-height: 18px; margin: -8px 0 12px; color: var(--muted); font-size: 12px; }
     #operatto-limpeza .lc-setores, #operatto-limpeza .lc-lista { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     #operatto-limpeza .lc-painel { display: none; }
@@ -1096,6 +1100,11 @@
     <div class="lc-date-control">
       <div><label for="lcDate">Data do checklist</label><input id="lcDate" type="date"></div>
       <button type="button" class="lc-voltar" id="lcToday">Hoje</button>
+    </div>
+    <div class="lc-pdf-control">
+      <div><label for="lcPdfMonth">Mês do PDF</label><input id="lcPdfMonth" type="month"></div>
+      <button type="button" id="lcPdfMonthBtn">Gerar PDF mensal</button>
+      <span class="hint" id="lcPdfMonthStatus" role="status" aria-live="polite"></span>
     </div>
     <div class="lc-sync-status" id="lcSyncStatus" role="status" aria-live="polite"></div>
 
@@ -4242,17 +4251,19 @@
     box.appendChild(wrap);
   }
 
-  function exportLimpezaPdf() {
+  async function exportLimpezaPdf(mesSelecionado) {
     const api = window.operattoLimpeza;
-    if (!api) return;
+    if (!api) return false;
 
     const JsPDF = window.jspdf && window.jspdf.jsPDF;
     if (!JsPDF) {
       alert("Biblioteca de PDF indisponível (sem internet). Conecte-se e tente novamente.");
-      return;
+      return false;
     }
 
-    const mes = dashLimpezaMonth || localStamp().slice(0, 7);
+    const mes = (typeof mesSelecionado === "string" && /^\d{4}-\d{2}$/.test(mesSelecionado))
+      ? mesSelecionado
+      : dashLimpezaMonth || localStamp().slice(0, 7);
     const info = limpezaMonthInfo(mes);
     const registros = api.registros();
     const resp = api.responsaveis(mes);
@@ -4261,7 +4272,7 @@
       const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
       if (typeof doc.autoTable !== "function") {
         alert("Biblioteca de tabelas do PDF indisponível (sem internet). Conecte-se e tente novamente.");
-        return;
+        return false;
       }
 
       const margin = 28;
@@ -4345,11 +4356,14 @@
         doc.text("Página " + i + " de " + pages, w - margin, h - 18, { align: "right" });
       }
 
-      sharePdf(doc, "operatto_limpeza_" + mes + ".pdf");
+      await sharePdf(doc, "operatto_limpeza_" + mes + ".pdf");
+      return true;
     } catch (error) {
       alert("Não foi possível gerar o PDF.");
+      return false;
     }
   }
+  window.operattoLimpezaPdf = exportLimpezaPdf;
 
   /* ---------------- Checklist: escolher qual fazer ---------------- */
 
@@ -5725,6 +5739,9 @@
   const progresso = root.querySelector("#lcProgresso");
   const syncStatus = root.querySelector("#lcSyncStatus");
   const dateInput = root.querySelector("#lcDate");
+  const pdfMonthInput = root.querySelector("#lcPdfMonth");
+  const pdfMonthButton = root.querySelector("#lcPdfMonthBtn");
+  const pdfMonthStatus = root.querySelector("#lcPdfMonthStatus");
 
   function statusNuvem(texto, tipo) {
     if (!syncStatus) return;
@@ -6049,6 +6066,27 @@
   dateInput.value = hoje();
   dateInput.addEventListener("change", () => selecionarData(dateInput.value));
   root.querySelector("#lcToday").addEventListener("click", () => selecionarData(hoje()));
+  pdfMonthInput.max = hoje().slice(0, 7);
+  pdfMonthInput.value = hoje().slice(0, 7);
+  pdfMonthButton.addEventListener("click", async () => {
+    const month = pdfMonthInput.value;
+    if (!month || month > hoje().slice(0, 7)) {
+      pdfMonthStatus.textContent = "Escolha um mês válido, igual ou anterior ao atual.";
+      return;
+    }
+    if (typeof window.operattoLimpezaPdf !== "function") {
+      pdfMonthStatus.textContent = "A função de PDF ainda não está disponível. Recarregue o aplicativo.";
+      return;
+    }
+    pdfMonthButton.disabled = true;
+    pdfMonthStatus.textContent = "Preparando o PDF mensal...";
+    try {
+      const generated = await window.operattoLimpezaPdf(month);
+      pdfMonthStatus.textContent = generated ? "PDF mensal preparado para " + month.slice(5, 7) + "/" + month.slice(0, 4) + "." : "Não foi possível preparar o PDF mensal.";
+    } catch (error) {
+      pdfMonthStatus.textContent = "Não foi possível gerar o PDF mensal.";
+    } finally { pdfMonthButton.disabled = false; }
+  });
 
   root.querySelector("#lcSalvar").addEventListener("click", async () => {
     if (bloqueado(atual) || cloudSyncing) return;
@@ -6083,6 +6121,7 @@
       diaSelecionado = hoje();
       dateInput.max = hoje();
       dateInput.value = diaSelecionado;
+      pdfMonthInput.max = hoje().slice(0, 7);
       mostrarSetores();
       await carregarNuvem(true);
       mostrarSetores();
