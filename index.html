@@ -267,6 +267,10 @@
     #operatto-limpeza .lc-header { margin-bottom: 18px; }
     #operatto-limpeza .lc-header h2 { display: none; }
     #operatto-limpeza .lc-header p { font-size: 13px; color: var(--muted); margin: 0; }
+    #operatto-limpeza .lc-date-control { display: flex; align-items: end; gap: 9px; flex-wrap: wrap; margin: 0 0 14px; }
+    #operatto-limpeza .lc-date-control label { color: var(--muted); font-size: 12px; }
+    #operatto-limpeza .lc-date-control input { width: 190px; margin: 4px 0 0; }
+    #operatto-limpeza .lc-date-control button { padding: 9px 13px; }
     #operatto-limpeza .lc-sync-status { min-height: 18px; margin: -8px 0 12px; color: var(--muted); font-size: 12px; }
     #operatto-limpeza .lc-setores, #operatto-limpeza .lc-lista { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     #operatto-limpeza .lc-painel { display: none; }
@@ -1087,7 +1091,11 @@
   <div id="operatto-limpeza">
     <div class="lc-header">
       <h2>Checklist de limpeza</h2>
-      <p>Selecione o setor para iniciar a conferência.</p>
+      <p>Escolha a data e o setor para preencher a conferência.</p>
+    </div>
+    <div class="lc-date-control">
+      <div><label for="lcDate">Data do checklist</label><input id="lcDate" type="date"></div>
+      <button type="button" class="lc-voltar" id="lcToday">Hoje</button>
     </div>
     <div class="lc-sync-status" id="lcSyncStatus" role="status" aria-live="polite"></div>
 
@@ -5701,6 +5709,7 @@
   // dados = { registros: { "AAAA-MM-DD": { setor: { itens: [], salvo, dataSalvamento } } }, responsaveis: { "AAAA-MM": { chefe, gerente } } }
   let dados = { registros: {}, responsaveis: {} };
   let atual = null;
+  let diaSelecionado = "";
   let cloudLoadedUid = "";
   let cloudFailedUid = "";
   let cloudLoading = null;
@@ -5715,6 +5724,7 @@
   const titulo = root.querySelector("#lcTitulo");
   const progresso = root.querySelector("#lcProgresso");
   const syncStatus = root.querySelector("#lcSyncStatus");
+  const dateInput = root.querySelector("#lcDate");
 
   function statusNuvem(texto, tipo) {
     if (!syncStatus) return;
@@ -5745,6 +5755,8 @@
   function pad(n) { return String(n).padStart(2, "0"); }
   function dataLocal(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
   function hoje() { return dataLocal(new Date()); }
+  function dataAtiva() { return diaSelecionado || hoje(); }
+  function dataLegivel(date) { return date ? date.slice(8, 10) + "/" + date.slice(5, 7) + "/" + date.slice(0, 4) : ""; }
 
   // Cada conta tem o seu próprio registro neste aparelho
   function chave() {
@@ -5925,9 +5937,9 @@
     return cloudLoading;
   }
 
-  // Registro do setor no dia de hoje
+  // Registro do setor na data selecionada
   function registro(k, criar) {
-    const dia = hoje();
+    const dia = dataAtiva();
     if (!dados.registros[dia] && criar) dados.registros[dia] = {};
     const d = dados.registros[dia];
     if (!d) return null;
@@ -5935,15 +5947,15 @@
     return d[k] || null;
   }
   function respostas() { const r = registro(atual, false); return (r && r.itens) || []; }
-  // Setor já salvo hoje: fica só para consulta e libera de novo no dia seguinte
+  // Setor salvo fica bloqueado para evitar alteração acidental.
   function bloqueado(k) { const r = registro(k, false); return !!(r && r.salvo); }
 
   function atualizarProgresso() {
     const total = setores[atual].itens.length;
     const preenchidos = respostas().filter(Boolean).length;
     rich(progresso, bloqueado(atual)
-      ? "{lock} Checklist de hoje concluído — disponível novamente amanhã."
-      : "Hoje: " + preenchidos + " de " + total + " itens conferidos");
+      ? "{lock} Checklist de " + dataLegivel(dataAtiva()) + " concluído."
+      : dataLegivel(dataAtiva()) + ": " + preenchidos + " de " + total + " itens conferidos");
     const salvar = root.querySelector("#lcSalvar");
     if (salvar) salvar.hidden = bloqueado(atual);
   }
@@ -5956,8 +5968,8 @@
       const r = registro(k, false);
       const preenchidos = ((r && r.itens) || []).filter(Boolean).length;
       const status = botao.querySelector(".lc-status");
-      if (r && r.salvo) rich(status, "{lock} Concluído hoje — libera amanhã");
-      else if (preenchidos) status.textContent = preenchidos + "/" + total + " preenchidos hoje";
+      if (r && r.salvo) rich(status, "{lock} Concluído em " + dataLegivel(dataAtiva()));
+      else if (preenchidos) status.textContent = preenchidos + "/" + total + " preenchidos em " + dataLegivel(dataAtiva());
       else status.textContent = "";
     });
   }
@@ -6016,11 +6028,27 @@
     abrirSetor(atual);
     window.scrollTo(0, y);
     statusNuvem("Salvando alteração na nuvem...", "hint");
-    gravarSetorNuvem(hoje(), atual).catch(() => {});
+    gravarSetorNuvem(dataAtiva(), atual).catch(() => {});
   }
 
   setoresEl.querySelectorAll("[data-setor]").forEach(b => b.addEventListener("click", () => abrirSetor(b.dataset.setor)));
   root.querySelector("#lcVoltar").addEventListener("click", mostrarSetores);
+  function selecionarData(value) {
+    const today = hoje();
+    if (!value || value > today) {
+      dateInput.value = diaSelecionado || today;
+      statusNuvem("A data do checklist não pode ser futura.", "warning");
+      return;
+    }
+    diaSelecionado = value;
+    statusNuvem("");
+    if (atual) abrirSetor(atual);
+    else renderizarSetores();
+  }
+  dateInput.max = hoje();
+  dateInput.value = hoje();
+  dateInput.addEventListener("change", () => selecionarData(dateInput.value));
+  root.querySelector("#lcToday").addEventListener("click", () => selecionarData(hoje()));
 
   root.querySelector("#lcSalvar").addEventListener("click", async () => {
     if (bloqueado(atual) || cloudSyncing) return;
@@ -6038,12 +6066,12 @@
     statusNuvem("Finalizando e sincronizando o setor...", "hint");
     let sincronizado = true;
     try {
-      await gravarSetorNuvem(hoje(), atual);
+      await gravarSetorNuvem(dataAtiva(), atual);
     } catch (error) {
       // A cópia local permanece disponível para sincronização posterior.
       sincronizado = false;
     }
-    alert(sincronizado ? "Setor salvo e sincronizado com a nuvem!" : "Setor salvo neste aparelho, mas não foi possível sincronizar. Veja o aviso na tela.");
+    alert(sincronizado ? "Setor de " + dataLegivel(dataAtiva()) + " salvo e sincronizado com a nuvem!" : "Setor salvo neste aparelho, mas não foi possível sincronizar. Veja o aviso na tela.");
     mostrarSetores();
   });
 
@@ -6052,6 +6080,9 @@
     setores: setores,
     abrir: async () => {
       ler();
+      diaSelecionado = hoje();
+      dateInput.max = hoje();
+      dateInput.value = diaSelecionado;
       mostrarSetores();
       await carregarNuvem(true);
       mostrarSetores();
