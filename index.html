@@ -661,16 +661,16 @@
   <div class="header-right">Painel de gestão</div>
 </header>
 
-<!-- Tela de login / criar conta / recuperação de senha -->
+<!-- Tela de login e recuperação de senha -->
 <div class="login-overlay" id="loginOverlay" hidden>
   <div class="login-card">
     <svg class="login-logo" viewBox="0 0 48 48" fill="none" role="img" aria-label="Logo do Operatto"><path d="M8 34V14L24 5L40 14V34L24 43L8 34Z" stroke="#56899A" stroke-width="2"/><path d="M17 30V18L24 14L31 18V30L24 34L17 30Z" stroke="#F0F1F3" stroke-width="2"/><path d="M24 14V34M17 18L31 30" stroke="#56899A" stroke-width="1.5"/></svg>
     <div class="login-brand">OPER<span>ATTO</span></div>
 
-    <!-- Login / criar conta -->
+    <!-- Login -->
     <form id="loginForm" autocomplete="on">
       <h2 id="loginTitle">Entrar</h2>
-      <p class="login-sub" id="loginSubtitle"></p>
+      <p class="login-sub" id="loginSubtitle">Entre com o e-mail e a senha fornecidos pelo administrador.</p>
 
       <div id="nameWrap" hidden>
         <label for="loginName">Seu nome</label>
@@ -691,7 +691,7 @@
       <div class="login-error" id="loginError" role="alert"></div>
 
       <button type="submit" id="loginBtn">Entrar</button>
-      <button type="button" class="link-btn" id="toggleModeBtn">Primeiro acesso? Criar conta</button>
+      <button type="button" class="link-btn" id="toggleModeBtn" hidden>Primeiro acesso? Criar conta</button>
       <button type="button" class="link-btn" id="forgotBtn">Esqueci minha senha</button>
     </form>
 
@@ -1504,7 +1504,7 @@
   const appMain = document.getElementById("appMain");
   const userBar = document.getElementById("userBar");
   const syncBanner = document.getElementById("syncBanner");
-  let signupMode = false;
+  const signupMode = false;
 
   /* ---------------- Utilidades ---------------- */
 
@@ -2277,13 +2277,14 @@
     loginName.required = signupMode;
     loginPass2.required = signupMode;
     forgotBtn.hidden = signupMode;
+    toggleModeBtn.hidden = true;
 
     document.getElementById("loginTitle").textContent = signupMode ? "Criar conta" : "Entrar";
     document.getElementById("loginSubtitle").textContent = signupMode
       ? "Crie sua conta com e-mail e senha. Seus dados ficam salvos na nuvem."
-      : "Digite seu e-mail e sua senha.";
+      : "Entre com o e-mail e a senha fornecidos pelo administrador.";
     loginBtn.textContent = signupMode ? "Criar conta e entrar" : "Entrar";
-    toggleModeBtn.textContent = signupMode ? "Já tenho conta. Entrar" : "Primeiro acesso? Criar conta";
+    toggleModeBtn.textContent = "";
     loginPass.autocomplete = signupMode ? "new-password" : "current-password";
   }
 
@@ -2314,7 +2315,6 @@
     loginOverlay.hidden = false;
     showView("login");
 
-    signupMode = false;
     loginName.value = "";
     loginPass.value = "";
     loginPass2.value = "";
@@ -2386,12 +2386,6 @@
 
   document.getElementById("syncRetryBtn").addEventListener("click", syncFromCloud);
 
-  toggleModeBtn.addEventListener("click", function () {
-    signupMode = !signupMode;
-    setMsg(loginError, "");
-    applyMode();
-  });
-
   resetCode.addEventListener("input", () => {
     resetCode.value = resetCode.value.replace(/\D/g, "").slice(0, 8);
   });
@@ -2414,33 +2408,6 @@
 
     loginBtn.disabled = true;
     try {
-      if (signupMode) {
-        const name = loginName.value.trim();
-        if (name.length < 2) {
-          setMsg(loginError, "Digite seu nome.");
-          return;
-        }
-        if (pass !== loginPass2.value) {
-          setMsg(loginError, "As senhas não são iguais.");
-          return;
-        }
-
-        const { data, error } = await supabaseClient.auth.signUp({
-          email: email,
-          password: pass,
-          options: { data: { name: name } }
-        });
-        if (error) throw error;
-
-        if (!data.session) {
-          // Projeto com confirmação de e-mail ligada
-          showLogin("Conta criada! Confirme seu e-mail pelo link que enviamos e depois entre.");
-          return;
-        }
-        await enterApp(data.user);
-        return;
-      }
-
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email: email, password: pass });
       if (error) throw error;
       await enterApp(data.user);
