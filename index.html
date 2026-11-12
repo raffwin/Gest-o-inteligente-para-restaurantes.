@@ -2,9 +2,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#111827">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%2316a34a'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='white' stroke-width='3'/%3E%3Crect x='15' y='21' width='3' height='5' rx='1' fill='white'/%3E%3Crect x='19' y='17' width='3' height='9' rx='1' fill='white'/%3E%3Crect x='23' y='14' width='3' height='12' rx='1' fill='white'/%3E%3C/svg%3E">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#17191D">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="OPERATTO">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/operatto-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+  <link rel="icon" type="image/svg+xml" href="./icons/operatto.svg">
   <title>Operatto | Gestão inteligente</title>
 
   <!-- Supabase: banco de dados e login -->
@@ -43,7 +49,7 @@
     h1, h2, h3, .number, .card-value, .brand-name, .page-title, .section-heading { font-family: "Manrope", "DM Sans", system-ui, sans-serif; }
 
     /* ----- Estrutura: barra lateral + conteúdo ----- */
-    .app { display: flex; min-height: 100vh; }
+    .app { display: flex; min-height: 100vh; min-height: 100dvh; }
     .shell { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .sidebar { width: 245px; flex-shrink: 0; background: var(--sidebar); border-right: 1px solid var(--border); padding: 26px 17px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
     body:not(:has(#appMain:not([hidden]))) .sidebar { display: none; }
@@ -505,8 +511,26 @@
     }
     @media (max-width: 360px) { #operatto-limpeza .lc-lista { grid-template-columns: 1fr; } }
 
+    /* Ajustes de área segura e altura dinâmica para Safari/iPhone. */
+    @supports (padding: env(safe-area-inset-top)) {
+      header { height: calc(76px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
+      .sidebar { height: 100dvh; padding-top: calc(26px + env(safe-area-inset-top)); padding-bottom: calc(26px + env(safe-area-inset-bottom)); }
+      .login-overlay, .terms-overlay { padding-top: calc(22px + env(safe-area-inset-top)); padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+      .modal-overlay { padding-top: calc(16px + env(safe-area-inset-top)); padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+    }
+    @media (max-width: 600px) {
+      @supports (padding: env(safe-area-inset-top)) {
+        header { height: calc(64px + env(safe-area-inset-top)); padding-left: calc(14px + env(safe-area-inset-left)); padding-right: calc(14px + env(safe-area-inset-right)); }
+        .sidebar.open { height: 100dvh; padding-top: calc(26px + env(safe-area-inset-top)); padding-bottom: calc(26px + env(safe-area-inset-bottom)); }
+        main { padding-left: calc(16px + env(safe-area-inset-left)); padding-right: calc(16px + env(safe-area-inset-right)); padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+        footer { margin-left: calc(16px + env(safe-area-inset-left)); margin-right: calc(16px + env(safe-area-inset-right)); }
+        .login-overlay { padding-left: calc(22px + env(safe-area-inset-left)); padding-right: calc(22px + env(safe-area-inset-right)); }
+        .terms-overlay { padding-left: calc(8px + env(safe-area-inset-left)); padding-right: calc(8px + env(safe-area-inset-right)); }
+      }
+    }
+
     /* ----- Termos de uso ----- */
-    .terms-overlay { position: fixed; inset: 0; z-index: 999999; background: #0F1114; display: flex; align-items: center; justify-content: center; padding: 20px; color: var(--text); }
+    .terms-overlay { position: fixed; inset: 0; z-index: 999999; background: #0F1114; display: flex; align-items: center; justify-content: center; padding: 20px; color: var(--text); overflow-y: auto; }
     .terms-container { width: 100%; max-width: 680px; max-height: 94vh; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 30px 100px #0009; }
     .terms-header { padding: 20px 26px; display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
     .terms-brand { display: flex; align-items: center; gap: 12px; }
@@ -537,6 +561,14 @@
       .terms-header { padding: 16px; }
       .terms-content { padding: 22px 18px; }
       .terms-scroll { max-height: 38vh; padding: 15px; }
+    }
+    @supports (padding: env(safe-area-inset-top)) {
+      .terms-container { max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px); }
+    }
+    @media (max-width: 600px) {
+      @supports (padding: env(safe-area-inset-top)) {
+        .terms-overlay { padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: calc(8px + env(safe-area-inset-bottom)); padding-left: calc(8px + env(safe-area-inset-left)); padding-right: calc(8px + env(safe-area-inset-right)); }
+      }
     }
   </style>
   <!-- xlsx-js-style: mesma API do SheetJS, mas aceita bordas e estilos nas células -->
@@ -8577,6 +8609,16 @@ function quoteGeneratePdf() {
   quotePdfDrawTables(doc, report.groups, report.date, currentUser);
   sharePdf(doc, "operatto_cotacao_" + report.date + ".pdf");
 }
+</script>
+
+<script>
+  // O service worker só guarda o shell estático. Chamadas ao Supabase e dados da conta ficam fora do cache.
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js", { scope: "./" })
+        .catch(error => console.warn("Não foi possível ativar o modo offline básico.", error));
+    });
+  }
 </script>
 
 </body>
