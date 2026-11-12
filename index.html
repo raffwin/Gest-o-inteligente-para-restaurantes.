@@ -1156,6 +1156,14 @@
           <button type="button" class="ck-final" id="ckFinalize">Finalizar controle do dia</button>
         </div>
       </div>
+      <section class="section" style="margin-top:14px">
+        <h2>Relatório mensal</h2>
+        <div class="row">
+          <div><label for="ckMonthPdf">Mês de referência</label><input id="ckMonthPdf" type="month"></div>
+          <div style="display:flex;align-items:end"><button type="button" class="ck-ghost" id="ckMonthlyPdf">Gerar PDF mensal</button></div>
+        </div>
+        <div class="ck-savebar"><span class="ck-save" id="ckMonthlyPdfStatus" aria-live="polite"></span></div>
+      </section>
       <div class="ck-legend">C = Conforme &nbsp;|&nbsp; NC = Não conforme. Os registros são salvos automaticamente. Depois de finalizado, o dia fica bloqueado.</div>
     </div>
   </div>
@@ -6450,7 +6458,7 @@ function cookPdfLogo(doc, x, y, size) {
   poly([[17, 30], [17, 18], [24, 14], [31, 18], [31, 30], [24, 34]], [240, 241, 243], 1.1);
 }
 
-function cookBuildPdf(date, list, day) {
+function cookBuildPdf(date, list, day, title) {
   const JsPDF = window.jspdf && window.jspdf.jsPDF;
   if (!JsPDF) {
     alert("Biblioteca de PDF indisponível (sem internet). Conecte-se e tente novamente.");
@@ -6468,24 +6476,25 @@ function cookBuildPdf(date, list, day) {
     r.product,
     (r.condition === "Cozimento" ? "(X) Cozimento   ( ) Reaquecimento" : "( ) Cozimento   (X) Reaquecimento"),
     fmtNum1(r.temp) + " °C",
-    r.responsible
+    r.responsible,
+    r.status === "C" ? "Conforme" : "Não conforme"
   ]);
-  const blankRows = Math.max(0, 24 - rows.length);
+  const blankRows = title ? 0 : Math.max(0, 24 - rows.length);
   for (let i = 0; i < blankRows; i++) rows.push(["", "", "( ) Cozimento   ( ) Reaquecimento", "", ""]);
 
   doc.setTextColor(25, 25, 25);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
-  doc.text("CONTROLE DE COZIMENTO E REAQUECIMENTO", w / 2, 27, { align: "center" });
+  doc.text(title || "CONTROLE DE COZIMENTO E REAQUECIMENTO", w / 2, 27, { align: "center" });
   doc.autoTable({
     startY: 49,
     theme: "grid",
     margin: { left: margin, right: margin, bottom: 52 },
-    head: [["Data", "Produto", "Condição", "Temperatura Atingida", "Responsável"]],
+    head: [["Data", "Produto", "Condição", "Temperatura Atingida", "Responsável", "Situação"]],
     body: rows,
     styles: { font: "helvetica", fontSize: 8.5, cellPadding: { top: 3, bottom: 3, left: 4, right: 4 }, minCellHeight: 15.5, lineColor: [65, 65, 65], lineWidth: 0.55, textColor: [25, 25, 25], valign: "middle" },
     headStyles: { fillColor: [255, 255, 255], textColor: [25, 25, 25], fontStyle: "bold", fontSize: 9, halign: "center", minCellHeight: 16 },
-    columnStyles: { 0: { cellWidth: 72, halign: "center" }, 1: { cellWidth: 185 }, 2: { cellWidth: 212, halign: "center", fontSize: 7.5 }, 3: { cellWidth: 128, halign: "center" }, 4: { cellWidth: "auto" } }
+    columnStyles: { 0: { cellWidth: 72, halign: "center" }, 1: { cellWidth: 155 }, 2: { cellWidth: 190, halign: "center", fontSize: 7.5 }, 3: { cellWidth: 105, halign: "center" }, 4: { cellWidth: "auto" }, 5: { cellWidth: 75, halign: "center" } }
   });
   const y = doc.lastAutoTable.finalY + 20;
   doc.setFont("helvetica", "bold");
@@ -6516,6 +6525,33 @@ function cookPdf(date, list, day, mode) {
   } catch (error) {
     alert("Não foi possível gerar o PDF.");
   }
+}
+
+async function cookMonthlyPdf() {
+  const monthEl = ckEl("ckMonthPdf"), statusEl = ckEl("ckMonthlyPdfStatus"), button = ckEl("ckMonthlyPdf");
+  const month = monthEl.value;
+  if (!month || month > localStamp().slice(0, 7)) { statusEl.textContent = "Escolha um mês válido, igual ou anterior ao atual."; statusEl.className = "ck-save warning"; return; }
+  button.disabled = true; statusEl.textContent = "Carregando registros do mês..."; statusEl.className = "ck-save hint";
+  try {
+    const [year, monthNum] = month.split("-").map(Number);
+    const from = month + "-01", to = month + "-" + String(new Date(year, monthNum, 0).getDate()).padStart(2, "0");
+    let records;
+    if (isPlatformOwner && platformOwnerData) {
+      records = platformOwnerData.cooking_records.filter(r => r.log_date >= from && r.log_date <= to).map(dbToCook);
+    } else {
+      const recordsResult = await supabaseClient.from("cooking_records").select("*").gte("log_date", from).lte("log_date", to).order("log_date").order("record_time").order("created_at");
+      if (recordsResult.error) throw recordsResult.error;
+      records = (recordsResult.data || []).map(dbToCook);
+    }
+    const doc = cookBuildPdf(month, records, null, "CONTROLE MENSAL DE COZIMENTO E REAQUECIMENTO");
+    if (!doc) return;
+    sharePdf(doc, "operatto_cozimento_mensal_" + month + ".pdf");
+    statusEl.textContent = records.length ? "PDF mensal gerado com " + records.length + " registro(s)." : "PDF mensal gerado; não há registros nesse mês.";
+    statusEl.className = "ck-save positive";
+  } catch (error) {
+    statusEl.textContent = "Não foi possível gerar o PDF mensal: " + friendlyError(error);
+    statusEl.className = "ck-save negative";
+  } finally { button.disabled = false; }
 }
 
 /* ----- Dashboard: histórico do Controle de Cozimento ----- */
@@ -6639,6 +6675,9 @@ function renderDashCozimento(box) {
   });
   ckEl("ckToday").addEventListener("click", () => { ckStatus(""); cookLoadDate(localStamp()); });
   ckEl("ckFinalize").addEventListener("click", cookFinalize);
+  const monthPdf = ckEl("ckMonthPdf");
+  if (monthPdf) { monthPdf.max = localStamp().slice(0, 7); monthPdf.value = localStamp().slice(0, 7); }
+  ckEl("ckMonthlyPdf").addEventListener("click", cookMonthlyPdf);
   ckEl("ckPdf").addEventListener("click", () => cookPdf(cookDate, cookRecords, cookDay, "download"));
   ckEl("ckPrint").addEventListener("click", () => cookPdf(cookDate, cookRecords, cookDay, "print"));
 })();
