@@ -1333,6 +1333,19 @@
     </section>
     <section class="section owner-section" id="ownerAllUsersPanel" data-owner-panel="users" hidden>
       <div class="owner-section-head"><div><h3>Usuários da plataforma</h3><p>Contas cadastradas e unidades às quais têm acesso.</p></div><button type="button" class="btn-edit" id="ownerRefreshUsersBtn">Atualizar usuários</button></div>
+      <section class="section">
+        <h3>Criar login e senha</h3>
+        <p class="hint">Cria uma conta para o usuário e concede acesso ao restaurante selecionado.</p>
+        <form id="ownerCreateUserForm" class="owner-form">
+          <div><label for="ownerNewUserName">Nome do usuário</label><input id="ownerNewUserName" type="text" maxlength="80" required autocomplete="off"></div>
+          <div><label for="ownerNewUserEmail">E-mail de login</label><input id="ownerNewUserEmail" type="email" required autocomplete="off" placeholder="usuario@empresa.com"></div>
+          <div><label for="ownerNewUserPassword">Senha inicial</label><input id="ownerNewUserPassword" type="password" minlength="6" required autocomplete="new-password" placeholder="Mínimo 6 caracteres"></div>
+          <div><label for="ownerNewUserRestaurant">Restaurante</label><select id="ownerNewUserRestaurant" required></select></div>
+          <div><label for="ownerNewUserRole">Função na unidade</label><select id="ownerNewUserRole"><option value="EMPLOYEE">Funcionário</option><option value="MANAGER">Gerente</option><option value="RESTAURANT_ADMIN">Administrador do restaurante</option></select></div>
+          <div class="owner-form-actions"><button type="submit" id="ownerCreateUserBtn">Criar login</button></div>
+        </form>
+        <div class="sim" id="ownerCreateUserStatus" role="status" aria-live="polite"></div>
+      </section>
       <div class="hint" style="margin:10px 0">Vincular adiciona uma conta já cadastrada a um restaurante. Remover acesso desfaz o vínculo com aquela unidade e preserva a conta e os dados.</div>
       <form id="ownerGlobalAddUserForm" class="owner-form">
         <div><label for="ownerGlobalUserEmail">E-mail da conta cadastrada</label><input id="ownerGlobalUserEmail" type="email" required autocomplete="off" placeholder="usuario@empresa.com"></div>
@@ -1899,6 +1912,25 @@
     el.textContent = message || "";
     el.className = "sim" + (kind ? " " + kind : "");
   }
+  async function requestOwnerAuthUser(email, password, name) {
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+    const token = data.session && data.session.access_token;
+    if (!token) throw new Error("Sua sessão expirou. Entre novamente.");
+    const response = await fetch(SUPABASE_URL + "/functions/v1/platform-owner-create-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify({ email: email, password: password, name: name })
+    });
+    let result = {};
+    try { result = await response.json(); } catch (error) {}
+    if (!response.ok) throw new Error(result.error || "A função de criação de login não está publicada no Supabase.");
+    return result.user;
+  }
   function renderOwnerOperationalSummary() {
     const status = document.getElementById("ownerOperationalStatus");
     const list = document.getElementById("ownerOperationalCounts");
@@ -1937,9 +1969,14 @@
   function renderOwnerUsers() {
     const body = document.getElementById("ownerAllUsersBody");
     const select = document.getElementById("ownerGlobalUserRestaurant");
-    if (!body || !select) return;
+    const createRestaurant = document.getElementById("ownerNewUserRestaurant");
+    if (!body || !select || !createRestaurant) return;
     select.replaceChildren(new Option("Selecione um restaurante", ""));
-    ownerRestaurants.forEach(r => select.add(new Option(r.name, r.id)));
+    createRestaurant.replaceChildren(new Option("Selecione um restaurante", ""));
+    ownerRestaurants.forEach(r => {
+      select.add(new Option(r.name, r.id));
+      createRestaurant.add(new Option(r.name, r.id));
+    });
     body.replaceChildren();
     if (!ownerAllUsers.length) {
       const tr = document.createElement("tr"), td = document.createElement("td");
@@ -2172,6 +2209,40 @@
     button.addEventListener("click", () => setOwnerTab(button.dataset.ownerTab));
   });
   document.getElementById("ownerRefreshUsersBtn").addEventListener("click", loadOwnerUsers);
+  document.getElementById("ownerCreateUserForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!isPlatformOwner) return;
+    const form = event.currentTarget;
+    const name = document.getElementById("ownerNewUserName").value.trim();
+    const email = document.getElementById("ownerNewUserEmail").value.trim();
+    const password = document.getElementById("ownerNewUserPassword").value;
+    const restaurantId = document.getElementById("ownerNewUserRestaurant").value;
+    const role = document.getElementById("ownerNewUserRole").value;
+    const button = document.getElementById("ownerCreateUserBtn");
+    const status = document.getElementById("ownerCreateUserStatus");
+    if (!restaurantId) { status.className = "sim warning"; status.textContent = "Selecione o restaurante do usuário."; return; }
+    button.disabled = true;
+    status.className = "sim hint";
+    status.textContent = "Criando conta e vinculando ao restaurante…";
+    try {
+      await requestOwnerAuthUser(email, password, name);
+      const { error } = await supabaseClient.rpc("platform_owner_add_restaurant_user", {
+        p_restaurant_id: restaurantId, p_email: email, p_role: role
+      });
+      if (error) {
+        status.textContent = "A conta foi criada, mas não foi possível vinculá-la ao restaurante: " + friendlyError(error);
+        await loadOwnerCenter();
+        return;
+      }
+      form.reset();
+      await loadOwnerCenter();
+      status.textContent = "Login criado e vinculado. O usuário já pode entrar com o e-mail e a senha informados.";
+      status.className = "sim positive";
+    } catch (error) {
+      status.textContent = "Não foi possível criar o login: " + (error.message || friendlyError(error));
+      status.className = "sim negative";
+    } finally { button.disabled = false; }
+  });
   document.getElementById("ownerGlobalAddUserForm").addEventListener("submit", async event => {
     event.preventDefault();
     if (!isPlatformOwner) return;
