@@ -994,6 +994,11 @@
       <strong>Limpeza</strong>
       <span>Cozinha, salão e copa</span>
     </button>
+    <button type="button" class="module" data-check="higiene">
+      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v5c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></div>
+      <strong>Condições de Higiene</strong>
+      <span>Avaliação mensal da higiene e conduta pessoal</span>
+    </button>
     <button type="button" class="module" data-check="cozimento">
       <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/></svg></div>
       <strong>Cozimento e Reaquecimento</strong>
@@ -4448,7 +4453,7 @@
 
   /* ---------------- Checklist: escolher qual fazer ---------------- */
 
-  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", cozimento: "{flame} Cozimento e Reaquecimento", oleo: "{drop} Controle de Qualidade do Óleo", gordura: "{clean} Limpeza da Caixa de Gordura", gerencial: "{list} Gerencial", producao: "Produção da Cozinha", salao: "Salão", copa: "Copa", fechamento: "Abertura e Fechamento da Casa" };
+  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", higiene: "Condições de Higiene", cozimento: "{flame} Cozimento e Reaquecimento", oleo: "{drop} Controle de Qualidade do Óleo", gordura: "{clean} Limpeza da Caixa de Gordura", gerencial: "{list} Gerencial", producao: "Produção da Cozinha", salao: "Salão", copa: "Copa", fechamento: "Abertura e Fechamento da Casa" };
   const SHEET_CHECKLISTS = {"producao":{"title":"Produção da Cozinha","items":["Açúcar 5 kg","Alcaparras balde","Arroz Camil 5 kg","Azeite dendê /Farofa Pronta","Azeite 5 litros Composto","Batata Palito","Champion","Farinha de trigo","Farinh panko","Leite de coco","Leite","Molho tartaro","Manteiga Paracatu","Margarina primor Bd 15 kg","Óleo","Óleo de Algodão","Papel toalha","Sal","Gergelim","Castanha caju xerém kgs","Mussarela fatiada","Bobina termica 80x40","Etiqueta Manipulação","Saco bobina 20/30","Emb. Pote para Molho unid","Emb.3 Divisórias D118","Emb. Moqueca K 151","Emb. Guanições K 49","Filé de Tilápia Bem Bom","Pescada em posta","File de pescada","Salmao","Camarão cinza 41/50","Filé Peito frango","Filé Mingnon","Bolinho de carne seca","Bolinho Bacalhau Unidade","Bolinho de Tilápia Unidade","Quibe Pacote 25 Unidade","Conferir Os Pasteis Pronto","Legumes na Manteiga","Legumes no Vapor","Batata Soute","Pure de Batata","Detergente","Chefe Grill chapa","Limpa coifa","Esponja Amarela","Isqueiro","Luva vinil","Mascara descartável","Perfex","Touca descartável"],"sections":[]},"salao":{"title":"Salão","items":["Açúcar sache","Adoçante sache","Azeite extra Virgem 250 ml","Bobina Termica","Caneta","Café capsula","Guardanapo Normal","Palito sache","Sal sache","Talher Descartável kit","Mexedor para Café","Álcool 70 %","Saco p/ Talher","Saco Personalizado","Lacre delivery","Perfex","Pimenta Mendes","Limpar Os Quadros","Limpar As Luminarias","Portas de Vidros","Limpar Balcão Frente","Limpar Aparadores","Limpar Letreiros","Limpar Adega"],"sections":[]},"copa":{"title":"Copa","items":["Açúcar Para suco","Canudo bio shake 8 mm","Cobertura de Chocolate","Copo descartável 500 ml","Copo descartável 300ml","Bobina termica 80x40","Bobina Picotada 20x30","Etiqueta Manipulação","Garrafa para Suco G","Caldo DE Tilapia","Pudim Tradicional","Petit Gateau","Café (Capsulas)","Fruta Morango KG","Fruta Acerola KG","Polpa de Maracujá Unid","Polpa de Abacaxi Unid","Sorvete de Creme","Sorvete de Queijo","Goiabada Cascão","Polpa de Maracujá Unid","Hortelã","Gengibre","Limao kgs","Laranja","Morango","Fazer Reposição Bebidas","Conferir o Gás do Chopp","Limpar Geladeira Refrigerante","Limpar Balcão Refrigerado","Limpar as Bancadas","Limpar Adega","Lavar a Lixeira"],"sections":[]},"fechamento":{"title":"Fechamento da Casa","items":["Abertura de loja","Abertura de caixa","Verificar fundo de caixa R$200,00","Verificar ifood e itens pausados","Verificar banheiros(Papel,sabão e limpeza)","Ligar TV fora","Ligar Ar condicionado","Verificar se o quibe subiu","Degustação (Ausencia do Antonio)","Verificar checklist salão","Verificar checklist Cozinha","Fechamento de loja","Cozinha","Fechamento gas","Fechamento Agua","Desligar microondas","Desligar banho Maria","Desligar Fritadeiras","Ferir a temperatura dos freezeres","limpar as bancadas","retirar e lavar as louças","Bar","Organizar o bar","Mandar todas as louças","Lavar os copos","limpar choppeira","Limpar maquina de café","Ferir a temperatura dos freezeres","desligar o microondas","Salao","Carregar máquinas","Pasta ANVISA","Desligar estufa","Desligar as luzes","Desligar as luzes dos banheiros"],"sections":["Abertura de loja","Salao","Salão","Fechamento de loja","Bar","Cozinha"]}};
 
   async function renderSheetChecklist(name) {
@@ -4699,6 +4704,165 @@
     await loadOwnerChecklistHistory();
   }
 
+  async function renderHygieneChecklist() {
+    const root = document.getElementById("sheetChecklistRoot");
+    const title = document.getElementById("sheetChecklistTitle");
+    if (!root || !title) return;
+    const questions = [
+      "Os uniformes estão completos, limpos e em bom estado de conservação e são trocados diariamente?",
+      "Os Colaboradores não usam adornos (relógios, pulseiras, anéis, cordões, brincos e alianças, etc)?",
+      "Os Colaboradores estão com os cabelos totalmente cobertos e devidamente barbeados?",
+      "As unhas estão limpas, curtas e sem esmalte?",
+      "Os Colaboradores cumprem as atitudes de lavar e sanificar as mãos como recomendado, antes de iniciar a manipulação de alimentos, após usar o banheiro, sempre que pegar no lixo e ao mudar de atividade?",
+      "Os Colaboradores sempre praticam atitudes higiênicas como não tossir ou espirrar sobre os alimentos e equipamentos, não levar as mãos à boca, nariz, orelhas e cabelos, evitando a contaminação?",
+      "Os Colaboradores cumprem a recomendação de não fumar, não se alimentar, não mascar chiclete ou palito, etc nas áreas de produção?",
+      "Os Colaboradores retiram o avental antes de ir ao banheiro e ao sair da área de produção?",
+      "Os Visitantes não entram na área de produção sem estarem devidamente uniformizados (com touca, pelo menos)?"
+    ];
+    const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const monthNow = new Date();
+    const monthDefault = monthNow.getFullYear() + "-" + String(monthNow.getMonth() + 1).padStart(2, "0");
+    const key = "higiene_conduta";
+    title.textContent = "Condições de Higiene";
+    root.replaceChildren();
+
+    const fields = document.createElement("div"); fields.className = "row";
+    fields.innerHTML = '<div><label for="hygieneMonth">Mês de referência</label><input id="hygieneMonth" type="month"></div><div><label for="hygieneResponsible">Responsável</label><input id="hygieneResponsible" type="text" maxlength="120" placeholder="Nome do responsável"></div>';
+    const monthInput = fields.querySelector("#hygieneMonth"), responsible = fields.querySelector("#hygieneResponsible");
+    monthInput.value = monthDefault;
+
+    const tableWrap = document.createElement("div"); tableWrap.className = "table-wrap"; tableWrap.style.marginTop = "12px";
+    const table = document.createElement("table"); table.className = "dash-table"; table.style.minWidth = "760px";
+    table.innerHTML = "<thead><tr><th rowspan=\"2\">Avaliação</th><th colspan=\"4\" style=\"text-align:center\">Semana</th></tr><tr><th style=\"text-align:center\">1ª</th><th style=\"text-align:center\">2ª</th><th style=\"text-align:center\">3ª</th><th style=\"text-align:center\">4ª</th></tr></thead>";
+    const body = document.createElement("tbody"), answers = [], ncInputs = [], actionInputs = [];
+    questions.forEach((question, qi) => {
+      const tr = document.createElement("tr"), labelCell = document.createElement("td");
+      labelCell.textContent = question; labelCell.style.whiteSpace = "normal"; labelCell.style.minWidth = "300px";
+      tr.appendChild(labelCell);
+      for (let week = 0; week < 4; week++) {
+        const td = document.createElement("td"), select = document.createElement("select");
+        select.setAttribute("aria-label", question + " — semana " + (week + 1));
+        [["", "—"], ["C", "C"], ["NC", "NC"]].forEach(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; select.appendChild(option); });
+        td.appendChild(select); tr.appendChild(td); answers.push(select);
+      }
+      body.appendChild(tr);
+      const nc = document.createElement("input"), action = document.createElement("input");
+      nc.type = action.type = "text"; nc.maxLength = action.maxLength = 180;
+      nc.setAttribute("aria-label", "Não conformidade " + (qi + 1)); action.setAttribute("aria-label", "Ação corretiva " + (qi + 1));
+      ncInputs.push(nc); actionInputs.push(action);
+    });
+    table.appendChild(body); tableWrap.appendChild(table);
+
+    const corrective = document.createElement("table"); corrective.className = "dash-table"; corrective.style.marginTop = "16px";
+    corrective.innerHTML = "<thead><tr><th>Não conformidade</th><th>Ação corretiva</th></tr></thead>";
+    const correctiveBody = document.createElement("tbody");
+    questions.forEach((_, i) => { const tr = document.createElement("tr"), a = document.createElement("td"), b = document.createElement("td"); a.appendChild(ncInputs[i]); b.appendChild(actionInputs[i]); tr.append(a, b); correctiveBody.appendChild(tr); });
+    corrective.appendChild(correctiveBody);
+
+    const legend = document.createElement("p"); legend.className = "hint"; legend.style.margin = "12px 0 0";
+    legend.textContent = "C: Conforme  ·  NC: Não conforme";
+    const actions = document.createElement("div"); actions.className = "actions"; actions.style.marginTop = "12px";
+    const save = document.createElement("button"); save.type = "button"; save.textContent = "Salvar checklist";
+    const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn-edit"; pdf.textContent = "Gerar PDF mensal";
+    const status = document.createElement("div"); status.className = "sim"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
+    const localKey = month => "operatto_hygiene_checklist_v1_" + (currentEmail || "local") + "_" + month;
+    const makeDate = month => month + "-01";
+    const getAnswers = () => answers.map(input => input.value);
+    const recordToData = () => ({
+      responsible: responsible.value.trim(),
+      responses: getAnswers().concat(ncInputs.map(input => input.value.trim()), actionInputs.map(input => input.value.trim())),
+      updated_at: new Date().toISOString()
+    });
+    function applyRecord(record) {
+      const values = Array.isArray(record && record.responses) ? record.responses : [];
+      responsible.value = record && record.responsible || "";
+      answers.forEach((input, i) => input.value = values[i] || "");
+      ncInputs.forEach((input, i) => input.value = values[36 + i] || "");
+      actionInputs.forEach((input, i) => input.value = values[45 + i] || "");
+    }
+    async function loadMonth() {
+      const month = monthInput.value;
+      if (!month) return;
+      const date = makeDate(month);
+      status.textContent = "Carregando mês…"; status.className = "sim";
+      let record = null;
+      try {
+        if (currentUserId) {
+          const result = await supabaseClient.from("spreadsheet_checklists").select("responsible,responses,updated_at")
+            .eq("user_id", currentUserId).eq("checklist_key", key).eq("checklist_date", date).maybeSingle();
+          if (result.error) throw result.error;
+          record = result.data;
+        }
+        if (!record) {
+          try { record = JSON.parse(localStorage.getItem(localKey(month)) || "null"); } catch (_) {}
+        }
+        applyRecord(record);
+        status.textContent = record ? "Registro mensal carregado." : (currentUserId ? "Nenhum registro salvo neste mês." : "Entre na sua conta para salvar na nuvem.");
+        status.className = "sim" + (record ? " positive" : "");
+      } catch (error) {
+        try { record = JSON.parse(localStorage.getItem(localKey(month)) || "null"); } catch (_) {}
+        applyRecord(record);
+        status.textContent = "Falha ao carregar da nuvem. " + (record ? "Rascunho local carregado." : friendlyError(error)); status.className = "sim warning";
+      }
+    }
+    save.addEventListener("click", async () => {
+      const month = monthInput.value;
+      if (!month) { status.textContent = "Informe o mês de referência."; status.className = "sim warning"; return; }
+      const record = recordToData();
+      try { localStorage.setItem(localKey(month), JSON.stringify(record)); } catch (_) {}
+      if (!currentUserId) { status.textContent = "Rascunho salvo neste aparelho. Entre na conta para sincronizar com a nuvem."; status.className = "sim warning"; return; }
+      save.disabled = true; status.textContent = "Salvando…"; status.className = "sim";
+      try {
+        const { error } = await supabaseClient.from("spreadsheet_checklists").upsert({
+          user_id: currentUserId, checklist_key: key, checklist_date: makeDate(month),
+          responsible: record.responsible, responses: record.responses, updated_at: record.updated_at
+        }, { onConflict: "user_id,checklist_key,checklist_date" });
+        if (error) throw error;
+        status.textContent = "Checklist mensal salvo no Supabase."; status.className = "sim positive";
+      } catch (error) {
+        status.textContent = "Não foi possível salvar na nuvem. " + friendlyError(error) + " O rascunho continua neste aparelho."; status.className = "sim negative";
+      } finally { save.disabled = false; }
+    });
+    monthInput.addEventListener("change", loadMonth);
+    pdf.addEventListener("click", () => {
+      const JsPDF = window.jspdf && window.jspdf.jsPDF;
+      if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
+      const month = monthInput.value || monthDefault, [year, monthNumber] = month.split("-");
+      const monthTitle = monthNames[Number(monthNumber) - 1] + " de " + year;
+      const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+      if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo."); return; }
+      const pageWidth = doc.internal.pageSize.getWidth(), margin = 27;
+      doc.setFont("times", "bold"); doc.setFontSize(11);
+      doc.text("PLANILHA DE AVALIAÇÃO DAS CONDIÇÕES DE HIGIENE E CONDUTA PESSOAL - UNIDADE SUDOESTE", pageWidth / 2, 38, { align: "center", maxWidth: pageWidth - 2 * margin });
+      doc.autoTable({
+        startY: 57,
+        head: [[{ content: "AVALIAÇÃO", rowSpan: 3, styles: { halign: "center", valign: "middle" } }, { content: monthTitle.toUpperCase(), colSpan: 4, styles: { halign: "center" } }], [{ content: "SEMANA", colSpan: 4, styles: { halign: "center" } }], ["1º", "2º", "3º", "4º"]],
+        body: questions.map((question, i) => [question, ...answers.slice(i * 4, i * 4 + 4).map(input => input.value === "C" ? "(X) C   ( ) NC" : input.value === "NC" ? "( ) C   (X) NC" : "( ) C   ( ) NC")]),
+        theme: "grid", styles: { font: "times", fontSize: 7.2, cellPadding: 3, textColor: [25, 25, 25], lineColor: [75, 75, 75], lineWidth: 0.45, valign: "middle" },
+        headStyles: { font: "times", fontStyle: "bold", fontSize: 8, textColor: [25, 25, 25], fillColor: [255, 255, 255], halign: "center" },
+        columnStyles: { 0: { cellWidth: 255, halign: "left" }, 1: { cellWidth: 70, halign: "center" }, 2: { cellWidth: 70, halign: "center" }, 3: { cellWidth: 70, halign: "center" }, 4: { cellWidth: 70, halign: "center" } },
+        margin: { left: margin, right: margin }
+      });
+      const actionRows = questions.map((_, i) => [ncInputs[i].value || "", actionInputs[i].value || ""]);
+      doc.autoTable({
+        startY: doc.lastAutoTable.finalY + 18, head: [["NÃO CONFORMIDADE", "AÇÃO CORRETIVA"]], body: actionRows,
+        theme: "grid", styles: { font: "times", fontSize: 8, cellPadding: 4, minCellHeight: 20, textColor: [25, 25, 25], lineColor: [75, 75, 75], lineWidth: 0.45 },
+        headStyles: { font: "times", fontStyle: "bold", fontSize: 9, textColor: [25, 25, 25], fillColor: [255, 255, 255], halign: "center" },
+        columnStyles: { 0: { cellWidth: (pageWidth - 2 * margin) / 2 }, 1: { cellWidth: (pageWidth - 2 * margin) / 2 } },
+        margin: { left: margin, right: margin }
+      });
+      let y = Math.min(doc.lastAutoTable.finalY + 23, doc.internal.pageSize.getHeight() - 55);
+      doc.setFont("times", "normal"); doc.setFontSize(9);
+      doc.text("RESPONSÁVEL:", margin, y); doc.setDrawColor(65, 65, 65); doc.line(margin + 75, y + 2, pageWidth - margin, y + 2);
+      if (responsible.value.trim()) doc.text(responsible.value.trim(), margin + 80, y - 2, { maxWidth: pageWidth - margin * 2 - 85 });
+      doc.setFont("times", "bold"); doc.text("C: CONFORME", margin, y + 28); doc.text("NC: NÃO CONFORME", margin, y + 41);
+      sharePdf(doc, "condicoes_de_higiene_" + month + ".pdf");
+    });
+    actions.append(save, pdf);
+    root.append(fields, tableWrap, corrective, legend, actions, status);
+    await loadMonth();
+  }
+
   function resetChecklistScreen() {
     document.getElementById("checklistHome").hidden = false;
     document.getElementById("checklistOpenView").hidden = true;
@@ -4712,8 +4876,9 @@
     if (name === "gordura" && typeof greaseOpen === "function") greaseOpen();
     if (name === "limpeza" && window.operattoLimpeza && typeof window.operattoLimpeza.abrir === "function") window.operattoLimpeza.abrir();
     if (SHEET_CHECKLISTS[name]) renderSheetChecklist(name);
+    else if (name === "higiene") renderHygieneChecklist();
     document.querySelectorAll("#checklistOpenView .tab-panel").forEach(p => {
-      const show = p.id === (SHEET_CHECKLISTS[name] ? "tab-planilha" : "tab-" + name);
+      const show = p.id === (SHEET_CHECKLISTS[name] || name === "higiene" ? "tab-planilha" : "tab-" + name);
       p.hidden = !show;
       p.classList.remove("enter");
       if (show) {
