@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <link rel="icon" type="image/svg+xml" href="./icons/operatto.svg">
   <title>Operatto | Gestão inteligente</title>
 
   <!-- Supabase: banco de dados e login -->
@@ -8767,28 +8766,6 @@ function quoteGeneratePdf() {
   quotePdfDrawTables(doc, report.groups, report.date, currentUser);
   sharePdf(doc, "operatto_cotacao_" + report.date + ".pdf");
 }
-</script>
-
-<script>
-  // Remove o service worker e o cache offline do PWA usado por versões anteriores.
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", async () => {
-      try {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.filter(registration =>
-          [registration.active, registration.waiting, registration.installing].some(worker =>
-            worker && new URL(worker.scriptURL).pathname.endsWith("/service-worker.js")
-          )
-        ).map(registration => registration.unregister()));
-        if ("caches" in window) {
-          const names = await caches.keys();
-          await Promise.all(names.filter(name => name.startsWith("operatto-shell-")).map(name => caches.delete(name)));
-        }
-      } catch (error) {
-        console.warn("Não foi possível remover o cache offline antigo.", error);
-      }
-    });
-  }
 </script>
 
 </body>
