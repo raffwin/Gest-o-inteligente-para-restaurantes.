@@ -3,13 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#17191D">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="OPERATTO">
-  <link rel="manifest" href="./manifest.json">
-  <link rel="icon" type="image/png" sizes="192x192" href="./icons/operatto-192.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
   <link rel="icon" type="image/svg+xml" href="./icons/operatto.svg">
   <title>Operatto | Gestão inteligente</title>
 
@@ -8777,15 +8770,26 @@ function quoteGeneratePdf() {
 </script>
 
 <script>
-  // O service worker só guarda o shell estático. Chamadas ao Supabase e dados da conta ficam fora do cache.
-  if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./service-worker.js", { scope: "./" })
-        .catch(error => console.warn("Não foi possível ativar o modo offline básico.", error));
+  // Remove o service worker e o cache offline do PWA usado por versões anteriores.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", async () => {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.filter(registration =>
+          [registration.active, registration.waiting, registration.installing].some(worker =>
+            worker && new URL(worker.scriptURL).pathname.endsWith("/service-worker.js")
+          )
+        ).map(registration => registration.unregister()));
+        if ("caches" in window) {
+          const names = await caches.keys();
+          await Promise.all(names.filter(name => name.startsWith("operatto-shell-")).map(name => caches.delete(name)));
+        }
+      } catch (error) {
+        console.warn("Não foi possível remover o cache offline antigo.", error);
+      }
     });
   }
 </script>
 
 </body>
 </html>
-
