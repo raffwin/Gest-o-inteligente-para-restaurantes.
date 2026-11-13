@@ -4374,7 +4374,7 @@
         return false;
       }
 
-      const margin = 28;
+      const margin = 22;
       const gridLine = { lineWidth: 0.4, lineColor: [156, 163, 175] };
 
       doc.setFont("helvetica", "bold");
@@ -4404,17 +4404,19 @@
       });
 
       const dayStyles = {};
-      for (let i = 2; i < head.length; i++) dayStyles[i] = { halign: "center", cellWidth: 16 };
+      const availableDayWidth = (doc.internal.pageSize.getWidth() - margin * 2 - 154) / info.dias;
+      for (let i = 2; i < head.length; i++) dayStyles[i] = { halign: "center", cellWidth: availableDayWidth };
 
       doc.autoTable({
-        startY: 72,
+        startY: 62,
         theme: "grid",
-        margin: { left: margin, right: margin, bottom: 55 },
+        margin: { left: margin, right: margin, bottom: 42 },
+        pageBreak: "avoid", rowPageBreak: "avoid",
         head: [head],
         body: body,
-        styles: Object.assign({ font: "helvetica", fontSize: 6, cellPadding: 1.5, overflow: "linebreak" }, gridLine),
-        headStyles: { fillColor: [17, 24, 39], textColor: 255, halign: "center" },
-        columnStyles: Object.assign({ 0: { cellWidth: 46 }, 1: { cellWidth: 120, halign: "left" } }, dayStyles),
+        styles: Object.assign({ font: "helvetica", fontSize: Math.max(4.5, Math.min(6, (doc.internal.pageSize.getHeight() - 150) / body.length * 0.55)), cellPadding: 1, minCellHeight: Math.max(7, Math.min(9, (doc.internal.pageSize.getHeight() - 150) / body.length)), overflow: "linebreak" }, gridLine),
+        headStyles: { fillColor: [17, 24, 39], textColor: 255, halign: "center", fontSize: 6, cellPadding: 2, minCellHeight: 11 },
+        columnStyles: Object.assign({ 0: { cellWidth: 50 }, 1: { cellWidth: 104, halign: "left" } }, dayStyles),
         didParseCell: function (data) {
           if (data.section !== "body" || data.column.index < 2) return;
           const t = data.cell.text && data.cell.text[0];
@@ -4432,10 +4434,7 @@
 
       const h0 = doc.internal.pageSize.getHeight();
       let y = doc.lastAutoTable.finalY + 30;
-      if (y > h0 - 60) {
-        doc.addPage();
-        y = 70;
-      }
+      y = Math.min(y, h0 - 42);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(17, 24, 39);
@@ -4652,7 +4651,7 @@
     pdf.addEventListener("click", async () => {
       const JsPDF = window.jspdf && window.jspdf.jsPDF;
       if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
-      const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+      const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
       if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo."); return; }
       const date = dateInput.value || today;
       doc.setFontSize(16); doc.text(config.title, 40, 44);
@@ -4900,12 +4899,12 @@
       const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
       if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo."); return; }
       const margin = 18, pageWidth = doc.internal.pageSize.getWidth();
-      ["Copa e Salão", "Cozinha"].forEach((area, areaIndex) => {
-        if (areaIndex) doc.addPage();
-        doc.setFont("times", "bold"); doc.setFontSize(10);
-        doc.text("PLANILHA DE CONTROLE DE HIGIENIZAÇÃO SEMANAL E MENSAL.", pageWidth / 2, 22, { align: "center" });
+      doc.setFont("times", "bold"); doc.setFontSize(10);
+      doc.text("PLANILHA DE CONTROLE DE HIGIENIZAÇÃO SEMANAL E MENSAL.", pageWidth / 2, 18, { align: "center" });
+      const rows = [];
+      ["Copa e Salão", "Cozinha"].forEach(area => {
         const groupTasks = tasks.map((task, index) => ({ task, index })).filter(row => row.task.area === area);
-        const rows = groupTasks.map(({ task, index }, taskIndex) => {
+        groupTasks.forEach(({ task, index }, taskIndex) => {
           const slots = taskSlots[index];
           const dates = slots.map(slot => { const parts = (slot.day.value || "").split("-"); return parts.length === 3 ? parts[2] + "/" + parts[1] : ""; });
           const responsibles = slots.map(slot => slot.person.value);
@@ -4914,29 +4913,29 @@
           const row = [];
           if (taskIndex === 0) row.push({ content: area.toUpperCase().split("").join("\n"), rowSpan: groupTasks.length, styles: { valign: "middle", halign: "center", fontStyle: "bold" } });
           row.push(task.task, task.period, ...dates, ...responsibles, ...evaluations, ...verifications);
-          return row;
+          rows.push(row);
         });
+      });
         const weekHeads = ["Data", "Responsável", "Avaliação", "Verificação"].map(label => ({ content: label, colSpan: 4, styles: { halign: "center" } }));
         const subHeads = [];
         for (let group = 0; group < 4; group++) subHeads.push("1º", "2º", "3º", "4º");
         const widths = [18, 110, 40];
         for (let i = 0; i < 4; i++) widths.push(35, 45, 35, 40);
         const columnStyles = Object.fromEntries(widths.map((width, i) => [i, { cellWidth: width, halign: i < 2 ? "left" : "center" }]));
-        doc.autoTable({
-          startY: 30,
+      doc.autoTable({
+          startY: 24,
           head: [
             [{ content: "", rowSpan: 3, styles: { valign: "middle" } }, { content: "Unidade: " + (unitInput.value.trim() || "Sudoeste"), colSpan: 2, styles: { halign: "left" } }, { content: "Mês/Ano: " + monthTitle, colSpan: 16, styles: { halign: "right" } }],
             [{ content: "Tarefa", rowSpan: 2, styles: { valign: "middle" } }, { content: "Período", rowSpan: 2, styles: { valign: "middle" } }, ...weekHeads],
             subHeads
           ],
           body: rows, theme: "grid", pageBreak: "avoid", rowPageBreak: "avoid",
-          styles: { font: "times", fontSize: 5.2, cellPadding: 2, overflow: "linebreak", textColor: [25, 25, 25], lineColor: [75, 75, 75], lineWidth: 0.35, valign: "middle" },
-          headStyles: { font: "times", fontStyle: "bold", fontSize: 5.4, cellPadding: 2, textColor: [25, 25, 25], fillColor: [255, 255, 255], halign: "center" },
-          columnStyles, margin: { left: margin, right: margin, bottom: 26 }
-        });
-        doc.setFont("times", "normal"); doc.setFontSize(7);
-        doc.text("C = Conforme     NC = Não conforme. Se marcar NC, solicitar que a tarefa seja refeita.", margin, doc.lastAutoTable.finalY + 14);
+          styles: { font: "times", fontSize: 5.2, cellPadding: 1.4, minCellHeight: 9, overflow: "linebreak", textColor: [25, 25, 25], lineColor: [75, 75, 75], lineWidth: 0.35, valign: "middle" },
+          headStyles: { font: "times", fontStyle: "bold", fontSize: 5.3, cellPadding: 1.5, textColor: [25, 25, 25], fillColor: [255, 255, 255], halign: "center" },
+          columnStyles, margin: { left: margin, right: margin, bottom: 22 }
       });
+      doc.setFont("times", "normal"); doc.setFontSize(6);
+      doc.text("C = Conforme     NC = Não conforme. Se marcar NC, solicitar que a tarefa seja refeita.", margin, Math.min(doc.lastAutoTable.finalY + 9, 580));
       sharePdf(doc, "higienizacao_semanal_mensal_" + month + ".pdf");
     });
     actions.append(save, pdf);
@@ -7086,7 +7085,8 @@ function cookBuildPdf(date, list, day, title) {
     alert("Biblioteca de tabelas do PDF indisponível (sem internet). Conecte-se e tente novamente.");
     return null;
   }
-  const margin = 56;
+  const monthly = Boolean(title);
+  const margin = monthly ? 28 : 56;
   const w = doc.internal.pageSize.getWidth();
   const rows = list.map(r => [
     fmtDate(r.date),
@@ -7104,20 +7104,20 @@ function cookBuildPdf(date, list, day, title) {
   doc.setFontSize(15);
   doc.text(title || "CONTROLE DE COZIMENTO E REAQUECIMENTO", w / 2, 27, { align: "center" });
   doc.autoTable({
-    startY: 49,
+    startY: monthly ? 38 : 49,
     theme: "grid",
-    margin: { left: margin, right: margin, bottom: 52 },
+    margin: { left: margin, right: margin, bottom: monthly ? 48 : 52 },
     head: [["Data", "Produto", "Condição", "Temperatura Atingida", "Responsável", "Situação"]],
     body: rows,
-    styles: { font: "helvetica", fontSize: 8.5, cellPadding: { top: 3, bottom: 3, left: 4, right: 4 }, minCellHeight: 15.5, lineColor: [65, 65, 65], lineWidth: 0.55, textColor: [25, 25, 25], valign: "middle" },
-    headStyles: { fillColor: [255, 255, 255], textColor: [25, 25, 25], fontStyle: "bold", fontSize: 9, halign: "center", minCellHeight: 16 },
-    columnStyles: { 0: { cellWidth: 72, halign: "center" }, 1: { cellWidth: 155 }, 2: { cellWidth: 190, halign: "center", fontSize: 7.5 }, 3: { cellWidth: 105, halign: "center" }, 4: { cellWidth: "auto" }, 5: { cellWidth: 75, halign: "center" } }
+    styles: { font: "helvetica", fontSize: monthly ? 6.5 : 8.5, cellPadding: monthly ? { top: 1.3, bottom: 1.3, left: 2, right: 2 } : { top: 3, bottom: 3, left: 4, right: 4 }, minCellHeight: monthly ? 9 : 15.5, lineColor: [65, 65, 65], lineWidth: 0.55, textColor: [25, 25, 25], valign: "middle" },
+    headStyles: { fillColor: [255, 255, 255], textColor: [25, 25, 25], fontStyle: "bold", fontSize: monthly ? 7 : 9, halign: "center", minCellHeight: monthly ? 12 : 16 },
+    columnStyles: { 0: { cellWidth: monthly ? 55 : 72, halign: "center" }, 1: { cellWidth: monthly ? 135 : 155 }, 2: { cellWidth: monthly ? 155 : 190, halign: "center", fontSize: monthly ? 6 : 7.5 }, 3: { cellWidth: monthly ? 90 : 105, halign: "center" }, 4: { cellWidth: "auto" }, 5: { cellWidth: monthly ? 68 : 75, halign: "center" } }
   });
   const y = doc.lastAutoTable.finalY + 20;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9.5);
+  doc.setFontSize(monthly ? 7 : 9.5);
   doc.text("Temperatura mínima de segurança no centro geométrico: 70°C para cozimento.", margin, y);
-  doc.text("Temperatura mínima de segurança no centro geométrico: 74°C para reaquecimento.", margin, y + 16);
+  doc.text("Temperatura mínima de segurança no centro geométrico: 74°C para reaquecimento.", margin, y + (monthly ? 10 : 16));
   return doc;
 }
 
@@ -7660,7 +7660,7 @@ async function olDelete(r) {
   olRenderHistory();
 }
 
-/* ----- PDF (A4 retrato, 1 página, dias 01 ao último, 2 linhas por dia) ----- */
+/* ----- PDF mensal horizontal em uma página, uma linha por dia ----- */
 
 function olBuildPdf(month, rows, unit) {
   const JsPDF = window.jspdf && window.jspdf.jsPDF;
@@ -7668,7 +7668,7 @@ function olBuildPdf(month, rows, unit) {
     alert("Biblioteca de PDF indisponível (sem internet). Conecte-se e tente novamente.");
     return null;
   }
-  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
   if (typeof doc.autoTable !== "function") {
     alert("Biblioteca de tabelas do PDF indisponível (sem internet). Conecte-se e tente novamente.");
     return null;
@@ -7687,7 +7687,7 @@ function olBuildPdf(month, rows, unit) {
   doc.setFontSize(11);
   doc.text("UNIDADE: " + (unit || "SUDOESTE").toUpperCase(), w / 2, 45, { align: "center" });
 
-  // Corpo: dois registros por dia
+  // Uma linha por dia reúne os dados das duas fritadeiras para caber em uma página horizontal.
   const byKey = {};
   rows.forEach(r => {
     const key = r.date + "#" + r.machine;
@@ -7696,23 +7696,18 @@ function olBuildPdf(month, rows, unit) {
   const body = [];
   for (let d = 1; d <= range.days; d++) {
     const date = month + "-" + String(d).padStart(2, "0");
-    OL_MACHINES.forEach(n => {
-      const r = byKey[date + "#" + n];
-      const machine = n === 1 ? "FRITADEIRA I" : "FRITADEIRA II";
-      const values = [machine, r ? olYN(r.smoke) : "", r ? olYN(r.residue) : "", r ? olYN(r.change) : ""];
-      if (n === 1) body.push([
-        { content: String(d).padStart(2, "0"), rowSpan: 2, styles: { halign: "center", valign: "middle", fontStyle: "bold" } },
-        ...values,
-        { content: r ? r.responsible : "", rowSpan: 2, styles: { halign: "center", valign: "middle" } }
-      ]);
-      else body.push([...values]);
-    });
+    const r1 = byKey[date + "#1"], r2 = byKey[date + "#2"];
+    body.push([
+      String(d).padStart(2, "0"),
+      r1 ? olYN(r1.smoke) : "", r1 ? olYN(r1.residue) : "", r1 ? olYN(r1.change) : "", r1 ? r1.responsible : "",
+      r2 ? olYN(r2.smoke) : "", r2 ? olYN(r2.residue) : "", r2 ? olYN(r2.change) : "", r2 ? r2.responsible : ""
+    ]);
   }
 
   // Ajusta a altura das linhas para o mês inteiro caber em uma folha A4
   const startY = 62;
   const bottom = h - 28;
-  const headH = 53;
+  const headH = 72;
   const rowH = Math.min(15, Math.floor(((bottom - startY - headH) / body.length) * 10) / 10 - 0.2);
   const fs = Math.min(8.5, rowH * 0.62);
   const padV = Math.max(0.6, (rowH - fs * 1.15) / 2);
@@ -7723,30 +7718,29 @@ function olBuildPdf(month, rows, unit) {
     margin: { left: margin, right: margin, top: startY, bottom: 28 },
     tableWidth: tw,
     head: [
-      [{ content: "CONTROLE DE QUALIDADE DO ÓLEO PARA FRITURA DE IMERSÃO", colSpan: 6, styles: { halign: "center", fontStyle: "bold", fontSize: 8, minCellHeight: 14 } }],
-      [{ content: "MÊS: " + MESES_PT[Number(month.slice(5, 7)) - 1].toUpperCase(), colSpan: 6, styles: { halign: "left", fontStyle: "bold", fontSize: 7.5, minCellHeight: 12 } }],
-      ["DATA", "MAQUINÁRIO", "PRESENÇA DE\nFUMAÇA", "PRESENÇA DE\nRESÍDUOS", "TROCA DE\nÓLEO", "RESPONSÁVEL"]
+      [{ content: "CONTROLE DE QUALIDADE DO ÓLEO PARA FRITURA DE IMERSÃO", colSpan: 9, styles: { halign: "center", fontStyle: "bold", fontSize: 8, minCellHeight: 14 } }],
+      [{ content: "MÊS: " + MESES_PT[Number(month.slice(5, 7)) - 1].toUpperCase(), colSpan: 9, styles: { halign: "left", fontStyle: "bold", fontSize: 7.5, minCellHeight: 12 } }],
+      [{ content: "DATA", rowSpan: 2 }, { content: "FRITADEIRA I", colSpan: 4 }, { content: "FRITADEIRA II", colSpan: 4 }],
+      ["DIA", "FUMAÇA", "RESÍDUOS", "TROCA DE ÓLEO", "RESPONSÁVEL", "FUMAÇA", "RESÍDUOS", "TROCA DE ÓLEO", "RESPONSÁVEL"]
     ],
     body: body,
-    styles: { font: "times", fontSize: fs, cellPadding: { top: padV, bottom: padV, left: 3, right: 3 }, minCellHeight: rowH, lineColor: [55, 55, 55], lineWidth: 0.45, textColor: [25, 25, 25], valign: "middle", overflow: "ellipsize", halign: "center" },
+    styles: { font: "times", fontSize: fs, cellPadding: { top: padV, bottom: padV, left: 3, right: 3 }, minCellHeight: rowH, lineColor: [55, 55, 55], lineWidth: 0.45, textColor: [25, 25, 25], valign: "middle", overflow: "linebreak", halign: "center" },
     headStyles: { fillColor: [255, 255, 255], textColor: [25, 25, 25], fontStyle: "bold", fontSize: 7, halign: "center", valign: "middle", cellPadding: 2, lineColor: [55, 55, 55], lineWidth: 0.45 },
     columnStyles: {
       0: { cellWidth: 38 },
-      1: { cellWidth: 91 },
-      2: { cellWidth: 91 },
-      3: { cellWidth: 98 },
-      4: { cellWidth: 76 }
+      1: { cellWidth: 55 }, 2: { cellWidth: 55 }, 3: { cellWidth: 66 }, 4: { cellWidth: 125 },
+      5: { cellWidth: 55 }, 6: { cellWidth: 55 }, 7: { cellWidth: 66 }, 8: { cellWidth: 125 }
     },
     didParseCell: function (data) {
       if (data.section === "head") {
         data.cell.styles.fillColor = [255, 255, 255];
-        if (data.row.index === 2) {
+        if (data.row.index === 3) {
           data.cell.styles.minCellHeight = 26;
           data.cell.styles.overflow = "linebreak";
           data.cell.styles.fontSize = 6.7;
         }
       }
-      if (data.section === "body" && data.column.index === 1) data.cell.styles.halign = "left";
+      if (data.section === "body" && (data.column.index === 4 || data.column.index === 8)) data.cell.styles.halign = "left";
     }
   });
   return doc;
@@ -8399,7 +8393,7 @@ function sauceGeneratePdf(record) {
   }
   const date = record ? record.count_date : sauceEl("sauceDate").value;
   const employee = record ? record.employee : currentUser;
-  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+  const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
   const width = doc.internal.pageSize.getWidth();
   const margin = 38;
   doc.setTextColor(25, 28, 32);
