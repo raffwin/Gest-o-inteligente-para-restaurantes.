@@ -1146,6 +1146,7 @@
       <button type="button" class="lc-setor" data-setor="cozinha"><strong>Cozinha</strong><small>Higienização e organização</small><span class="lc-status"></span></button>
       <button type="button" class="lc-setor" data-setor="salao"><strong>Salão / Caixa</strong><small>Limpeza e organização</small><span class="lc-status"></span></button>
       <button type="button" class="lc-setor" data-setor="copa"><strong>Copa</strong><small>Limpeza e organização</small><span class="lc-status"></span></button>
+      <button type="button" class="lc-setor" data-setor="estoque"><strong>Estoque / Recebimento / Banheiros</strong><small>Limpeza e organização</small><span class="lc-status"></span></button>
     </div>
 
     <div class="lc-painel" id="lcPainel">
@@ -6001,6 +6002,7 @@
   const STORAGE = "operatto_checklist_limpeza_v2";
   const setores = {
     cozinha: { nome: "Cozinha", itens: ["Banho-maria (os dois)", "Coifa (por fora)", "Fogões", "Chapa", "Bancadas", "Prateleiras", "Bancada refrigerada", "Pista fria", "Micro-ondas", "Utensílios", "Fritadeiras", "Processador", "Lixeiras", "Balança", "Estoque seco", "Piso do estoque"] },
+    estoque: { nome: "Estoque / Recebimento / Banheiros", itens: ["Utensílios", "Fritadeiras", "Processador", "Lixeiras", "Balança", "Estoque seco", "Piso do estoque", "Porta do estoque", "Piso da recepção", "Bancada da recepção", "Vestiário", "Banheiros colaboradores", "Banheiros clientes"] },
     salao: { nome: "Salão / Caixa", itens: ["Mesas, estofados e cadeiras", "Freezer, geladeira e adega por fora", "Aparadores", "Utensílios", "Balcão caixa", "Piso", "Cardápios", "Computadores", "Portas de vidros", "Estufa para quibes", "Cafeteira", "Chopeira", "Microondas"] },
     copa: { nome: "Copa", itens: ["Geladeira e freezer (por fora)", "Balcão refrigerado (por fora)", "Máquina de gelo", "Utensílios", "Lixeiras", "Bancadas", "Liquidificadores e espremedores"] }
   };
