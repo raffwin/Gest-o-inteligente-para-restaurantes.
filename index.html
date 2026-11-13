@@ -1577,6 +1577,7 @@
 
   function friendlyError(error) {
     const msg = String((error && error.message) || error || "").toLowerCase();
+    if (msg.includes("spreadsheet_checklists_checklist_key_check")) return "O Supabase ainda não permite o checklist Condições de Higiene. Execute supabase_higiene_conduta.sql no SQL Editor e tente salvar novamente.";
     if (msg.includes("platform_owner_operational_rows")) return "A consulta global do proprietário ainda não foi instalada. Execute supabase_platform_owner_operational_data.sql no SQL Editor do Supabase.";
     if (msg.includes("platform_owner_list_users")) return "A lista global de usuários ainda não foi instalada. Execute novamente supabase_platform_owner_operational_data.sql no SQL Editor do Supabase.";
     if ((msg.includes("spreadsheet_checklists") || msg.includes("spreadsheet checklists")) &&
@@ -4851,33 +4852,35 @@
       if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
       const month = monthInput.value || monthDefault, [year, monthNumber] = month.split("-");
       const monthTitle = monthNames[Number(monthNumber) - 1] + " de " + year;
-      const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+      const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
       if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo."); return; }
-      const pageWidth = doc.internal.pageSize.getWidth(), margin = 27;
-      doc.setFont("times", "bold"); doc.setFontSize(11);
-      doc.text("PLANILHA DE AVALIAÇÃO DAS CONDIÇÕES DE HIGIENE E CONDUTA PESSOAL - UNIDADE SUDOESTE", pageWidth / 2, 38, { align: "center", maxWidth: pageWidth - 2 * margin });
+      const pageWidth = doc.internal.pageSize.getWidth(), margin = 24;
+      doc.setFont("times", "bold"); doc.setFontSize(10);
+      doc.text("PLANILHA DE AVALIAÇÃO DAS CONDIÇÕES DE HIGIENE E CONDUTA PESSOAL - UNIDADE SUDOESTE", pageWidth / 2, 29, { align: "center", maxWidth: pageWidth - 2 * margin });
       doc.autoTable({
-        startY: 57,
+        startY: 39,
         head: [[{ content: "AVALIAÇÃO", rowSpan: 3, styles: { halign: "center", valign: "middle" } }, { content: monthTitle.toUpperCase(), colSpan: 4, styles: { halign: "center" } }], [{ content: "SEMANA", colSpan: 4, styles: { halign: "center" } }], ["1º", "2º", "3º", "4º"]],
         body: questions.map((question, i) => [question, ...answers.slice(i * 4, i * 4 + 4).map(answer => answer.value === "C" ? "(X) C   ( ) NC" : answer.value === "NC" ? "( ) C   (X) NC" : "( ) C   ( ) NC")]),
-        theme: "grid", styles: { font: "times", fontSize: 7.2, cellPadding: 3, textColor: [25, 25, 25], lineColor: [75, 75, 75], lineWidth: 0.45, valign: "middle" },
-        headStyles: { font: "times", fontStyle: "bold", fontSize: 8, textColor: [25, 25, 25], fillColor: [255, 255, 255], halign: "center" },
-        columnStyles: { 0: { cellWidth: 255, halign: "left" }, 1: { cellWidth: 70, halign: "center" }, 2: { cellWidth: 70, halign: "center" }, 3: { cellWidth: 70, halign: "center" }, 4: { cellWidth: 70, halign: "center" } },
-        margin: { left: margin, right: margin }
+        theme: "grid", pageBreak: "avoid", rowPageBreak: "avoid",
+        styles: { font: "times", fontSize: 6.6, cellPadding: 2.5, overflow: "linebreak", textColor: [25, 25, 25], lineColor: [75, 75, 75], lineWidth: 0.4, valign: "middle" },
+        headStyles: { font: "times", fontStyle: "bold", fontSize: 7.5, cellPadding: 2.5, textColor: [25, 25, 25], fillColor: [255, 255, 255], halign: "center" },
+        columnStyles: { 0: { cellWidth: 430, halign: "left" }, 1: { cellWidth: 91, halign: "center" }, 2: { cellWidth: 91, halign: "center" }, 3: { cellWidth: 91, halign: "center" }, 4: { cellWidth: 91, halign: "center" } },
+        margin: { left: margin, right: margin, bottom: 22 }
       });
       const actionRows = questions.map((_, i) => [ncInputs[i].value || "", actionInputs[i].value || ""]);
       doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 18, head: [["NÃO CONFORMIDADE", "AÇÃO CORRETIVA"]], body: actionRows,
-        theme: "grid", styles: { font: "times", fontSize: 8, cellPadding: 4, minCellHeight: 20, textColor: [25, 25, 25], lineColor: [75, 75, 75], lineWidth: 0.45 },
-        headStyles: { font: "times", fontStyle: "bold", fontSize: 9, textColor: [25, 25, 25], fillColor: [255, 255, 255], halign: "center" },
+        startY: doc.lastAutoTable.finalY + 9, head: [["NÃO CONFORMIDADE", "AÇÃO CORRETIVA"]], body: actionRows,
+        theme: "grid", pageBreak: "avoid", rowPageBreak: "avoid",
+        styles: { font: "times", fontSize: 6.8, cellPadding: 2.2, minCellHeight: 12, overflow: "linebreak", textColor: [25, 25, 25], lineColor: [75, 75, 75], lineWidth: 0.4 },
+        headStyles: { font: "times", fontStyle: "bold", fontSize: 7.5, cellPadding: 2.5, textColor: [25, 25, 25], fillColor: [255, 255, 255], halign: "center" },
         columnStyles: { 0: { cellWidth: (pageWidth - 2 * margin) / 2 }, 1: { cellWidth: (pageWidth - 2 * margin) / 2 } },
-        margin: { left: margin, right: margin }
+        margin: { left: margin, right: margin, bottom: 22 }
       });
-      let y = Math.min(doc.lastAutoTable.finalY + 23, doc.internal.pageSize.getHeight() - 55);
-      doc.setFont("times", "normal"); doc.setFontSize(9);
+      const y = doc.lastAutoTable.finalY + 15;
+      doc.setFont("times", "normal"); doc.setFontSize(8);
       doc.text("RESPONSÁVEL:", margin, y); doc.setDrawColor(65, 65, 65); doc.line(margin + 75, y + 2, pageWidth - margin, y + 2);
       if (responsible.value.trim()) doc.text(responsible.value.trim(), margin + 80, y - 2, { maxWidth: pageWidth - margin * 2 - 85 });
-      doc.setFont("times", "bold"); doc.text("C: CONFORME", margin, y + 28); doc.text("NC: NÃO CONFORME", margin, y + 41);
+      doc.setFont("times", "bold"); doc.setFontSize(7.5); doc.text("C: CONFORME    |    NC: NÃO CONFORME", margin, y + 17);
       sharePdf(doc, "condicoes_de_higiene_" + month + ".pdf");
     });
     actions.append(save, pdf);
