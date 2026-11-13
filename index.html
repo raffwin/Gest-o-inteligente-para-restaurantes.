@@ -178,14 +178,14 @@
     .hygiene-choice button { padding: 6px 9px; min-width: 30px; background: var(--field); color: var(--muted); border-color: var(--field-border); font-size: 12px; }
     .hygiene-choice button.selected-c { background: #1F3329; color: #9BE0BD; border-color: var(--ok); }
     .hygiene-choice button.selected-nc { background: #3A2528; color: #FF9B9B; border-color: #C0626A; }
-    .higienizacao-table { min-width: 1540px; font-size: 11px; }
+    .higienizacao-table { min-width: 1940px; font-size: 11px; }
     .higienizacao-table th { text-align: center; }
     .higienizacao-table td { padding: 4px; vertical-align: middle; }
     .higienizacao-table .hz-task { min-width: 220px; white-space: normal; text-align: left; }
     .higienizacao-table .hz-period { min-width: 75px; text-align: center; }
     .higienizacao-table input { min-width: 0; margin: 0; padding: 6px 4px; font-size: 12px; }
-    .higienizacao-table .hz-day { width: 54px; }
-    .higienizacao-table .hz-name { width: 112px; }
+    .higienizacao-table .hz-day { width: 142px; }
+    .higienizacao-table .hz-name { width: 138px; }
     .higienizacao-table .hz-verify { width: 96px; }
     .owner-head, .owner-section-head { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
     .owner-head { margin-bottom:18px; }
@@ -4780,8 +4780,9 @@
       tr.append(taskCell, periodCell);
       const slots = [];
       for (let week = 1; week <= 4; week++) {
-        const day = document.createElement("input"); day.type = "number"; day.min = "1"; day.max = "31"; day.placeholder = "Dia"; day.className = "hz-day"; day.setAttribute("aria-label", task.task + " — dia da semana " + week);
-        const person = document.createElement("input"); person.type = "text"; person.maxLength = 50; person.placeholder = "Nome"; person.className = "hz-name"; person.setAttribute("aria-label", task.task + " — responsável da semana " + week);
+        const day = document.createElement("input"); day.type = "date"; day.className = "hz-day"; day.setAttribute("aria-label", task.task + " — data da semana " + week);
+        const person = document.createElement("select"); person.className = "hz-name"; person.setAttribute("aria-label", task.task + " — responsável da semana " + week);
+        [["", "Selecione"], ["SILVANA", "SILVANA"], ["COZINHA JOHNY", "COZINHA JOHNY"]].forEach(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; person.appendChild(option); });
         const verify = document.createElement("input"); verify.type = "text"; verify.maxLength = 30; verify.placeholder = "Visto"; verify.className = "hz-verify"; verify.setAttribute("aria-label", task.task + " — verificação da semana " + week);
         const evalWrap = document.createElement("div"); evalWrap.className = "hygiene-choice";
         const cButton = document.createElement("button"), ncButton = document.createElement("button"); cButton.type = ncButton.type = "button"; cButton.textContent = "C"; ncButton.textContent = "NC";
@@ -4817,7 +4818,18 @@
     function applyRecord(record) {
       const values = Array.isArray(record && record.responses) ? record.responses : [];
       unitInput.value = record && record.responsible || record && record.unit || "Sudoeste";
-      allSlots.forEach((slot, i) => { const offset = i * 4; slot.day.value = values[offset] || ""; slot.person.value = values[offset + 1] || ""; slot.set(values[offset + 2] || ""); slot.verify.value = values[offset + 3] || ""; });
+      allSlots.forEach((slot, i) => {
+        const offset = i * 4, savedDate = values[offset] || "";
+        slot.day.value = /^\d{1,2}$/.test(savedDate) && monthInput.value ? monthInput.value + "-" + String(Number(savedDate)).padStart(2, "0") : savedDate;
+        slot.person.value = values[offset + 1] || ""; slot.set(values[offset + 2] || ""); slot.verify.value = values[offset + 3] || "";
+      });
+    }
+    function updateDateLimits() {
+      const month = monthInput.value;
+      if (!/^\d{4}-\d{2}$/.test(month)) return;
+      const [year, monthNumber] = month.split("-").map(Number);
+      const lastDay = new Date(year, monthNumber, 0).getDate();
+      allSlots.forEach(slot => { slot.day.min = month + "-01"; slot.day.max = month + "-" + String(lastDay).padStart(2, "0"); });
     }
     async function loadMonth() {
       const month = monthInput.value, request = ++loadRequest, uid = currentUserId;
@@ -4845,7 +4857,7 @@
     }
     unitInput.addEventListener("input", markDirty);
     allSlots.forEach(slot => { slot.day.addEventListener("input", markDirty); slot.person.addEventListener("input", markDirty); slot.verify.addEventListener("input", markDirty); });
-    monthInput.addEventListener("change", () => { dirty = false; loadMonth(); });
+    monthInput.addEventListener("change", () => { dirty = false; updateDateLimits(); loadMonth(); });
     save.addEventListener("click", async () => {
       const month = monthInput.value;
       if (!month) { status.textContent = "Informe o mês."; status.className = "sim warning"; return; }
@@ -4879,14 +4891,18 @@
         doc.setFontSize(8); doc.text("Unidade: " + (unitInput.value.trim() || "Sudoeste"), margin, 37); doc.text("Mês/Ano: " + monthTitle, pageWidth - margin, 37, { align: "right" });
         const groupTasks = tasks.map((task, index) => ({ task, index })).filter(row => row.task.area === area);
         const rows = groupTasks.map(({ task, index }) => {
-          const values = taskSlots[index].flatMap(slot => [slot.day.value || "", slot.person.value.trim(), slot.evaluation ? "(X) " + slot.evaluation : "( ) C  ( ) NC", slot.verify.value.trim()]);
+          const values = taskSlots[index].flatMap(slot => {
+            const parts = (slot.day.value || "").split("-");
+            const dateLabel = parts.length === 3 ? parts[2] + "/" + parts[1] : "";
+            return [dateLabel, slot.person.value, slot.evaluation ? "(X) " + slot.evaluation : "( ) C  ( ) NC", slot.verify.value.trim()];
+          });
           return [task.task, task.period, ...values];
         });
         const weekHeads = ["1º", "2º", "3º", "4º"].map(label => ({ content: label, colSpan: 4, styles: { halign: "center" } }));
         const subHeads = [];
         for (let i = 0; i < 4; i++) subHeads.push("Data", "Responsável", "Avaliação", "Verificação");
-        const widths = [150, 48];
-        for (let i = 0; i < 4; i++) widths.push(25, 48, 34, 40);
+        const widths = [130, 45];
+        for (let i = 0; i < 4; i++) widths.push(42, 43, 32, 40);
         const columnStyles = Object.fromEntries(widths.map((width, i) => [i, { cellWidth: width, halign: i < 2 ? "left" : "center" }]));
         doc.autoTable({
           startY: 43,
@@ -4903,6 +4919,7 @@
     });
     actions.append(save, pdf);
     root.append(fields, hint, tableWrap, actions, status);
+    updateDateLimits();
     await loadMonth();
   }
 
