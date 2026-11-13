@@ -174,6 +174,10 @@
     .dash-table tbody tr { cursor: pointer; }
     .dash-table tbody tr:hover { background: var(--hover); }
     .dash-table tfoot td { font-weight: 700; border-bottom: 0; }
+    .hygiene-choice { display: flex; justify-content: center; gap: 4px; min-width: 66px; }
+    .hygiene-choice button { padding: 6px 9px; min-width: 30px; background: var(--field); color: var(--muted); border-color: var(--field-border); font-size: 12px; }
+    .hygiene-choice button.selected-c { background: #1F3329; color: #9BE0BD; border-color: var(--ok); }
+    .hygiene-choice button.selected-nc { background: #3A2528; color: #FF9B9B; border-color: #C0626A; }
     .owner-head, .owner-section-head { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
     .owner-head { margin-bottom:18px; }
     .owner-head h2 { margin:4px 0; font-size:24px; }
@@ -4732,10 +4736,24 @@
       labelCell.textContent = question; labelCell.style.whiteSpace = "normal"; labelCell.style.minWidth = "300px";
       tr.appendChild(labelCell);
       for (let week = 0; week < 4; week++) {
-        const td = document.createElement("td"), select = document.createElement("select");
-        select.setAttribute("aria-label", question + " — semana " + (week + 1));
-        [["", "—"], ["C", "C"], ["NC", "NC"]].forEach(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; select.appendChild(option); });
-        td.appendChild(select); tr.appendChild(td); answers.push(select);
+        const td = document.createElement("td"), choices = document.createElement("div"); choices.className = "hygiene-choice";
+        const cButton = document.createElement("button"), ncButton = document.createElement("button");
+        cButton.type = ncButton.type = "button"; cButton.textContent = "C"; ncButton.textContent = "NC";
+        cButton.setAttribute("aria-label", "Conforme — semana " + (week + 1) + ": " + question);
+        ncButton.setAttribute("aria-label", "Não conforme — semana " + (week + 1) + ": " + question);
+        const answer = {
+          value: "",
+          set(value) {
+            this.value = value;
+            cButton.classList.toggle("selected-c", value === "C");
+            ncButton.classList.toggle("selected-nc", value === "NC");
+            cButton.setAttribute("aria-pressed", value === "C" ? "true" : "false");
+            ncButton.setAttribute("aria-pressed", value === "NC" ? "true" : "false");
+          }
+        };
+        cButton.addEventListener("click", () => { answer.set(answer.value === "C" ? "" : "C"); markDirty(); });
+        ncButton.addEventListener("click", () => { answer.set(answer.value === "NC" ? "" : "NC"); markDirty(); });
+        choices.append(cButton, ncButton); td.appendChild(choices); tr.appendChild(td); answers.push(answer);
       }
       body.appendChild(tr);
       const nc = document.createElement("input"), action = document.createElement("input");
@@ -4757,9 +4775,14 @@
     const save = document.createElement("button"); save.type = "button"; save.textContent = "Salvar checklist";
     const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn-edit"; pdf.textContent = "Gerar PDF mensal";
     const status = document.createElement("div"); status.className = "sim"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
+    let dirty = false, loadRequest = 0;
     const localKey = month => "operatto_hygiene_checklist_v1_" + (currentEmail || "local") + "_" + month;
     const makeDate = month => month + "-01";
-    const getAnswers = () => answers.map(input => input.value);
+    function markDirty() {
+      dirty = true;
+      status.textContent = "Há alterações sem salvar."; status.className = "sim warning";
+    }
+    const getAnswers = () => answers.map(answer => answer.value);
     const recordToData = () => ({
       responsible: responsible.value.trim(),
       responses: getAnswers().concat(ncInputs.map(input => input.value.trim()), actionInputs.map(input => input.value.trim())),
@@ -4768,41 +4791,47 @@
     function applyRecord(record) {
       const values = Array.isArray(record && record.responses) ? record.responses : [];
       responsible.value = record && record.responsible || "";
-      answers.forEach((input, i) => input.value = values[i] || "");
+      answers.forEach((answer, i) => answer.set(values[i] || ""));
       ncInputs.forEach((input, i) => input.value = values[36 + i] || "");
       actionInputs.forEach((input, i) => input.value = values[45 + i] || "");
     }
     async function loadMonth() {
-      const month = monthInput.value;
+      const month = monthInput.value, request = ++loadRequest, uid = currentUserId;
       if (!month) return;
       const date = makeDate(month);
       status.textContent = "Carregando mês…"; status.className = "sim";
       let record = null;
       try {
-        if (currentUserId) {
+        if (uid) {
           const result = await supabaseClient.from("spreadsheet_checklists").select("responsible,responses,updated_at")
-            .eq("user_id", currentUserId).eq("checklist_key", key).eq("checklist_date", date).maybeSingle();
+            .eq("user_id", uid).eq("checklist_key", key).eq("checklist_date", date).maybeSingle();
           if (result.error) throw result.error;
           record = result.data;
         }
         if (!record) {
           try { record = JSON.parse(localStorage.getItem(localKey(month)) || "null"); } catch (_) {}
         }
-        applyRecord(record);
-        status.textContent = record ? "Registro mensal carregado." : (currentUserId ? "Nenhum registro salvo neste mês." : "Entre na sua conta para salvar na nuvem.");
-        status.className = "sim" + (record ? " positive" : "");
+        if (request !== loadRequest || monthInput.value !== month || currentUserId !== uid) return;
+        if (!dirty) applyRecord(record);
+        status.textContent = dirty ? "Há alterações sem salvar." : record ? "Registro mensal carregado." : (uid ? "Nenhum registro salvo neste mês." : "Entre na sua conta para salvar na nuvem.");
+        status.className = "sim" + (dirty ? " warning" : record ? " positive" : "");
       } catch (error) {
+        if (request !== loadRequest || monthInput.value !== month || currentUserId !== uid) return;
         try { record = JSON.parse(localStorage.getItem(localKey(month)) || "null"); } catch (_) {}
-        applyRecord(record);
-        status.textContent = "Falha ao carregar da nuvem. " + (record ? "Rascunho local carregado." : friendlyError(error)); status.className = "sim warning";
+        if (!dirty) applyRecord(record);
+        status.textContent = dirty ? "Há alterações sem salvar." : "Falha ao carregar da nuvem. " + (record ? "Rascunho local carregado." : friendlyError(error)); status.className = "sim warning";
       }
     }
+    responsible.addEventListener("input", markDirty);
+    ncInputs.forEach(input => input.addEventListener("input", markDirty));
+    actionInputs.forEach(input => input.addEventListener("input", markDirty));
     save.addEventListener("click", async () => {
       const month = monthInput.value;
       if (!month) { status.textContent = "Informe o mês de referência."; status.className = "sim warning"; return; }
+      loadRequest++;
       const record = recordToData();
       try { localStorage.setItem(localKey(month), JSON.stringify(record)); } catch (_) {}
-      if (!currentUserId) { status.textContent = "Rascunho salvo neste aparelho. Entre na conta para sincronizar com a nuvem."; status.className = "sim warning"; return; }
+      if (!currentUserId) { dirty = false; status.textContent = "Rascunho salvo neste aparelho. Entre na conta para sincronizar com a nuvem."; status.className = "sim warning"; return; }
       save.disabled = true; status.textContent = "Salvando…"; status.className = "sim";
       try {
         const { error } = await supabaseClient.from("spreadsheet_checklists").upsert({
@@ -4810,12 +4839,13 @@
           responsible: record.responsible, responses: record.responses, updated_at: record.updated_at
         }, { onConflict: "user_id,checklist_key,checklist_date" });
         if (error) throw error;
+        dirty = false;
         status.textContent = "Checklist mensal salvo no Supabase."; status.className = "sim positive";
       } catch (error) {
         status.textContent = "Não foi possível salvar na nuvem. " + friendlyError(error) + " O rascunho continua neste aparelho."; status.className = "sim negative";
       } finally { save.disabled = false; }
     });
-    monthInput.addEventListener("change", loadMonth);
+    monthInput.addEventListener("change", () => { dirty = false; loadMonth(); });
     pdf.addEventListener("click", () => {
       const JsPDF = window.jspdf && window.jspdf.jsPDF;
       if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
@@ -4829,7 +4859,7 @@
       doc.autoTable({
         startY: 57,
         head: [[{ content: "AVALIAÇÃO", rowSpan: 3, styles: { halign: "center", valign: "middle" } }, { content: monthTitle.toUpperCase(), colSpan: 4, styles: { halign: "center" } }], [{ content: "SEMANA", colSpan: 4, styles: { halign: "center" } }], ["1º", "2º", "3º", "4º"]],
-        body: questions.map((question, i) => [question, ...answers.slice(i * 4, i * 4 + 4).map(input => input.value === "C" ? "(X) C   ( ) NC" : input.value === "NC" ? "( ) C   (X) NC" : "( ) C   ( ) NC")]),
+        body: questions.map((question, i) => [question, ...answers.slice(i * 4, i * 4 + 4).map(answer => answer.value === "C" ? "(X) C   ( ) NC" : answer.value === "NC" ? "( ) C   (X) NC" : "( ) C   ( ) NC")]),
         theme: "grid", styles: { font: "times", fontSize: 7.2, cellPadding: 3, textColor: [25, 25, 25], lineColor: [75, 75, 75], lineWidth: 0.45, valign: "middle" },
         headStyles: { font: "times", fontStyle: "bold", fontSize: 8, textColor: [25, 25, 25], fillColor: [255, 255, 255], halign: "center" },
         columnStyles: { 0: { cellWidth: 255, halign: "left" }, 1: { cellWidth: 70, halign: "center" }, 2: { cellWidth: 70, halign: "center" }, 3: { cellWidth: 70, halign: "center" }, 4: { cellWidth: 70, halign: "center" } },
