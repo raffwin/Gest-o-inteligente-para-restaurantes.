@@ -4795,8 +4795,9 @@
       for (let week = 1; week <= 4; week++) {
         const day = document.createElement("input"); day.type = "date"; day.className = "hz-day"; day.setAttribute("aria-label", task.task + " — data da semana " + week);
         const person = document.createElement("select"); person.className = "hz-name"; person.setAttribute("aria-label", task.task + " — responsável da semana " + week);
-        [["", "Selecione"], ["SILVANA", "SILVANA"], ["COZINHA JOHNY", "COZINHA JOHNY"]].forEach(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; person.appendChild(option); });
-        const verify = document.createElement("input"); verify.type = "text"; verify.maxLength = 30; verify.placeholder = "Visto"; verify.className = "hz-verify"; verify.setAttribute("aria-label", task.task + " — verificação da semana " + week);
+        [["", "Selecione"], ["JOHNY", "JOHNY"], ["SILVANA", "SILVANA"], ["COZINHA", "COZINHA"]].forEach(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; person.appendChild(option); });
+        const verify = document.createElement("select"); verify.className = "hz-verify"; verify.setAttribute("aria-label", task.task + " — visto por — semana " + week);
+        [["", "Selecione"], ["RAFAEL", "RAFAEL"], ["ANTONIO", "ANTONIO"]].forEach(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; verify.appendChild(option); });
         const evalWrap = document.createElement("div"); evalWrap.className = "hygiene-choice";
         const cButton = document.createElement("button"), ncButton = document.createElement("button"); cButton.type = ncButton.type = "button"; cButton.textContent = "C"; ncButton.textContent = "NC";
         cButton.setAttribute("aria-label", "Conforme — " + task.task + " — semana " + week); ncButton.setAttribute("aria-label", "Não conforme — " + task.task + " — semana " + week);
@@ -4834,7 +4835,9 @@
       allSlots.forEach((slot, i) => {
         const offset = i * 4, savedDate = values[offset] || "";
         slot.day.value = /^\d{1,2}$/.test(savedDate) && monthInput.value ? monthInput.value + "-" + String(Number(savedDate)).padStart(2, "0") : savedDate;
-        slot.person.value = values[offset + 1] || ""; slot.set(values[offset + 2] || ""); slot.verify.value = values[offset + 3] || "";
+        const savedPerson = values[offset + 1] || "";
+        slot.person.value = savedPerson === "COZINHA JOHNY" ? "COZINHA" : savedPerson;
+        slot.set(values[offset + 2] || ""); slot.verify.value = values[offset + 3] || "";
       });
     }
     function updateDateLimits() {
