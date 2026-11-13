@@ -178,6 +178,15 @@
     .hygiene-choice button { padding: 6px 9px; min-width: 30px; background: var(--field); color: var(--muted); border-color: var(--field-border); font-size: 12px; }
     .hygiene-choice button.selected-c { background: #1F3329; color: #9BE0BD; border-color: var(--ok); }
     .hygiene-choice button.selected-nc { background: #3A2528; color: #FF9B9B; border-color: #C0626A; }
+    .higienizacao-table { min-width: 1540px; font-size: 11px; }
+    .higienizacao-table th { text-align: center; }
+    .higienizacao-table td { padding: 4px; vertical-align: middle; }
+    .higienizacao-table .hz-task { min-width: 220px; white-space: normal; text-align: left; }
+    .higienizacao-table .hz-period { min-width: 75px; text-align: center; }
+    .higienizacao-table input { min-width: 0; margin: 0; padding: 6px 4px; font-size: 12px; }
+    .higienizacao-table .hz-day { width: 54px; }
+    .higienizacao-table .hz-name { width: 112px; }
+    .higienizacao-table .hz-verify { width: 96px; }
     .owner-head, .owner-section-head { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
     .owner-head { margin-bottom:18px; }
     .owner-head h2 { margin:4px 0; font-size:24px; }
@@ -995,6 +1004,11 @@
       <strong>Condições de Higiene</strong>
       <span>Avaliação mensal da higiene e conduta pessoal</span>
     </button>
+    <button type="button" class="module" data-check="higienizacao">
+      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/><path d="m17 15 2 2 3-4"/></svg></div>
+      <strong>Higienização Semanal e Mensal</strong>
+      <span>Controle por área, semana, responsável e verificação</span>
+    </button>
     <button type="button" class="module" data-check="cozimento">
       <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/></svg></div>
       <strong>Cozimento e Reaquecimento</strong>
@@ -1578,7 +1592,7 @@
 
   function friendlyError(error) {
     const msg = String((error && error.message) || error || "").toLowerCase();
-    if (msg.includes("spreadsheet_checklists_checklist_key_check")) return "O Supabase ainda não permite o checklist Condições de Higiene. Execute supabase_higiene_conduta.sql no SQL Editor e tente salvar novamente.";
+    if (msg.includes("spreadsheet_checklists_checklist_key_check")) return "O Supabase ainda não permite esta chave de checklist. Execute supabase_higienizacao_semanal_mensal.sql no SQL Editor e tente salvar novamente.";
     if (msg.includes("platform_owner_operational_rows")) return "A consulta global do proprietário ainda não foi instalada. Execute supabase_platform_owner_operational_data.sql no SQL Editor do Supabase.";
     if (msg.includes("platform_owner_list_users")) return "A lista global de usuários ainda não foi instalada. Execute novamente supabase_platform_owner_operational_data.sql no SQL Editor do Supabase.";
     if ((msg.includes("spreadsheet_checklists") || msg.includes("spreadsheet checklists")) &&
@@ -4451,7 +4465,7 @@
 
   /* ---------------- Checklist: escolher qual fazer ---------------- */
 
-  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", higiene: "Condições de Higiene", cozimento: "{flame} Cozimento e Reaquecimento", oleo: "{drop} Controle de Qualidade do Óleo", gordura: "{clean} Limpeza da Caixa de Gordura", gerencial: "{list} Gerencial", producao: "Produção da Cozinha", salao: "Salão", copa: "Copa", fechamento: "Abertura e Fechamento da Casa" };
+  const CHECKLIST_TITLES = { temperatura: "{thermo} Temperatura", limpeza: "{clean} Limpeza", higiene: "Condições de Higiene", higienizacao: "Higienização Semanal e Mensal", cozimento: "{flame} Cozimento e Reaquecimento", oleo: "{drop} Controle de Qualidade do Óleo", gordura: "{clean} Limpeza da Caixa de Gordura", gerencial: "{list} Gerencial", producao: "Produção da Cozinha", salao: "Salão", copa: "Copa", fechamento: "Abertura e Fechamento da Casa" };
   const SHEET_CHECKLISTS = {"producao":{"title":"Produção da Cozinha","items":["Açúcar 5 kg","Alcaparras balde","Arroz Camil 5 kg","Azeite dendê /Farofa Pronta","Azeite 5 litros Composto","Batata Palito","Champion","Farinha de trigo","Farinh panko","Leite de coco","Leite","Molho tartaro","Manteiga Paracatu","Margarina primor Bd 15 kg","Óleo","Óleo de Algodão","Papel toalha","Sal","Gergelim","Castanha caju xerém kgs","Mussarela fatiada","Bobina termica 80x40","Etiqueta Manipulação","Saco bobina 20/30","Emb. Pote para Molho unid","Emb.3 Divisórias D118","Emb. Moqueca K 151","Emb. Guanições K 49","Filé de Tilápia Bem Bom","Pescada em posta","File de pescada","Salmao","Camarão cinza 41/50","Filé Peito frango","Filé Mingnon","Bolinho de carne seca","Bolinho Bacalhau Unidade","Bolinho de Tilápia Unidade","Quibe Pacote 25 Unidade","Conferir Os Pasteis Pronto","Legumes na Manteiga","Legumes no Vapor","Batata Soute","Pure de Batata","Detergente","Chefe Grill chapa","Limpa coifa","Esponja Amarela","Isqueiro","Luva vinil","Mascara descartável","Perfex","Touca descartável"],"sections":[]},"salao":{"title":"Salão","items":["Açúcar sache","Adoçante sache","Azeite extra Virgem 250 ml","Bobina Termica","Caneta","Café capsula","Guardanapo Normal","Palito sache","Sal sache","Talher Descartável kit","Mexedor para Café","Álcool 70 %","Saco p/ Talher","Saco Personalizado","Lacre delivery","Perfex","Pimenta Mendes","Limpar Os Quadros","Limpar As Luminarias","Portas de Vidros","Limpar Balcão Frente","Limpar Aparadores","Limpar Letreiros","Limpar Adega"],"sections":[]},"copa":{"title":"Copa","items":["Açúcar Para suco","Canudo bio shake 8 mm","Cobertura de Chocolate","Copo descartável 500 ml","Copo descartável 300ml","Bobina termica 80x40","Bobina Picotada 20x30","Etiqueta Manipulação","Garrafa para Suco G","Caldo DE Tilapia","Pudim Tradicional","Petit Gateau","Café (Capsulas)","Fruta Morango KG","Fruta Acerola KG","Polpa de Maracujá Unid","Polpa de Abacaxi Unid","Sorvete de Creme","Sorvete de Queijo","Goiabada Cascão","Polpa de Maracujá Unid","Hortelã","Gengibre","Limao kgs","Laranja","Morango","Fazer Reposição Bebidas","Conferir o Gás do Chopp","Limpar Geladeira Refrigerante","Limpar Balcão Refrigerado","Limpar as Bancadas","Limpar Adega","Lavar a Lixeira"],"sections":[]},"fechamento":{"title":"Fechamento da Casa","items":["Abertura de loja","Abertura de caixa","Verificar fundo de caixa R$200,00","Verificar ifood e itens pausados","Verificar banheiros(Papel,sabão e limpeza)","Ligar TV fora","Ligar Ar condicionado","Verificar se o quibe subiu","Degustação (Ausencia do Antonio)","Verificar checklist salão","Verificar checklist Cozinha","Fechamento de loja","Cozinha","Fechamento gas","Fechamento Agua","Desligar microondas","Desligar banho Maria","Desligar Fritadeiras","Ferir a temperatura dos freezeres","limpar as bancadas","retirar e lavar as louças","Bar","Organizar o bar","Mandar todas as louças","Lavar os copos","limpar choppeira","Limpar maquina de café","Ferir a temperatura dos freezeres","desligar o microondas","Salao","Carregar máquinas","Pasta ANVISA","Desligar estufa","Desligar as luzes","Desligar as luzes dos banheiros"],"sections":["Abertura de loja","Salao","Salão","Fechamento de loja","Bar","Cozinha"]}};
 
   async function renderSheetChecklist(name) {
@@ -4702,6 +4716,196 @@
     await loadOwnerChecklistHistory();
   }
 
+  async function renderHigienizacaoChecklist() {
+    const root = document.getElementById("sheetChecklistRoot");
+    const title = document.getElementById("sheetChecklistTitle");
+    if (!root || !title) return;
+    const tasks = [
+      { area: "Copa e Salão", task: "Piso (atrás de todos os móveis)", period: "Semanal" },
+      { area: "Copa e Salão", task: "Paredes e Rodapés (loja)", period: "Mensal" },
+      { area: "Copa e Salão", task: "Luminárias e Arandelas", period: "Mensal" },
+      { area: "Copa e Salão", task: "Portas e Vidros", period: "Semanal" },
+      { area: "Copa e Salão", task: "Banners e Totens", period: "Semanal" },
+      { area: "Copa e Salão", task: "Freezer da copa", period: "Semanal" },
+      { area: "Copa e Salão", task: "Adega", period: "Semanal" },
+      { area: "Copa e Salão", task: "Aparadores (retirar tudo)", period: "Semanal" },
+      { area: "Copa e Salão", task: "Quadros e Decoração", period: "Semanal" },
+      { area: "Copa e Salão", task: "Estrados", period: "Semanal" },
+      { area: "Copa e Salão", task: "Geladeira Cerveja", period: "Semanal" },
+      { area: "Copa e Salão", task: "Geladeira Refrigerantes", period: "Semanal" },
+      { area: "Copa e Salão", task: "Balcão Refrigerado", period: "Semanal" },
+      { area: "Copa e Salão", task: "Bancada de Utensílios (RETIRAR TUDO)", period: "Semanal" },
+      { area: "Copa e Salão", task: "Máquina de gelo", period: "Semanal" },
+      { area: "Cozinha", task: "Piso (atrás de todos os móveis)", period: "Semanal" },
+      { area: "Cozinha", task: "Ralos (Pia e Chão)", period: "Semanal" },
+      { area: "Cozinha", task: "Paredes", period: "Semanal" },
+      { area: "Cozinha", task: "Porta", period: "Semanal" },
+      { area: "Cozinha", task: "Teto", period: "Mensal" },
+      { area: "Cozinha", task: "Luminárias", period: "Mensal" },
+      { area: "Cozinha", task: "Bancadas", period: "Semanal" },
+      { area: "Cozinha", task: "Prateleiras (retirar tudo)", period: "Semanal" },
+      { area: "Cozinha", task: "Bancada Refrigerada", period: "Semanal" },
+      { area: "Cozinha", task: "Fritadeira 1", period: "Semanal" },
+      { area: "Cozinha", task: "Fritadeira 2", period: "Semanal" },
+      { area: "Cozinha", task: "Coifa (dentro, em cima e fora)", period: "Semanal" },
+      { area: "Cozinha", task: "Freezer horizontal branco I", period: "Semanal" },
+      { area: "Cozinha", task: "Freezer horizontal branco II", period: "Semanal" },
+      { area: "Cozinha", task: "Geladeira Expositora Peixe", period: "Semanal" },
+      { area: "Cozinha", task: "Geladeira Vermelha", period: "Semanal" },
+      { area: "Cozinha", task: "Geladeira Branca I", period: "Semanal" },
+      { area: "Cozinha", task: "Estoque Seco (paredes e prateleiras)", period: "Semanal" },
+      { area: "Cozinha", task: "Estrados (TODOS)", period: "Semanal" }
+    ];
+    const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const now = new Date(), monthDefault = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+    const key = "higienizacao_semanal_mensal";
+    title.textContent = "Higienização Semanal e Mensal";
+    root.replaceChildren();
+
+    const fields = document.createElement("div"); fields.className = "row";
+    fields.innerHTML = '<div><label for="hzMonth">Mês/Ano</label><input id="hzMonth" type="month"></div><div><label for="hzUnit">Unidade</label><input id="hzUnit" type="text" maxlength="80" value="Sudoeste"></div>';
+    const monthInput = fields.querySelector("#hzMonth"), unitInput = fields.querySelector("#hzUnit"); monthInput.value = monthDefault;
+    const tableWrap = document.createElement("div"); tableWrap.className = "table-wrap"; tableWrap.style.marginTop = "12px";
+    const table = document.createElement("table"); table.className = "dash-table higienizacao-table";
+    const head = document.createElement("thead");
+    const head1 = document.createElement("tr"), head2 = document.createElement("tr");
+    [["Tarefa", 2], ["Período", 2]].forEach(([label, span]) => { const th = document.createElement("th"); th.textContent = label; th.rowSpan = span; head1.appendChild(th); });
+    ["1º", "2º", "3º", "4º"].forEach(week => { const th = document.createElement("th"); th.textContent = week; th.colSpan = 4; head1.appendChild(th); });
+    for (let i = 0; i < 4; i++) ["Data", "Responsável", "Avaliação", "Verificação"].forEach(label => { const th = document.createElement("th"); th.textContent = label; head2.appendChild(th); });
+    head.append(head1, head2); table.appendChild(head);
+    const body = document.createElement("tbody"), taskSlots = [], allSlots = [];
+    tasks.forEach(task => {
+      const tr = document.createElement("tr"), taskCell = document.createElement("td"), periodCell = document.createElement("td");
+      taskCell.textContent = task.task; taskCell.className = "hz-task"; periodCell.textContent = task.period; periodCell.className = "hz-period";
+      tr.append(taskCell, periodCell);
+      const slots = [];
+      for (let week = 1; week <= 4; week++) {
+        const day = document.createElement("input"); day.type = "number"; day.min = "1"; day.max = "31"; day.placeholder = "Dia"; day.className = "hz-day"; day.setAttribute("aria-label", task.task + " — dia da semana " + week);
+        const person = document.createElement("input"); person.type = "text"; person.maxLength = 50; person.placeholder = "Nome"; person.className = "hz-name"; person.setAttribute("aria-label", task.task + " — responsável da semana " + week);
+        const verify = document.createElement("input"); verify.type = "text"; verify.maxLength = 30; verify.placeholder = "Visto"; verify.className = "hz-verify"; verify.setAttribute("aria-label", task.task + " — verificação da semana " + week);
+        const evalWrap = document.createElement("div"); evalWrap.className = "hygiene-choice";
+        const cButton = document.createElement("button"), ncButton = document.createElement("button"); cButton.type = ncButton.type = "button"; cButton.textContent = "C"; ncButton.textContent = "NC";
+        cButton.setAttribute("aria-label", "Conforme — " + task.task + " — semana " + week); ncButton.setAttribute("aria-label", "Não conforme — " + task.task + " — semana " + week);
+        const slot = {
+          day, person, verify, evaluation: "",
+          set(value) {
+            this.evaluation = value;
+            cButton.classList.toggle("selected-c", value === "C"); ncButton.classList.toggle("selected-nc", value === "NC");
+            cButton.setAttribute("aria-pressed", value === "C" ? "true" : "false"); ncButton.setAttribute("aria-pressed", value === "NC" ? "true" : "false");
+          }
+        };
+        cButton.addEventListener("click", () => { slot.set(slot.evaluation === "C" ? "" : "C"); markDirty(); });
+        ncButton.addEventListener("click", () => { slot.set(slot.evaluation === "NC" ? "" : "NC"); markDirty(); });
+        evalWrap.append(cButton, ncButton);
+        [day, person, evalWrap, verify].forEach(el => { const td = document.createElement("td"); td.appendChild(el); tr.appendChild(td); });
+        slots.push(slot); allSlots.push(slot);
+      }
+      taskSlots.push(slots); body.appendChild(tr);
+    });
+    table.appendChild(body); tableWrap.appendChild(table);
+    const hint = document.createElement("p"); hint.className = "hint"; hint.style.margin = "12px 0";
+    hint.textContent = "Preencha data, responsável, avaliação (C/NC) e verificação em cada semana aplicável. As tarefas mensais podem ficar em branco nas semanas sem execução.";
+    const actions = document.createElement("div"); actions.className = "actions";
+    const save = document.createElement("button"); save.type = "button"; save.textContent = "Salvar checklist";
+    const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn-edit"; pdf.textContent = "Gerar PDF mensal";
+    const status = document.createElement("div"); status.className = "sim"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
+    let dirty = false, loadRequest = 0;
+    const localKey = month => "operatto_higienizacao_semanal_mensal_v1_" + (currentEmail || "local") + "_" + month;
+    const makeDate = month => month + "-01";
+    function markDirty() { dirty = true; status.textContent = "Há alterações sem salvar."; status.className = "sim warning"; }
+    function makeRecord() { return { unit: unitInput.value.trim(), responses: allSlots.flatMap(slot => [slot.day.value, slot.person.value.trim(), slot.evaluation, slot.verify.value.trim()]), updated_at: new Date().toISOString() }; }
+    function applyRecord(record) {
+      const values = Array.isArray(record && record.responses) ? record.responses : [];
+      unitInput.value = record && record.responsible || record && record.unit || "Sudoeste";
+      allSlots.forEach((slot, i) => { const offset = i * 4; slot.day.value = values[offset] || ""; slot.person.value = values[offset + 1] || ""; slot.set(values[offset + 2] || ""); slot.verify.value = values[offset + 3] || ""; });
+    }
+    async function loadMonth() {
+      const month = monthInput.value, request = ++loadRequest, uid = currentUserId;
+      if (!month) return;
+      status.textContent = "Carregando mês…"; status.className = "sim";
+      let record = null;
+      try {
+        if (uid) {
+          const result = await supabaseClient.from("spreadsheet_checklists").select("responsible,responses,updated_at")
+            .eq("user_id", uid).eq("checklist_key", key).eq("checklist_date", makeDate(month)).maybeSingle();
+          if (result.error) throw result.error;
+          record = result.data;
+        }
+        if (!record) { try { record = JSON.parse(localStorage.getItem(localKey(month)) || "null"); } catch (_) {} }
+        if (request !== loadRequest || monthInput.value !== month || currentUserId !== uid) return;
+        if (!dirty) applyRecord(record);
+        status.textContent = dirty ? "Há alterações sem salvar." : record ? "Registro mensal carregado." : (uid ? "Nenhum registro neste mês." : "Entre na conta para sincronizar com a nuvem.");
+        status.className = "sim" + (dirty ? " warning" : record ? " positive" : "");
+      } catch (error) {
+        if (request !== loadRequest || monthInput.value !== month || currentUserId !== uid) return;
+        if (!record) { try { record = JSON.parse(localStorage.getItem(localKey(month)) || "null"); } catch (_) {} }
+        if (!dirty) applyRecord(record);
+        status.textContent = dirty ? "Há alterações sem salvar." : "Falha ao carregar da nuvem. " + (record ? "Rascunho local carregado." : friendlyError(error)); status.className = "sim warning";
+      }
+    }
+    unitInput.addEventListener("input", markDirty);
+    allSlots.forEach(slot => { slot.day.addEventListener("input", markDirty); slot.person.addEventListener("input", markDirty); slot.verify.addEventListener("input", markDirty); });
+    monthInput.addEventListener("change", () => { dirty = false; loadMonth(); });
+    save.addEventListener("click", async () => {
+      const month = monthInput.value;
+      if (!month) { status.textContent = "Informe o mês."; status.className = "sim warning"; return; }
+      loadRequest++;
+      const record = makeRecord();
+      try { localStorage.setItem(localKey(month), JSON.stringify(record)); } catch (_) {}
+      if (!currentUserId) { dirty = false; status.textContent = "Rascunho salvo neste aparelho. Entre na conta para sincronizar."; status.className = "sim warning"; return; }
+      save.disabled = true; status.textContent = "Salvando…"; status.className = "sim";
+      try {
+        const { error } = await supabaseClient.from("spreadsheet_checklists").upsert({
+          user_id: currentUserId, checklist_key: key, checklist_date: makeDate(month),
+          responsible: record.unit, responses: record.responses, updated_at: record.updated_at
+        }, { onConflict: "user_id,checklist_key,checklist_date" });
+        if (error) throw error;
+        dirty = false; status.textContent = "Checklist salvo no Supabase."; status.className = "sim positive";
+      } catch (error) {
+        status.textContent = "Não foi possível salvar na nuvem. " + friendlyError(error) + " O rascunho permanece neste aparelho."; status.className = "sim negative";
+      } finally { save.disabled = false; }
+    });
+    pdf.addEventListener("click", () => {
+      const JsPDF = window.jspdf && window.jspdf.jsPDF;
+      if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
+      const month = monthInput.value || monthDefault, [year, monthNumber] = month.split("-"), monthTitle = monthNames[Number(monthNumber) - 1] + " de " + year;
+      const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+      if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo."); return; }
+      const margin = 18, pageWidth = doc.internal.pageSize.getWidth();
+      ["Copa e Salão", "Cozinha"].forEach((area, areaIndex) => {
+        if (areaIndex) doc.addPage();
+        doc.setFont("times", "bold"); doc.setFontSize(10);
+        doc.text("PLANILHA DE CONTROLE DE HIGIENIZAÇÃO SEMANAL E MENSAL", pageWidth / 2, 22, { align: "center" });
+        doc.setFontSize(8); doc.text("Unidade: " + (unitInput.value.trim() || "Sudoeste"), margin, 37); doc.text("Mês/Ano: " + monthTitle, pageWidth - margin, 37, { align: "right" });
+        const groupTasks = tasks.map((task, index) => ({ task, index })).filter(row => row.task.area === area);
+        const rows = groupTasks.map(({ task, index }) => {
+          const values = taskSlots[index].flatMap(slot => [slot.day.value || "", slot.person.value.trim(), slot.evaluation ? "(X) " + slot.evaluation : "( ) C  ( ) NC", slot.verify.value.trim()]);
+          return [task.task, task.period, ...values];
+        });
+        const weekHeads = ["1º", "2º", "3º", "4º"].map(label => ({ content: label, colSpan: 4, styles: { halign: "center" } }));
+        const subHeads = [];
+        for (let i = 0; i < 4; i++) subHeads.push("Data", "Responsável", "Avaliação", "Verificação");
+        const widths = [150, 48];
+        for (let i = 0; i < 4; i++) widths.push(25, 48, 34, 40);
+        const columnStyles = Object.fromEntries(widths.map((width, i) => [i, { cellWidth: width, halign: i < 2 ? "left" : "center" }]));
+        doc.autoTable({
+          startY: 43,
+          head: [[{ content: "Tarefa", rowSpan: 2, styles: { valign: "middle" } }, { content: "Período", rowSpan: 2, styles: { valign: "middle" } }, ...weekHeads], subHeads],
+          body: rows, theme: "grid", pageBreak: "avoid", rowPageBreak: "avoid",
+          styles: { font: "times", fontSize: 5.2, cellPadding: 2, overflow: "linebreak", textColor: [25, 25, 25], lineColor: [75, 75, 75], lineWidth: 0.35, valign: "middle" },
+          headStyles: { font: "times", fontStyle: "bold", fontSize: 5.4, cellPadding: 2, textColor: [25, 25, 25], fillColor: [255, 255, 255], halign: "center" },
+          columnStyles, margin: { left: margin, right: margin, bottom: 26 }
+        });
+        doc.setFont("times", "normal"); doc.setFontSize(7);
+        doc.text("C = Conforme     NC = Não conforme. Se marcar NC, solicitar que a tarefa seja refeita.", margin, doc.lastAutoTable.finalY + 14);
+      });
+      sharePdf(doc, "higienizacao_semanal_mensal_" + month + ".pdf");
+    });
+    actions.append(save, pdf);
+    root.append(fields, hint, tableWrap, actions, status);
+    await loadMonth();
+  }
+
   async function renderHygieneChecklist() {
     const root = document.getElementById("sheetChecklistRoot");
     const title = document.getElementById("sheetChecklistTitle");
@@ -4902,9 +5106,10 @@
     if (name === "gordura" && typeof greaseOpen === "function") greaseOpen();
     if (name === "limpeza" && window.operattoLimpeza && typeof window.operattoLimpeza.abrir === "function") window.operattoLimpeza.abrir();
     if (SHEET_CHECKLISTS[name]) renderSheetChecklist(name);
+    else if (name === "higienizacao") renderHigienizacaoChecklist();
     else if (name === "higiene") renderHygieneChecklist();
     document.querySelectorAll("#checklistOpenView .tab-panel").forEach(p => {
-      const show = p.id === (SHEET_CHECKLISTS[name] || name === "higiene" ? "tab-planilha" : "tab-" + name);
+      const show = p.id === (SHEET_CHECKLISTS[name] || name === "higiene" || name === "higienizacao" ? "tab-planilha" : "tab-" + name);
       p.hidden = !show;
       p.classList.remove("enter");
       if (show) {
@@ -6038,6 +6243,7 @@
 
   function erroNuvem(error) {
     const message = String((error && error.message) || error || "");
+    if (/cleaning_checklists_sector_check/i.test(message)) return "O Supabase ainda não permite o setor Estoque / Recebimento / Banheiros. Execute supabase_limpeza_estoque.sql no SQL Editor e tente novamente.";
     if ((error && (error.code === "42P01" || error.code === "PGRST205")) || /cleaning_checklists|cleaning_monthly_responsibles/i.test(message) && /does not exist|schema cache|could not find/i.test(message)) {
       return "Tabelas de limpeza ainda não configuradas. Execute supabase_checklist_limpeza.sql no SQL Editor do Supabase.";
     }
