@@ -164,6 +164,18 @@
     .stock-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
     .stock-info { min-width: 0; flex: 1; overflow-wrap: anywhere; }
     .stock-item strong, .movement strong { font-weight: 600; }
+    /* Cartões individuais para os produtos do Estoque */
+    #stockList { min-width: 0; }
+    #stockList .stock-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    #stockList .stock-item { min-width: 0; padding: 16px; background: #25292F; border: 1px solid #383D45; border-radius: 9px; }
+    #stockList .stock-info { display: grid; gap: 7px; }
+    #stockList .stock-info > strong { font-size: 15px; line-height: 1.35; color: var(--text); overflow-wrap: anywhere; }
+    #stockList .stock-info > .hint { line-height: 1.45; }
+    #stockList .edit-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, 120px) auto; align-items: center; gap: 8px; margin: 5px 0 0; }
+    #stockList .edit-row > .hint { white-space: normal; font-size: 12px; }
+    #stockList .edit-row input { width: 100%; min-width: 0; height: 42px; margin: 0; padding: 8px 10px; }
+    #stockList .edit-row .btn-save { min-height: 42px; white-space: nowrap; }
+    #stockList .btn-remove { min-height: 40px; }
     .item-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
     .dash-reading { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; font-size: 14px; }
     .table-wrap { overflow-x: auto; }
@@ -207,6 +219,11 @@
     .owner-activity-row span:last-child { color:var(--muted); white-space:nowrap; }
     #ownerNavLink[hidden] { display:none; }
     @media (max-width: 820px) {
+      #stockList .stock-group, #sauceRoot .sauce-table tbody, #sheetStockTable .sauce-table tbody { grid-template-columns: minmax(0, 1fr); }
+      #stockList .stock-item { padding: 14px; }
+      #stockList .edit-row { grid-template-columns: minmax(0, 1fr) minmax(88px, 112px); }
+      #stockList .edit-row .btn-save { grid-column: 1 / -1; width: 100%; }
+      #sauceRoot .sauce-table tbody tr, #sheetStockTable .sauce-table tbody tr { padding: 14px; }
       .owner-form { grid-template-columns:1fr; }
       .owner-form-actions { flex-direction:column; align-items:stretch; }
       .owner-form-actions button { width:100%; }
@@ -331,6 +348,24 @@
     #sauceRoot .sauce-history-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     #sauceRoot .sauce-history-actions button { width: auto; padding: 8px 11px; }
     #sauceRoot .sauce-status { min-height: 20px; }
+
+    /* Cards responsivos para os produtos de Molhos e Cotação */
+    #sauceRoot .sauce-table-wrap, #sheetStockTable .sauce-table-wrap { overflow: visible; border: 0; border-radius: 0; }
+    #sauceRoot .sauce-table, #sheetStockTable .sauce-table { width: 100%; min-width: 0; border-collapse: separate; border-spacing: 0; }
+    #sauceRoot .sauce-table thead, #sheetStockTable .sauce-table thead { display: none; }
+    #sauceRoot .sauce-table tbody, #sheetStockTable .sauce-table tbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    #sauceRoot .sauce-table tbody tr, #sheetStockTable .sauce-table tbody tr { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 8px 10px; padding: 13px; background: #25292F; border: 1px solid #383D45; border-radius: 9px; }
+    #sauceRoot .sauce-table tbody td, #sheetStockTable .sauce-table tbody td { min-width: 0; width: auto; border: 0; padding: 0; }
+    #sauceRoot .sauce-table tbody td:first-child, #sheetStockTable .sauce-table tbody td:first-child { grid-column: 1 / -1; font-size: 14px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; color: var(--text); }
+    #sauceRoot .sauce-table tbody td:not(:first-child), #sheetStockTable .sauce-table tbody td:not(:first-child) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px; }
+    #sauceRoot .sauce-table tbody td:not(:first-child)::before, #sheetStockTable .sauce-table tbody td:not(:first-child)::before { content: attr(data-label); color: var(--muted); font-size: 11px; font-weight: 600; }
+    #sauceRoot .sauce-table tbody td input, #sheetStockTable .sauce-table tbody td input { width: 100%; min-width: 0 !important; height: 42px; margin: 0 !important; padding: 8px; text-align: center; }
+    #sauceRoot .sauce-count-control { justify-content: flex-end; gap: 5px; }
+    #sauceRoot .sauce-count-control input { width: 58px; }
+    #sauceRoot .sauce-count-control button { width: 36px; height: 42px; flex: 0 0 36px; border-radius: 6px; }
+    #sauceRoot .sauce-order { width: 72px; height: 42px; }
+    #sheetStockTable > .section { min-width: 0; padding: 16px; }
+    #sheetStockTable .section h2 { margin-bottom: 12px; }
 
     .d30-checks { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 12px 0 2px; }
     .d30-checks label { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 13.5px; color: var(--text); cursor: pointer; }
@@ -8166,6 +8201,7 @@ function sauceRenderItems() {
 
     const countCell = document.createElement("td");
     countCell.className = "sauce-qty";
+    countCell.dataset.label = "CONTAGEM";
     const countControl = document.createElement("div");
     countControl.className = "sauce-count-control";
     const minus = document.createElement("button");
@@ -8205,6 +8241,7 @@ function sauceRenderItems() {
     countCell.appendChild(countControl);
 
     const orderCell = document.createElement("td");
+    orderCell.dataset.label = "PEDIDO";
     const orderInput = document.createElement("input");
     orderInput.className = "sauce-order";
     orderInput.type = "number";
@@ -8222,6 +8259,7 @@ function sauceRenderItems() {
     });
     orderCell.appendChild(orderInput);
     const salesCell = document.createElement("td");
+    salesCell.dataset.label = "VENDAS";
     const salesInput = document.createElement("input");
     salesInput.className = "sauce-order";
     salesInput.type = "number"; salesInput.min = "0"; salesInput.step = "1"; salesInput.inputMode = "numeric";
@@ -8528,10 +8566,10 @@ async function sheetStockOpen() {
     thead.appendChild(header); table.appendChild(thead);
     const body = document.createElement("tbody");
     SHEET_STOCK[category].forEach((product, sourceIndex) => {
-      const tr = document.createElement("tr"), name = document.createElement("td"); name.textContent = product; tr.appendChild(name);
+      const tr = document.createElement("tr"), name = document.createElement("td"); name.textContent = product; name.className = "quote-product-name"; tr.appendChild(name);
       fields.forEach(field => {
         const key = field.key;
-        const cell = document.createElement("td"), input = document.createElement("input");
+        const cell = document.createElement("td"), input = document.createElement("input"); cell.dataset.label = field.label;
         input.type = "number"; input.min = "0"; input.step = "any";
         input.style.margin = "0"; input.style.textAlign = "center"; input.style.minWidth = "72px";
         const valueKey = String(sourceIndex);
