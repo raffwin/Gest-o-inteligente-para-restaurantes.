@@ -814,7 +814,7 @@
       </div>
       <div class="sauce-table-wrap">
         <table class="sauce-table">
-          <thead id="sauceItemsHead"><tr><th>MOLHO</th><th style="text-align:center">VENDAS</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr></thead>
+          <thead id="sauceItemsHead"><tr><th>MOLHO</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">VENDAS</th><th style="text-align:center">PEDIDO</th></tr></thead>
           <tbody id="sauceItems"><tr><td colspan="4" class="loading">Carregando...</td></tr></tbody>
         </table>
       </div>
@@ -8154,7 +8154,7 @@ function sauceDefaultValues(items) {
 function sauceRenderItems() {
   const body = sauceEl("sauceItems");
   if (!body) return;
-  sauceEl("sauceItemsHead").innerHTML = '<tr><th>MOLHO</th><th style="text-align:center">VENDAS</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">PEDIDO</th></tr>';
+  sauceEl("sauceItemsHead").innerHTML = '<tr><th>MOLHO</th><th style="text-align:center">CONTAGEM</th><th style="text-align:center">VENDAS</th><th style="text-align:center">PEDIDO</th></tr>';
   sauceEl("sauceSaveBtn").textContent = "Salvar contagem";
   sauceEl("saucePdfBtn").textContent = "Gerar PDF";
   body.replaceChildren();
@@ -8234,7 +8234,7 @@ function sauceRenderItems() {
       sauceSetStatus("Há alterações sem salvar.", "warning");
     });
     salesCell.appendChild(salesInput);
-    row.append(name, salesCell, countCell, orderCell);
+    row.append(name, countCell, salesCell, orderCell);
     body.appendChild(row);
   });
 }
@@ -8413,12 +8413,12 @@ function sauceGeneratePdf(record) {
     startY: 112,
     theme: "grid",
     margin: { left: margin, right: margin, bottom: 40 },
-    head: [["MOLHO", "VENDAS", "CONTAGEM", "PEDIDO"]],
+    head: [["MOLHO", "CONTAGEM", "VENDAS", "PEDIDO"]],
     body: SAUCE_CATALOG.map(product => {
       const item = byRow.get(product.row) || {};
       return [product.name,
-        item.sales_quantity == null ? "" : String(item.sales_quantity),
         item.count_quantity == null ? "" : String(item.count_quantity),
+        item.sales_quantity == null ? "" : String(item.sales_quantity),
         item.order_quantity == null ? "" : String(item.order_quantity)];
     }),
     styles: { font: "helvetica", fontSize: 8.5, cellPadding: 5, lineColor: [190, 195, 202], lineWidth: 0.5, textColor: [35, 39, 45], valign: "middle" },
@@ -8456,15 +8456,15 @@ sauceEl("saucePdfBtn").addEventListener("click", () => sauceGeneratePdf(null));
 /* Cotação baseada no arquivo de cotação do repositório.
    A lista de molhos deste formulário é independente do controle de molhos por código. */
 const SHEET_STOCK = {
-  "Produtos": ["Açucar Sachê 400 unid","Açucar Cristal 5 kg","Aceto Balsanico 250ML","Adoçante Sachê","Alcaparras Balde kg","Arroz 5 Kg","Azeite de Dende","Azeite 250 ml","Azeite de 5 litros","Batata Palito","Catchup sache","Canudo Bio 6mm","Champignon","Cobertura de Chocolate","Copo descartável 500 ml","Copo descartável 300ml","Farinha de Mandioca","Farinha de Trigo","farinha panko","Guardanapo","Leite de Coco","Leite Integral","Maionese","Manteiga Paracatu","Margarina Balde 15 kg","Mostarda Cepera","Mexedor de café","Palito de Dente","Papel Toalha Quick","Sal","Sal Sachê kg","Talher Descartável","Colher Descartável","Pimenta Mendes","Óleo de Algodão","Óleo","Vinho Branco Seco","Café","Molho de tomate","Feijão","Macarrão"],
+  "Produtos": ["Açucar Sachê 400 unid","Açucar Cristal 5 kg","Aceto Balsanico 250ML","Adoçante Sachê","Alcaparras Balde kg","Arroz 5 Kg","Azeite de Dende","Azeite 250 ml","Azeite de 5 litros","Batata Palito","Catchup sache","Canudo Bio 6mm","Champignon","Cobertura de Chocolate","Copo descartável 500 ml","Copo descartável 300ml","Farinha de Mandioca","Farinha de Trigo","Mistura Panko","Guardanapo","Leite de Coco","Leite Integral","Maionese","Manteiga Paracatu","Margarina Balde 15 kg","Mostarda Cepera","Mexedor de café","Palito de Dente","Papel Toalha Quick","Sal","Sal Sachê kg","Talher Descartável","Colher Descartável","Pimenta Mendes","Óleo de Algodão","Óleo","Vinho Branco Seco","Café","Molho de tomate","Feijão","Macarrão"],
   "Embalagens": ["Bobina termica 80x40","Saco p/ Talher 500 unid","Saco Delivery Personalizado","Lacre delivery","Forro de Mesa","Emb. Pote Molho (0,002)","Emb.3 Divi. D 118 (0,026)","Emb. Moqueca K151 (0,020)","Emb. Guarnições K49 (0,010)","Emb.3 G.330","Emb.Isopor Rasa","Molho de Isopor","Emb. pote retangular 350 ml","Garrafa para Suco G"],
-  "Pescados e Carnes": ["Camarão Cinza 41,50","File de Tilápia","File de Tilápia","File de Tilápia","File de pescada amarela","Pescada amarela em posta","Salmão","File Mignon","File de Peito de Frango","Carne funcionário"],
+  "Pescados e Carnes": ["Camarão Cinza 41,50","File de Tilápia","File de pescada amarela","Pescada amarela em posta","Salmão","File Mignon","File de Peito de Frango","Carne funcionário"],
   "Temperos diversos": ["Pimenta Reino (500g)","Gergelim Branco","Gergelim Preto","Mussarela Pedaço","Mussarela Fatiada","Massa Pastel","Castanha Xéren (KG)"],
-  "Molhos": ["Molho Cremoso","Molho Camarão","Molho Gorgonzola","Molho Limão","Molho Maracuja","Estrogonofe Frango","Moqueca Cajú","Moqueca Capixaba","Moqueca Pescada","Molho Moquequinha","Pirão","Prom.","Prom.","Purê de Abóbora","Purê de Banana","Purê de Maçã","Req. Banana","Shitake","Parmegiana","Farinha de Pão Na Unidade","Mistura Crocante Pct. c/5","Teriyaki","Torradas Pacote","Calda de Maracujá","Geleia de Pimenta"],
-  "Petiscos": ["Bolinho Bacalhau Unidade","Quibe (25 uni.)","Bolinho de Tilápia Unidade","Pastel de Camarão Meia","Bolinho de Carne Seca","Pastel de Tilápia Meia","Caldo de Bobó de Camarão","Tarrafa Porcionada","Caldo de Tilápia Unidade","Pastel Trio Meia","Camarão Empanado","Pastel Queijo Meia"],
-  "Sobremesas": ["Pudim Tradicional","Fruta Morango","Petit Gateau","Fruta Acerola","Sorvete Creme","Polpa de Maracujá Un.","Café (Cápsulas)","Polpa de Abacaxi","Sorvete Queijo","Calda de Maracujá","Goiabada Cascão"],
-  "Hortifruti": ["Hortelã","Cebola","Gengibre","Ovo","Limão kgs","Batata inglesa","Laranja","Tomate","Morango","Alho com Casca","Banana Prata","Repolho unid","Abobrinha","Brocolis Comum","Chuchu","Cenoura","Pepino Japonês","Salsinha","Rúcula","Alface Americana","Alface Roxa","Alface Crespa","Tomate Cereja","Vagem Americana","Brocolis Japones","Couve Flor","Berinjela","Batata Doce","Mandioca","Jiló","Pimentão Verde","Quiabo","Beterraba","Abobora Japonesa"],
-  "Bebidas": ["Coca Cola Ks Zero","Coca Cola Ks","Coca Cola Lata","Coca Cola Zero Lata","Fanta Lata","Sprite Lata","Schweppes Citrus Lata","Schweppes citrus zero","Heineken 600 ml","Heineken Long Neck","Heineken long neck zero","Água sem Gás","Água com Gás","Guaraná Lata","Guaraná Zero Lata","Soda limonada","Água Tônica Lata","Água Tônica zero Lata","H2OH Limão","H2OH Limoneto","Original 600ml","Spaten long neck","Spaten 600ml","Stella long neck gold","Stella long neck","Stella 600 ml","Chopp (Litros)","Pilse (Proibida-DIA A DIA)","Vodka Smirnoff (Dose)","Cachaça Seleta (Dose)","Cachaça 51","Gin Beefeater","Licor 43","Xarope Monin Le Fruit Coco","Xarope Monin Abacaxi","Xarope Monin Morango","Xarope Monin Tangerina","Xarope Monin Maçã Verde","Gás para Chopp"],
+  "Molhos": ["Molho Cremoso","Molho Camarão","Molho Gorgonzola","Molho Limão","Molho Maracuja","Estrogonofe Frango","Moqueca Cajú","Moqueca Capixaba","Moqueca Pescada","Moqueca de Coco","Molho Moquequinha","Pirão","Prom.","Prom.","Purê de Abóbora","Purê de Banana","Purê de Maçã","Req. Banana","Shitake","Parmegiana","Farinha de Pão Na Unidade","Mistura Crocante Pct. c/5","Teriyaki","Torradas Pacote","Geleia de Pimenta"],
+  "Petiscos": ["Bolinho Bacalhau Unidade","Quibe (25 uni.)","Bolinho de Tilápia Unidade","Pastel de Camarão Meia","Bolinho de Carne Seca","Pastel de Tilápia Meia","Caldo de Bobó de Camarão","Tarrafa Porcionada","Caldo de Tilápia Unidade","Pastel Trio Meia","Pastel Queijo Meia"],
+  "Sobremesas": ["Pudim Tradicional","Fruta Morango","Petit Gateau","Fruta Acerola","Sorvete Creme","Polpa de Maracujá Un.","Café (Cápsulas)","Polpa de Abacaxi","Sorvete Queijo","Goiabada Cascão"],
+  "Hortifruti": ["Hortelã","Cebola","Gengibre","Ovo","Limão kgs","Batata inglesa","Laranja","Tomate","Morango","Alho com Casca","Banana Prata","Repolho unid","Abobrinha","Brocolis Comum","Chuchu","Cenoura","Pepino Japonês","Salsinha","Rúcula","Alface Americana","Alface Roxa","Alface Crespa","Tomate Cereja","Vagem Americana","Brocolis Japones","Couve Flor","Berinjela"],
+  "Bebidas": ["Coca Cola Ks Zero","Coca Cola Ks","Coca Cola Lata","Coca Cola Zero Lata","Fanta Lata","Sprite Lata","Schweppes Citrus Lata","Schweppes citrus zero","Heineken 600 ml","Heineken Long Neck","Heineken long neck zero","Água sem Gás","Água com Gás","Guaraná Lata","Pepsi Black","Guaraná Zero Lata","Soda limonada","Água Tônica Lata","Água Tônica zero Lata","H2OH Limão","H2OH Limoneto","Original 600ml","Spaten long neck","Cerveja Michelob","Spaten 600ml","Stella long neck gold","Stella long neck","Stella 600 ml","Chopp (Litros)","Pilse (Proibida-DIA A DIA)","Vodka Smirnoff (Dose)","Cachaça Seleta (Dose)","Cachaça 51","Red Label","Gin Beefeater","Licor 43","Xarope Monin Le Fruit Coco","Xarope Monin Abacaxi","Xarope Monin Morango","Xarope Monin Tangerina","Xarope Monin Maçã Verde","Gás para Chopp"],
   "Vinhos": ["1913 Prosecco","1913 Sparkling Brut Rose","1913 Prosecco 187 ml","Casal da Seara Vinho Branco","Vulcanici Pinot Grigio","Bellavista Chardonnay","4 Estaciones Summer Torrontés","Bellavista Rosé","Chaka Sysah V. Vale Central","Donoso Suave Cab. Sauvignon","C. Del Maipo Cab. Sauvignon","Bellavista Carménère","Jean Bousquet Malbec","Malacara Bornarda","4 Estaciones Malbec P. Autumn","La Vid blend tinto","4 Estaciones Spring Rosé","Vasco Viejo B. Meia Branco","Esperança Tinto","Vasco Viejo B. Meia Tinto","Vila Ruiva","Bellavista Cab.Sauvignon","Vulcanici Mont. Abruzzo","Vulcanici Sangiovese Puglia"],
   "Brago": ["Papel toalha cliente","Papel higiênico cliente","Sabonete cliente com cheiro","Sabonete bactericida","Álcool 70 salão Spray","Papel Toalha Produção","Wiper Branco"],
   "Limpeza": ["Agua Sanitaria","Fita Durex Larga","Álcool 70","Perfex","Desinfetante","Detergente","Limpa coifa","Master grill","Sapólio cremoso","Esponja","Fibraco","Filme PVC","Isqueiro","Luva amarela","Luva verde","Luva vinil","Máscara descartável","Caneta Permanente","Bloco rascunho branco","Touca descartável","Saco lixo 100 lts Azul","Saco lixo 60 lts Preto","Saco t. 35/45","Etiqueta P. Manipulado","Saco bobina 20/30","Saco bobina 40/60","Bobina Açougue 40 cm","Bobina 35X50","Bucha de aço","Veja Multiuso","Pano de chão","Papel higiênico funcionário"],
