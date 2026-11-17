@@ -8506,11 +8506,11 @@ async function sheetStockOpen() {
       sheetStockValues[category] = {};
       const used = new Set();
       SHEET_STOCK[category].forEach((product, index) => {
-        let found = savedItems.find((item, itemIndex) => !used.has(itemIndex) && item.source_index === index);
-        if (!found) {
-          const itemIndex = savedItems.findIndex((item, j) => !used.has(j) && item.product === product);
-          if (itemIndex >= 0) { used.add(itemIndex); found = savedItems[itemIndex]; }
-        } else used.add(savedItems.indexOf(found));
+        let itemIndex = savedItems.findIndex((item, j) => !used.has(j) && item.source_index === index && item.product === product);
+        if (itemIndex < 0) itemIndex = savedItems.findIndex((item, j) => !used.has(j) && item.product === product);
+        if (itemIndex < 0) itemIndex = savedItems.findIndex((item, j) => !used.has(j) && item.source_index === index && !item.product);
+        const found = itemIndex >= 0 ? savedItems[itemIndex] : null;
+        if (found) used.add(itemIndex);
         if (found) sheetStockValues[category][String(index)] = found;
       });
     });
@@ -8628,7 +8628,8 @@ function sheetStockPdf() {
   const groups = Object.keys(SHEET_STOCK).map(category => ({
     category, suppliers: SHEET_SUPPLIERS[category] || [],
     items: SHEET_STOCK[category].map((product, sourceIndex) => ({
-      product, ...(((sheetStockValues[category] || {})[String(sourceIndex)]) || {})
+      ...(((sheetStockValues[category] || {})[String(sourceIndex)]) || {}),
+      product, source_index: sourceIndex
     }))
   }));
   quotePdfDrawTables(doc, groups, date, currentUser);
@@ -8988,12 +8989,12 @@ async function quoteLoad(date, req) {
     Object.keys(SHEET_STOCK).forEach(category => {
       const session = sessions[category];
       const storedItems = (session && session.items) || [];
-      const byIndex = new Map(storedItems.filter(i => Number.isInteger(i.source_index)).map(i => [i.source_index, i]));
+      const byIndex = new Map(storedItems.filter(i => Number.isInteger(i.source_index) && (!i.product || SHEET_STOCK[category][i.source_index] === i.product)).map(i => [i.source_index, i]));
       const items = SHEET_STOCK[category].map((product, index) => {
         const stored = byIndex.get(index) || storedItems.find(i => i.product === product) || {};
         total++;
         if (stored.stock !== null && stored.stock !== undefined && stored.stock !== "") filled++;
-        return { product, ...stored, stock: stored.stock, order: stored.order };
+        return { ...stored, product, source_index: index, stock: stored.stock, order: stored.order };
       });
       groups.push({ category, suppliers: SHEET_SUPPLIERS[category] || [], items, complete: !!session && items.every(i => i.stock !== null && i.stock !== undefined && i.stock !== "") });
     });
