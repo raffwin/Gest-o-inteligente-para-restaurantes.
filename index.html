@@ -8602,7 +8602,9 @@ function quotePdfDrawTables(doc, groups, date, responsible) {
       head, body,
       styles: { font: "helvetica", fontSize: 6.2, cellPadding: { top: 1.5, bottom: 1.5, left: 2.5, right: 2.5 }, lineColor: [125, 125, 125], lineWidth: 0.3, textColor: [25, 25, 25], valign: "middle", overflow: "linebreak" },
       headStyles: { fillColor: [240, 190, 20], textColor: [20, 20, 20], fontStyle: "bold", fontSize: 6.2, halign: "center" },
-      columnStyles
+      columnStyles,
+      rowPageBreak: "avoid",
+      didDrawPage: drawHeader
     });
     // Se a tabela avançar de página, a próxima categoria começa em uma página
     // limpa para evitar sobreposição; todas as linhas da tabela atual são mantidas.
