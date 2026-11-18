@@ -1209,7 +1209,7 @@
         <div class="ck-field ck-f-temp"><label for="ckTemp">Temperatura atingida (°C)</label><input id="ckTemp" type="number" step="0.1" min="-50" max="400" inputmode="decimal" required></div>
         <div class="ck-field ck-f-resp"><label for="ckResp">Responsável</label><input id="ckResp" type="text" maxlength="80" required></div>
         <div class="ck-field ck-f-status"><label>Situação</label><div class="ck-auto" id="ckAuto" aria-live="polite"></div></div>
-        <div class="ck-f-add"><button type="submit" id="ckAdd">Adicionar registro</button></div>
+        <div class="ck-f-add"><button type="submit" id="ckSaveRecord">Salvar registro</button></div>
       </form>
 
       <div class="ck-savebar"><span class="ck-save" id="ckSaveStatus" aria-live="polite"></span></div>
@@ -6949,7 +6949,7 @@ function cookSuggest() {
   box.appendChild(mk("span", "ck-hint", "  mínimo " + min + " °C"));
 }
 
-async function cookAdd(e) {
+async function cookSaveRecord(e) {
   e.preventDefault();
   if (cookBusy) return;
   const f = ckEl("ckForm");
@@ -6975,7 +6975,7 @@ async function cookAdd(e) {
   }
 
   cookBusy = true;
-  ckEl("ckAdd").disabled = true;
+  ckEl("ckSaveRecord").disabled = true;
   ckStatus("Salvando...", "hint");
   try {
     const { data, error } = await supabaseClient.from("cooking_records").insert(row).select().single();
@@ -6993,7 +6993,7 @@ async function cookAdd(e) {
     cookTouchedByError(error);
   }
   cookBusy = false;
-  ckEl("ckAdd").disabled = false;
+  ckEl("ckSaveRecord").disabled = false;
   ckRender();
 }
 
@@ -7290,7 +7290,7 @@ function renderDashCozimento(box) {
 (function () {
   const f = ckEl("ckForm");
   if (!f) return;
-  f.addEventListener("submit", cookAdd);
+  f.addEventListener("submit", cookSaveRecord);
   f.ckTemp.addEventListener("input", cookSuggest);
   f.ckCond.addEventListener("change", cookSuggest);
   ckEl("ckDate").addEventListener("change", () => {
