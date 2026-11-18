@@ -8585,8 +8585,9 @@ async function sheetStockSave() {
 }
 function quotePdfDrawTables(doc, groups, date, responsible) {
   const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
-  const margin = 24, startY = 68, categoryY = 52, bottom = pageH - 26;
-  let y = startY;
+  const margin = 24, gap = 12, colW = (pageW - margin * 2 - gap) / 2;
+  const xs = [margin, margin + colW + gap], startY = 52, bottom = pageH - 22;
+  let ys = [startY, startY], needsFreshPage = false;
   function drawHeader() {
     doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(25, 28, 32);
     doc.text("COTA\u00c7\u00c3O", margin, 23);
@@ -8596,25 +8597,31 @@ function quotePdfDrawTables(doc, groups, date, responsible) {
   drawHeader();
   groups.forEach(group => {
     const suppliers = group.suppliers || [], items = group.items || [];
-    if (y + 42 > bottom) { doc.addPage(); drawHeader(); y = startY; }
-    const category = String(group.category).toUpperCase();
+    const estimate = 15 + items.length * 9.5;
+    let col = ys[0] <= ys[1] ? 0 : 1;
+    if (needsFreshPage || ys[col] + estimate > bottom) {
+      const other = 1 - col;
+      if (!needsFreshPage && ys[other] + estimate <= bottom) col = other;
+      else { doc.addPage(); drawHeader(); ys = [startY, startY]; col = 0; }
+    }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); doc.setTextColor(25, 28, 32);
+    doc.text(String(group.category).toUpperCase(), xs[col], ys[col] + 7);
     const head = [["PRODUTOS", "ESTOQUE", "PEDIR"].concat(suppliers)];
     const body = items.map(item => [item.product, quoteDisplay(item.stock), quoteDisplay(item.order), ...suppliers.map((_, i) => quoteDisplay(item["supplier_" + i]))]);
-    const columnStyles = { 1: { cellWidth: 48, halign: "center" }, 2: { cellWidth: 48, halign: "center" } };
-    suppliers.forEach((_, i) => { columnStyles[i + 3] = { cellWidth: 48, halign: "center" }; });
+    const columnStyles = { 1: { cellWidth: 34, halign: "center" }, 2: { cellWidth: 34, halign: "center" } };
+    suppliers.forEach((_, i) => { columnStyles[i + 3] = { cellWidth: 26, halign: "center" }; });
+    const pagesBefore = doc.internal.getNumberOfPages();
     doc.autoTable({
-      startY: y, theme: "grid", tableWidth: pageW - margin * 2,
-      margin: { left: margin, right: margin, top: startY, bottom: 26 }, head, body,
-      styles: { font: "helvetica", fontSize: 7, cellPadding: 2.5, lineColor: [125, 125, 125], lineWidth: 0.3, textColor: [25, 25, 25], valign: "middle", overflow: "linebreak" },
-      headStyles: { fillColor: [240, 190, 20], textColor: [20, 20, 20], fontStyle: "bold", fontSize: 7, halign: "center" },
-      columnStyles, showHead: "everyPage",
-      willDrawPage: () => {
-        doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(25, 28, 32);
-        doc.text(category, margin, categoryY);
-      },
+      startY: ys[col] + 10, theme: "grid", tableWidth: colW,
+      margin: { left: xs[col], right: pageW - xs[col] - colW, top: startY, bottom: 18 },
+      head, body,
+      styles: { font: "helvetica", fontSize: 5.5, cellPadding: { top: 1, bottom: 1, left: 1.8, right: 1.8 }, lineColor: [125, 125, 125], lineWidth: 0.25, textColor: [25, 25, 25], valign: "middle", overflow: "linebreak" },
+      headStyles: { fillColor: [240, 190, 20], textColor: [20, 20, 20], fontStyle: "bold", fontSize: 5.5, halign: "center" },
+      columnStyles,
       didDrawPage: drawHeader
     });
-    y = doc.lastAutoTable.finalY + 22;
+    needsFreshPage = doc.internal.getNumberOfPages() > pagesBefore;
+    if (!needsFreshPage) ys[col] = doc.lastAutoTable.finalY + 5;
   });
   const pages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
