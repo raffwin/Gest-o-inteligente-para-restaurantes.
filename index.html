@@ -8140,6 +8140,10 @@ function sauceDateTime(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleString("pt-BR");
 }
+function sauceParseQuantity(raw) {
+  if (raw == null || String(raw).trim() === "") return null;
+  return Number(String(raw).trim().replace(",", "."));
+}
 function sauceDefaultValues(items) {
   const result = {};
   (Array.isArray(items) ? items : []).forEach(item => {
@@ -8174,10 +8178,9 @@ function sauceRenderItems() {
     minus.textContent = "−";
     minus.setAttribute("aria-label", "Diminuir contagem de " + product.name);
     const countInput = document.createElement("input");
-    countInput.type = "number";
-    countInput.min = "0";
-    countInput.step = "1";
-    countInput.inputMode = "numeric";
+    countInput.type = "text";
+    countInput.inputMode = "decimal";
+    countInput.autocomplete = "off";
     countInput.placeholder = "0";
     countInput.value = values.count;
     countInput.setAttribute("aria-label", "Contagem de " + product.name);
@@ -8193,13 +8196,13 @@ function sauceRenderItems() {
     };
     countInput.addEventListener("input", updateCount);
     minus.addEventListener("click", () => {
-      const value = Math.max(0, (Number(countInput.value) || 0) - 1);
-      countInput.value = String(value);
+      const value = Math.max(0, (sauceParseQuantity(countInput.value) || 0) - 1);
+      countInput.value = String(Number(value.toFixed(6)));
       updateCount();
     });
     plus.addEventListener("click", () => {
-      const value = (Number(countInput.value) || 0) + 1;
-      countInput.value = String(value);
+      const value = (sauceParseQuantity(countInput.value) || 0) + 1;
+      countInput.value = String(Number(value.toFixed(6)));
       updateCount();
     });
     countControl.append(minus, countInput, plus);
@@ -8208,10 +8211,9 @@ function sauceRenderItems() {
     const orderCell = document.createElement("td");
     const orderInput = document.createElement("input");
     orderInput.className = "sauce-order";
-    orderInput.type = "number";
-    orderInput.min = "0";
-    orderInput.step = "1";
-    orderInput.inputMode = "numeric";
+    orderInput.type = "text";
+    orderInput.inputMode = "decimal";
+    orderInput.autocomplete = "off";
     orderInput.placeholder = "—";
     orderInput.value = values.order;
     orderInput.setAttribute("aria-label", "Pedido de " + product.name);
@@ -8225,7 +8227,7 @@ function sauceRenderItems() {
     const salesCell = document.createElement("td");
     const salesInput = document.createElement("input");
     salesInput.className = "sauce-order";
-    salesInput.type = "number"; salesInput.min = "0"; salesInput.step = "1"; salesInput.inputMode = "numeric";
+    salesInput.type = "text"; salesInput.inputMode = "decimal"; salesInput.autocomplete = "off";
     salesInput.placeholder = "—"; salesInput.value = values.sales;
     salesInput.setAttribute("aria-label", "Vendas de " + product.name);
     salesInput.addEventListener("input", () => {
@@ -8246,9 +8248,9 @@ function sauceCollectItems() {
     const item = { source_row: product.row, category: "MOLHO", product_name: product.name };
     for (const [key, raw] of [["count_quantity", values.count], ["order_quantity", values.order], ["sales_quantity", values.sales]]) {
       if (raw == null || String(raw).trim() === "") { item[key] = null; continue; }
-      const value = Number(raw);
-      if (!Number.isSafeInteger(value) || value < 0) {
-        alert("Use apenas números inteiros iguais ou maiores que zero em " + product.name + ".");
+      const value = sauceParseQuantity(raw);
+      if (!Number.isFinite(value) || value < 0) {
+        alert("Use valores numericos iguais ou maiores que zero em " + product.name + ". Separe decimais com ponto ou virgula.");
         return null;
       }
       item[key] = value;
@@ -8583,7 +8585,7 @@ async function sheetStockSave() {
 }
 function quotePdfDrawTables(doc, groups, date, responsible) {
   const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
-  const margin = 24, startY = 55, bottom = pageH - 26;
+  const margin = 24, startY = 68, categoryY = 52, bottom = pageH - 26;
   let y = startY;
   function drawHeader() {
     doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(25, 28, 32);
@@ -8595,19 +8597,24 @@ function quotePdfDrawTables(doc, groups, date, responsible) {
   groups.forEach(group => {
     const suppliers = group.suppliers || [], items = group.items || [];
     if (y + 42 > bottom) { doc.addPage(); drawHeader(); y = startY; }
-    doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(25, 28, 32);
-    doc.text(String(group.category).toUpperCase(), margin, y + 8);
+    const category = String(group.category).toUpperCase();
     const head = [["PRODUTOS", "ESTOQUE", "PEDIR"].concat(suppliers)];
     const body = items.map(item => [item.product, quoteDisplay(item.stock), quoteDisplay(item.order), ...suppliers.map((_, i) => quoteDisplay(item["supplier_" + i]))]);
     const columnStyles = { 1: { cellWidth: 48, halign: "center" }, 2: { cellWidth: 48, halign: "center" } };
     suppliers.forEach((_, i) => { columnStyles[i + 3] = { cellWidth: 48, halign: "center" }; });
-    doc.autoTable({ startY: y + 14, theme: "grid", tableWidth: pageW - margin * 2,
+    doc.autoTable({
+      startY: y, theme: "grid", tableWidth: pageW - margin * 2,
       margin: { left: margin, right: margin, top: startY, bottom: 26 }, head, body,
       styles: { font: "helvetica", fontSize: 7, cellPadding: 2.5, lineColor: [125, 125, 125], lineWidth: 0.3, textColor: [25, 25, 25], valign: "middle", overflow: "linebreak" },
       headStyles: { fillColor: [240, 190, 20], textColor: [20, 20, 20], fontStyle: "bold", fontSize: 7, halign: "center" },
-      columnStyles, showHead: "everyPage", didDrawPage: drawHeader
+      columnStyles, showHead: "everyPage",
+      willDrawPage: () => {
+        doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(25, 28, 32);
+        doc.text(category, margin, categoryY);
+      },
+      didDrawPage: drawHeader
     });
-    y = doc.lastAutoTable.finalY + 12;
+    y = doc.lastAutoTable.finalY + 22;
   });
   const pages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
