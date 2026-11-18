@@ -8476,7 +8476,7 @@ const SHEET_SUPPLIERS = {
   "Pescados e Carnes": ["Grelhado", "Belle", "Moqueca"],
   "Bebidas": ["Faccol", "Coca", "Ambev", "Mercado"]
 };
-let sheetStockCategory = "";
+
 let sheetStockValues = {};
 let sheetStockDirty = false;
 function sheetStockStatus(text, cls) {
@@ -8487,7 +8487,7 @@ function sheetStockStatus(text, cls) {
 async function sheetStockOpen() {
   const date = document.getElementById("sheetStockDate");
   date.max = localStamp(); if (!date.value || date.value > date.max) date.value = date.max;
-  sheetStockCategory = "Cotação"; sheetStockValues = {}; sheetStockDirty = false;
+  sheetStockValues = {}; sheetStockDirty = false;
   const box = document.getElementById("sheetStockTable"); box.hidden = false; box.replaceChildren(mk("div", "loading", "Carregando cotação salva..."));
   sheetStockStatus("Carregando contagens...", "hint");
   try {
@@ -8533,7 +8533,7 @@ async function sheetStockOpen() {
       fields.forEach(field => {
         const key = field.key;
         const cell = document.createElement("td"), input = document.createElement("input");
-        input.type = "number"; input.min = "0"; input.step = "any";
+        input.type = "text"; input.inputMode = "decimal"; input.autocomplete = "off";
         input.style.margin = "0"; input.style.textAlign = "center"; input.style.minWidth = "72px";
         const valueKey = String(sourceIndex);
         const saved = (sheetStockValues[category] || {})[valueKey] || {};
@@ -8541,7 +8541,7 @@ async function sheetStockOpen() {
         input.setAttribute("aria-label", field.label + " de " + product);
         input.addEventListener("input", () => {
           if (!sheetStockValues[category][valueKey]) sheetStockValues[category][valueKey] = { product, source_index: sourceIndex, stock: null, order: null };
-          sheetStockValues[category][valueKey][key] = input.value === "" ? null : Number(input.value);
+          sheetStockValues[category][valueKey][key] = input.value.trim() === "" ? null : input.value.trim();
           sheetStockDirty = true; sheetStockStatus("Há alterações sem salvar.", "warning");
         });
         cell.appendChild(input); tr.appendChild(cell);
@@ -8552,13 +8552,27 @@ async function sheetStockOpen() {
   });
   sheetStockStatus("");
 }
+function sheetStockParseCount(value, product, field) {
+  if (value === null || value === undefined || String(value).trim() === "") return null;
+  const normalized = String(value).trim().replace(",", ".");
+  const number = Number(normalized);
+  if (!Number.isFinite(number) || number < 0) {
+    throw new Error("Valor inválido em " + field + " de " + product + ". Use zero ou mais; vírgula pode ser usada como separador decimal.");
+  }
+  return number;
+}
 async function sheetStockSave() {
-  if (!sheetStockCategory) { sheetStockStatus("Escolha um subgrupo primeiro.", "warning"); return; }
+
   const date = document.getElementById("sheetStockDate").value;
   const btn = document.getElementById("sheetStockSave"); btn.disabled = true; sheetStockStatus("Salvando...", "hint");
   try {
     for (const category of Object.keys(SHEET_STOCK)) {
-      const items = SHEET_STOCK[category].map((product, source_index) => (sheetStockValues[category] || {})[String(source_index)] || { product, source_index, stock: null, order: null });
+      const countFields = ["stock", "order"].concat((SHEET_SUPPLIERS[category] || []).map((_, i) => "supplier_" + i));
+      const items = SHEET_STOCK[category].map((product, source_index) => {
+        const item = { ...((sheetStockValues[category] || {})[String(source_index)] || {}), product, source_index };
+        countFields.forEach(field => { item[field] = sheetStockParseCount(item[field], product, field); });
+        return item;
+      });
       const payload = { user_id: currentUserId, count_date: date, category, employee: currentUser || "", items, updated_at: new Date().toISOString() };
       const { error } = await supabaseClient.from("stock_quote_sessions").upsert(payload, { onConflict: "user_id,count_date,category" });
       if (error) throw error;
@@ -8619,7 +8633,7 @@ function quotePdfDrawTables(doc, groups, date, responsible) {
   }
 }
 function sheetStockPdf() {
-  if (!sheetStockCategory) { sheetStockStatus("Abra um subgrupo antes de gerar o PDF.", "warning"); return; }
+
   const JsPDF = window.jspdf && window.jspdf.jsPDF;
   if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
   const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
@@ -8637,7 +8651,7 @@ function sheetStockPdf() {
 }
 document.getElementById("sheetStockDate").addEventListener("change", () => {
   if (sheetStockDirty && !confirm("Descartar alterações sem salvar e carregar outra data?")) return;
-  if (sheetStockCategory) { sheetStockDirty = false; sheetStockOpen(); }
+  sheetStockDirty = false; sheetStockOpen();
 });
 document.getElementById("sheetStockSave").addEventListener("click", sheetStockSave);
 document.getElementById("sheetStockPdf").addEventListener("click", sheetStockPdf);
