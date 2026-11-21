@@ -380,6 +380,20 @@
     #olRoot .ol-head, #olRoot #olMachines { display: none !important; }
     #olRoot #olHistory .ck-table { min-width: 900px; }
     #olRoot #olHistory .ck-table select, #olRoot #olHistory .ck-table input { min-width: 92px; padding: 7px; font-size: 12px; }
+    .rm-type-cell { display: grid; gap: 6px; }
+    .rm-type-field { display: grid; gap: 3px; }
+    .rm-type-field label { font-size: 11px; color: var(--muted); }
+    .rm-receive-table { min-width: 0 !important; }
+    @media (max-width: 700px) {
+      #sheetChecklistRoot .rm-receive-table, #sheetChecklistRoot .rm-receive-table tbody,
+      #sheetChecklistRoot .rm-receive-table tr, #sheetChecklistRoot .rm-receive-table td { display: block; width: 100%; }
+      #sheetChecklistRoot .rm-receive-table thead { display: none; }
+      #sheetChecklistRoot .rm-receive-table tr { padding: 10px 12px; margin: 0 0 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); }
+      #sheetChecklistRoot .rm-receive-table td { padding: 7px 2px; border: 0; }
+      #sheetChecklistRoot .rm-receive-table td::before { content: attr(data-label); display: block; margin-bottom: 4px; color: var(--muted); font-size: 11px; font-weight: 700; }
+      #sheetChecklistRoot .rm-receive-table input, #sheetChecklistRoot .rm-receive-table select { width: 100% !important; min-width: 0; min-height: 42px; }
+      #sheetChecklistRoot .rm-receive-table td:last-child button { width: 100%; min-height: 42px; }
+    }
     @media (max-width: 820px) {
       #olRoot .ol-machines { grid-template-columns: 1fr; }
       #olRoot .ol-tools { grid-template-columns: 1fr; }
@@ -4516,7 +4530,7 @@
     const help = document.createElement("section"); help.className = "section";
     help.innerHTML = '<strong>Orientação rápida</strong><div class="hint" style="margin-top:5px">Para refrigerados ou congelados, informe a temperatura. Para secos, selecione “Seco”. Marque “Não” se encontrar problema e indique se recebeu ou devolveu o produto.</div><div class="hint" style="margin-top:6px"><b>Referências da planilha:</b> refrigerados até 10 °C (preferencialmente até 4 °C); congelados a −18 °C (tolerância até −12 °C); secos em temperatura ambiente. Siga também os critérios do estabelecimento.</div>';
     const wrap = document.createElement("div"); wrap.className = "table-wrap"; wrap.style.marginTop = "12px";
-    const table = document.createElement("table"); table.className = "dash-table"; table.style.minWidth = "1050px";
+    const table = document.createElement("table"); table.className = "dash-table rm-receive-table";
     table.innerHTML = "<thead><tr><th>Produto</th><th>Tipo e temperatura</th><th>Características adequadas?</th><th>Embalagem adequada?</th><th>Transporte adequado?</th><th>Ação</th><th></th></tr></thead>";
     const tbody = document.createElement("tbody"); table.appendChild(tbody); wrap.appendChild(table);
     const rows = [];
@@ -4525,10 +4539,13 @@
       const tr=document.createElement("tr"), product=document.createElement("input"); product.placeholder="Nome do produto"; product.maxLength=120; product.value=item.product||""; product.setAttribute("aria-label","Produto");
       const type=select([["","Tipo"],["Seco","Seco"],["Refrigerado","Refrigerado"],["Congelado","Congelado"]],"Tipo de alimento",item.type);
       const temp=document.createElement("input"); temp.type="number"; temp.step="0.1"; temp.placeholder="°C"; temp.value=item.temperature||""; temp.style.width="72px"; temp.setAttribute("aria-label","Temperatura em graus Celsius");
-      const typeCell=document.createElement("td"); typeCell.append(type,temp);
+      const typeCell=document.createElement("div"); typeCell.className="rm-type-cell";
+      const typeField=document.createElement("div");typeField.className="rm-type-field";const typeLabel=document.createElement("label");typeLabel.textContent="Tipo de alimento";typeField.append(typeLabel,type);
+      const tempField=document.createElement("div");tempField.className="rm-type-field";const tempLabel=document.createElement("label");tempLabel.textContent="Temperatura (°C)";tempField.append(tempLabel,temp);typeCell.append(typeField,tempField);
       const fields=[product,typeCell,select([["","Selecione"],["Sim","Sim"],["Não","Não"]],"Características adequadas",item.characteristics),select([["","Selecione"],["Sim","Sim"],["Não","Não"]],"Embalagem adequada",item.packaging),select([["","Selecione"],["Sim","Sim"],["Não","Não"]],"Transporte adequado",item.transport),select([["","Selecione"],["Recebido","Recebimento"],["Devolvido","Devolução"]],"Ação efetuada",item.action)];
       const del=document.createElement("button"); del.type="button"; del.className="btn-edit"; del.textContent="Remover"; del.setAttribute("aria-label","Remover produto"); fields.push(del);
-      fields.forEach(el=>{const td=document.createElement("td");td.appendChild(el);tr.appendChild(td)}); tbody.appendChild(tr);
+      const labels=["Nome do produto","Tipo e temperatura","Características do produto adequadas?","Condições da embalagem adequadas?","Condições do transporte adequadas?","Ação efetuada","Remover produto"];
+      fields.forEach((el,i)=>{const td=document.createElement("td");td.dataset.label=labels[i];td.appendChild(el);tr.appendChild(td)}); tbody.appendChild(tr);
       const row={tr,product,type,temp,characteristics:fields[2],packaging:fields[3],transport:fields[4],action:fields[5]}; rows.push(row);
       del.addEventListener("click",()=>{const i=rows.indexOf(row);if(i>=0)rows.splice(i,1);tr.remove()});
     }
