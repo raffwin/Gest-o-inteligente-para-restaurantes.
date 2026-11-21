@@ -4564,8 +4564,8 @@
       doc.setFont("times","bold");doc.setFontSize(14);doc.text("CONTROLE DE RECEBIMENTO DE MATÉRIA-PRIMA",doc.internal.pageSize.getWidth()/2,24,{align:"center"});
       doc.setFontSize(9);doc.text("UNIDADE: SUDOESTE",doc.internal.pageSize.getWidth()/2,38,{align:"center"});
       doc.autoTable({startY:48,theme:"grid",head:[
-        [{content:"PLANILHA DE RECEBIMENTO DE MATÉRIA-PRIMA",colSpan:14,styles:{halign:"center",fontStyle:"bold"}],
-        [{content:"MÊS: "+monthLabel,colSpan:14,styles:{halign:"left",fontStyle:"bold"}],
+        [{content:"PLANILHA DE RECEBIMENTO DE MATÉRIA-PRIMA",colSpan:14,styles:{halign:"center",fontStyle:"bold"}}],
+        [{content:"MÊS: "+monthLabel,colSpan:14,styles:{halign:"left",fontStyle:"bold"}}],
         [{content:"DATA",rowSpan:2},{content:"NOME DO PRODUTO",rowSpan:2},{content:"TIPO DE ALIMENTO",colSpan:3},{content:"CARACTERÍSTICAS DO PRODUTO ESTÃO ADEQUADAS?",colSpan:2},{content:"CONDIÇÕES DAS EMBALAGENS ESTÃO ADEQUADAS?",colSpan:2},{content:"CONDIÇÕES DE TRANSPORTE ESTÃO ADEQUADAS?",colSpan:2},{content:"AÇÃO EFETUADA",colSpan:2},{content:"RESPONSÁVEL",rowSpan:2}],
         ["SECO","REFRIGERADO (°C)","CONGELADO (°C)","SIM","NÃO","SIM","NÃO","SIM","NÃO","RECEBIMENTO DO PRODUTO","DEVOLUÇÃO DO PRODUTO"]
       ],body,styles:{font:"times",fontSize:6.2,cellPadding:2.3,minCellHeight:13,lineColor:[65,65,65],lineWidth:.45,textColor:[25,25,25],valign:"middle",halign:"center",overflow:"linebreak"},headStyles:{fillColor:[255,255,255],textColor:[25,25,25],fontStyle:"bold",fontSize:6.2,cellPadding:2.5,lineColor:[65,65,65],lineWidth:.45,valign:"middle",halign:"center"},columnStyles:{0:{cellWidth:38},1:{cellWidth:116,halign:"left"},2:{cellWidth:32},3:{cellWidth:48},4:{cellWidth:48},5:{cellWidth:28},6:{cellWidth:28},7:{cellWidth:28},8:{cellWidth:28},9:{cellWidth:28},10:{cellWidth:28},11:{cellWidth:45},12:{cellWidth:45},13:{cellWidth:90,halign:"left"}},margin:{left:18,right:18,bottom:25},didParseCell(data){if(data.section==="head"){data.cell.styles.fillColor=[255,255,255];if(data.row.index===2){data.cell.styles.minCellHeight=28;data.cell.styles.fontSize=5.8}}}});
