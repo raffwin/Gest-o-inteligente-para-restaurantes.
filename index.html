@@ -377,9 +377,10 @@
     #olRoot .ol-meta { margin: 4px 0 10px; }
     #olRoot .ol-yn.yes { font-weight: 700; }
     #olRoot .ol-legend { color: var(--muted); font-size: 12px; margin-top: 14px; line-height: 1.5; }
-    #olRoot .ol-head, #olRoot #olMachines { display: none !important; }
-    #olRoot #olHistory .ck-table { min-width: 900px; }
-    #olRoot #olHistory .ck-table select, #olRoot #olHistory .ck-table input { min-width: 92px; padding: 7px; font-size: 12px; }
+    #olRoot .ol-actions { display: flex; justify-content: flex-start; margin: 12px 0; }
+    #olRoot .ol-actions button { min-height: 44px; padding: 11px 18px; font-weight: 700; }
+    #olRoot .ol-day-responsible { max-width: 320px; }
+    #olRoot #olHistory .ck-table { min-width: 680px; }
     .rm-type-cell { display: grid; gap: 6px; }
     .rm-type-field { display: grid; gap: 3px; }
     .rm-type-field label { font-size: 11px; color: var(--muted); }
@@ -1268,10 +1269,13 @@
             <button type="button" class="ol-ghost" id="olToday">Hoje</button>
           </div>
         </div>
+        <div class="ol-field ol-day-responsible"><label for="olResponsible">Responsável pelo dia</label><input id="olResponsible" type="text" maxlength="80" placeholder="Nome de quem conferiu"></div>
         <div class="ol-meta" id="olDayMeta"></div>
       </div>
 
+      <p class="hint">Para cada fritadeira, marque Sim ou Não nas três perguntas. Depois, salve o dia uma única vez.</p>
       <div class="ol-machines" id="olMachines"></div>
+      <div class="ol-actions"><button type="button" id="olSaveDay">Salvar controle do dia</button></div>
       <div class="ol-savebar"><span class="ol-save" id="olSaveStatus" aria-live="polite"></span></div>
 
       <div class="ol-panel">
@@ -7547,6 +7551,8 @@ function olFillDrafts() {
       ? { smoke: rec.smoke, residue: rec.residue, change: rec.change, responsible: rec.responsible }
       : olBlankDraft(n);
   });
+  const responsibleRecord = window.operattoOwnerPreferredRecord(olDayRows, "updatedAt");
+  olEl("olResponsible").value = responsibleRecord ? responsibleRecord.responsible : (olLastResp || "");
 }
 
 async function olLoadDate(date) {
@@ -7658,24 +7664,41 @@ function olCard(n) {
     card.appendChild(row);
   });
 
-  const respWrap = mk("div", "ol-field ol-resp");
-  const lab = mk("label", "", "Responsável");
-  lab.htmlFor = "olResp" + n;
-  const inp = document.createElement("input");
-  inp.type = "text";
-  inp.id = "olResp" + n;
-  inp.maxLength = 80;
-  inp.value = d.responsible;
-  inp.addEventListener("input", () => { olDraft[n].responsible = inp.value; });
-  respWrap.append(lab, inp);
-  card.appendChild(respWrap);
-
-  const save = mk("button", "ol-save-btn", rec ? "{save} Atualizar Fritadeira " + n : "{save} Salvar Fritadeira " + n);
-  save.type = "button";
-  save.disabled = olBusy;
-  save.addEventListener("click", () => olSave(n));
-  card.appendChild(save);
   return card;
+}
+
+async function olSaveDay() {
+  if (olBusy) return;
+  if (!currentUserId) { olStatus("Entre na sua conta para salvar no Supabase.", "warning"); return; }
+  if (!olDate || olDate > localStamp()) { olStatus("Escolha uma data válida (não pode ser futura).", "warning"); return; }
+  const responsible = olEl("olResponsible").value.trim();
+  if (!responsible) { olStatus("Informe o responsável pelo controle do dia.", "warning"); return; }
+  for (const machine of OL_MACHINES) {
+    const d = olDraft[machine];
+    if (!d || d.smoke === null || d.residue === null || d.change === null) {
+      olStatus("Responda Sim ou Não para fumaça, resíduos e troca de óleo nas duas fritadeiras.", "warning"); return;
+    }
+  }
+  olBusy = true; const button = olEl("olSaveDay"); if (button) button.disabled = true;
+  olStatus("Salvando o dia no Supabase…", "hint");
+  try {
+    const updated = new Date().toISOString();
+    const payload = OL_MACHINES.map(machine => ({ user_id: currentUserId, log_date: olDate, machine, smoke: olDraft[machine].smoke, residue: olDraft[machine].residue, oil_change: olDraft[machine].change, responsible, updated_at: updated }));
+    const { data, error } = await supabaseClient.from("oil_checks").upsert(payload, { onConflict: "user_id,log_date,machine" }).select();
+    if (error) throw error;
+    const saved = (data || []).map(dbToOil);
+    if (saved.length !== OL_MACHINES.length) throw new Error("O Supabase não confirmou as duas fritadeiras. Confira os registros e tente novamente.");
+    olDayRows = olDayRows.filter(r => !OL_MACHINES.includes(r.machine)).concat(saved).sort((a, b) => a.machine - b.machine);
+    olDraft = Object.fromEntries(saved.map(r => [r.machine, { smoke: r.smoke, residue: r.residue, change: r.change, responsible }]));
+    olLastResp = responsible;
+    if (olDate.slice(0, 7) === olMonth) olMonthRows = olSortMonth(olMonthRows.filter(r => r.date !== olDate || !OL_MACHINES.includes(r.machine)).concat(saved));
+    olStatus("As duas fritadeiras foram salvas no Supabase.", "positive");
+  } catch (error) {
+    if (olMissing(error)) { olReady = false; olShowMissing(true); }
+    olStatus("Não foi possível salvar no Supabase. " + friendlyError(error), "negative");
+  } finally {
+    olBusy = false; if (button) button.disabled = false; olRenderMachines(); olRenderHistory();
+  }
 }
 
 function olHM(iso) {
@@ -7737,43 +7760,18 @@ function olRenderHistory() {
   olEl("olMonthMeta").textContent = olMonthName(olMonth) + "  |  " + list.length + (list.length === 1 ? " registro salvo" : " registros salvos") + " em " + days + (days === 1 ? " dia" : " dias");
   olEl("olPdf").disabled = false;
   olEl("olPrint").disabled = false;
-  const wrap = mk("div", "ck-tablewrap"), table = mk("table", "ck-table");
-  const thead = document.createElement("thead"), hr = document.createElement("tr");
-  ["Data", "Maquinário", "Presença de fumaça", "Presença de resíduos", "Troca de óleo", "Responsável", "Ação"].forEach(h => hr.appendChild(mk("th", "", h)));
-  thead.appendChild(hr); table.appendChild(thead);
-  const tbody = document.createElement("tbody"), range = olMonthRange(olMonth);
-  function choice(value, label) {
-    const s = document.createElement("select"); s.setAttribute("aria-label", label);
-    [["", "Selecione"], ["true", "Sim"], ["false", "Não"]].forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; s.appendChild(o); });
-    s.value = value === true ? "true" : value === false ? "false" : ""; return s;
-  }
-  for (let day = 1; day <= range.days; day++) {
-    const date = olMonth + "-" + String(day).padStart(2, "0");
-    for (const machine of OL_MACHINES) {
-      const saved = window.operattoOwnerPreferredRecord(list.filter(r => r.date === date && r.machine === machine), "updatedAt");
-      const key = date + "#" + machine;
-      if (!olTableDrafts[key]) olTableDrafts[key] = saved ? { smoke: saved.smoke, residue: saved.residue, change: saved.change, responsible: saved.responsible } : { smoke: null, residue: null, change: null, responsible: "" };
-      const draft = olTableDrafts[key], tr = document.createElement("tr");
-      function cell(label, node, cls) { const td = document.createElement("td"); td.dataset.label = label; if (cls) td.className = cls; if (node instanceof Node) td.appendChild(node); else td.textContent = node; tr.appendChild(td); }
-      cell("Data", String(day).padStart(2, "0"), "ck-num"); cell("Maquinário", "Fritadeira " + machine, "ck-prod");
-      const smoke = choice(draft.smoke, "Fumaça - Fritadeira " + machine + " - dia " + day);
-      const residue = choice(draft.residue, "Resíduos - Fritadeira " + machine + " - dia " + day);
-      const change = choice(draft.change, "Troca de óleo - Fritadeira " + machine + " - dia " + day);
-      const responsible = document.createElement("input"); responsible.type = "text"; responsible.maxLength = 80; responsible.placeholder = "Nome"; responsible.value = draft.responsible || ""; responsible.setAttribute("aria-label", "Responsável - Fritadeira " + machine + " - dia " + day);
-      const update = () => { olTableDrafts[key] = { smoke: smoke.value === "" ? null : smoke.value === "true", residue: residue.value === "" ? null : residue.value === "true", change: change.value === "" ? null : change.value === "true", responsible: responsible.value }; };
-      [smoke, residue, change].forEach(el => el.addEventListener("change", update)); responsible.addEventListener("input", update);
-      cell("Presença de fumaça", smoke); cell("Presença de resíduos", residue); cell("Troca de óleo", change); cell("Responsável", responsible);
-      const save = mk("button", "btn-edit", saved ? "Atualizar" : "Salvar"); save.type = "button"; save.disabled = isPlatformOwner;
-      save.addEventListener("click", async () => {
-        update(); const d = olTableDrafts[key];
-        if (d.smoke === null || d.residue === null || d.change === null || !String(d.responsible || "").trim()) { olStatus("Preencha fumaça, resíduos, troca de óleo e responsável para salvar esta linha.", "warning"); return; }
-        await olLoadDate(date); olDraft[machine] = { smoke: d.smoke, residue: d.residue, change: d.change, responsible: d.responsible };
-        await olSave(machine);
-      });
-      cell("Ação", save, "ck-actcell"); tbody.appendChild(tr);
-    }
-  }
-  table.appendChild(tbody); wrap.appendChild(table); box.replaceChildren(wrap);
+  const wrap = mk("div", "ck-tablewrap");
+  if (!list.length) { wrap.appendChild(mk("div", "ck-empty", "Nenhum registro salvo neste mês.")); box.replaceChildren(wrap); return; }
+  const table = mk("table", "ck-table"), thead = document.createElement("thead"), hr = document.createElement("tr");
+  ["Data", "Maquinário", "Presença de fumaça", "Presença de resíduos", "Troca de óleo", "Responsável", "Ações"].forEach(h => hr.appendChild(mk("th", "", h)));
+  thead.appendChild(hr); table.appendChild(thead); const tbody = document.createElement("tbody");
+  list.slice().sort((a,b)=>a.date===b.date?a.machine-b.machine:b.date.localeCompare(a.date)).forEach(r=>{
+    const tr=document.createElement("tr");
+    const cell=(label,value,cls)=>{const td=document.createElement("td");td.dataset.label=label;if(cls)td.className=cls;if(value instanceof Node)td.appendChild(value);else td.textContent=value;tr.appendChild(td)};
+    cell("Data",fmtDate(r.date),"ck-num");cell("Maquinário","Fritadeira "+(r.machine===1?"I":"II"),"ck-prod");cell("Presença de fumaça",olYN(r.smoke));cell("Presença de resíduos",olYN(r.residue));cell("Troca de óleo",olYN(r.change));cell("Responsável",r.responsible||"—");
+    const actions=mk("div","ck-rowact");actions.append(actionBtn("Abrir dia","btn-edit",()=>olEdit(r)));if(!isPlatformOwner)actions.append(actionBtn("Excluir","btn-remove",()=>olDelete(r)));cell("Ações",actions,"ck-actcell");tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);wrap.appendChild(table);box.replaceChildren(wrap);
 }
 
 function olEdit(r) {
@@ -7911,6 +7909,7 @@ function olPdf(mode) {
     olLoadDate(v);
   });
   olEl("olToday").addEventListener("click", () => { olStatus(""); olLoadDate(localStamp()); });
+  olEl("olSaveDay").addEventListener("click", olSaveDay);
   olEl("olMonth").addEventListener("change", () => {
     const v = olEl("olMonth").value;
     if (!v) { olEl("olMonth").value = olMonth; return; }
