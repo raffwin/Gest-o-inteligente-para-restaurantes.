@@ -377,6 +377,9 @@
     #olRoot .ol-meta { margin: 4px 0 10px; }
     #olRoot .ol-yn.yes { font-weight: 700; }
     #olRoot .ol-legend { color: var(--muted); font-size: 12px; margin-top: 14px; line-height: 1.5; }
+    #olRoot .ol-head, #olRoot #olMachines { display: none !important; }
+    #olRoot #olHistory .ck-table { min-width: 900px; }
+    #olRoot #olHistory .ck-table select, #olRoot #olHistory .ck-table input { min-width: 92px; padding: 7px; font-size: 12px; }
     @media (max-width: 820px) {
       #olRoot .ol-machines { grid-template-columns: 1fr; }
       #olRoot .ol-tools { grid-template-columns: 1fr; }
@@ -1258,7 +1261,7 @@
       <div class="ol-savebar"><span class="ol-save" id="olSaveStatus" aria-live="polite"></span></div>
 
       <div class="ol-panel">
-        <h3 class="ol-h">Histórico e PDF mensal do controle de óleo</h3>
+        <h3 class="ol-h">Controle mensal de qualidade do óleo de fritura</h3>
         <div class="ol-tools">
           <div class="ol-field"><label for="olMonth">Mês de referência</label><input id="olMonth" type="month"></div>
           <div class="ol-field ol-f-unit"><label for="olUnit">Unidade (aparece no PDF)</label><input id="olUnit" type="text" maxlength="80" placeholder="Nome da unidade"></div>
@@ -1270,7 +1273,7 @@
         <div class="ol-meta" id="olMonthMeta"></div>
         <div id="olHistory"></div>
       </div>
-      <div class="ol-legend">Cada fritadeira tem o seu próprio registro por dia. Salvar de novo na mesma data e fritadeira atualiza o registro. Os dados ficam na sua conta e aparecem em qualquer aparelho.</div>
+      <div class="ol-legend">A tabela mostra os dias do mês e uma linha para cada fritadeira. Escolha Sim ou Não para fumaça, resíduos e troca de óleo, informe o responsável e salve a linha. Você pode preencher datas anteriores. Os dados ficam na sua conta e aparecem em qualquer aparelho.</div>
     </div>
   </div>
   </section>
@@ -7413,6 +7416,7 @@ let olMonth = "";          // mês do histórico e do PDF (AAAA-MM)
 let olDayRows = [];        // registros da data selecionada (0 a 2)
 let olMonthRows = [];      // registros do mês selecionado
 let olDraft = {};          // rascunho de cada fritadeira
+let olTableDrafts = {};     // valores editados diretamente na tabela mensal
 let olDayReq = 0;
 let olMonthReq = 0;
 let olBusy = false;
@@ -7653,6 +7657,7 @@ async function olSave(n) {
     if (error) throw error;
     const rec = dbToOil(data);
     olDayRows = olDayRows.filter(r => r.machine !== n).concat(rec).sort((a, b) => a.machine - b.machine);
+    delete olTableDrafts[olDate + "#" + n];
     if (olDate.slice(0, 7) === olMonth) {
       olMonthRows = olSortMonth(olMonthRows.filter(r => !(r.date === olDate && r.machine === n)).concat(rec));
     }
@@ -7674,53 +7679,46 @@ function olRenderHistory() {
   const box = olEl("olHistory");
   const list = olMonthRows;
   const days = new Set(list.map(r => r.date)).size;
-  olEl("olMonthMeta").textContent = olMonthName(olMonth) + "  |  " + list.length + (list.length === 1 ? " registro" : " registros") + " em " + days + (days === 1 ? " dia" : " dias");
+  olEl("olMonthMeta").textContent = olMonthName(olMonth) + "  |  " + list.length + (list.length === 1 ? " registro salvo" : " registros salvos") + " em " + days + (days === 1 ? " dia" : " dias");
   olEl("olPdf").disabled = false;
   olEl("olPrint").disabled = false;
-
-  const wrap = mk("div", "ck-tablewrap");
-  if (list.length === 0) {
-    wrap.appendChild(mk("div", "ck-empty", "Nenhum registro neste mês."));
-    box.replaceChildren(wrap);
-    return;
+  const wrap = mk("div", "ck-tablewrap"), table = mk("table", "ck-table");
+  const thead = document.createElement("thead"), hr = document.createElement("tr");
+  ["Data", "Maquinário", "Presença de fumaça", "Presença de resíduos", "Troca de óleo", "Responsável", "Ação"].forEach(h => hr.appendChild(mk("th", "", h)));
+  thead.appendChild(hr); table.appendChild(thead);
+  const tbody = document.createElement("tbody"), range = olMonthRange(olMonth);
+  function choice(value, label) {
+    const s = document.createElement("select"); s.setAttribute("aria-label", label);
+    [["", "Selecione"], ["true", "Sim"], ["false", "Não"]].forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; s.appendChild(o); });
+    s.value = value === true ? "true" : value === false ? "false" : ""; return s;
   }
-  const table = mk("table", "ck-table");
-  const thead = document.createElement("thead");
-  const hr = document.createElement("tr");
-  ["Data", "Maquinário", "Presença de fumaça", "Presença de resíduos", "Troca de óleo", "Responsável", ""].forEach(h => hr.appendChild(mk("th", "", h)));
-  thead.appendChild(hr);
-  table.appendChild(thead);
-
-  const tbody = document.createElement("tbody");
-  list.slice().sort((a, b) => a.date === b.date ? a.machine - b.machine : b.date.localeCompare(a.date)).forEach(r => {
-    const tr = document.createElement("tr");
-    const cell = (label, content, cls) => {
-      const td = document.createElement("td");
-      td.dataset.label = label;
-      if (cls) td.className = cls;
-      if (content instanceof Node) td.appendChild(content);
-      else td.textContent = content;
-      tr.appendChild(td);
-    };
-    cell("Data", fmtDate(r.date), "ck-num");
-    cell("Maquinário", "Fritadeira " + r.machine, "ck-prod");
-    cell("Presença de fumaça", olYN(r.smoke));
-    cell("Presença de resíduos", olYN(r.residue));
-    cell("Troca de óleo", olYN(r.change));
-    cell("Responsável", r.responsible);
-    if (!isPlatformOwner) {
-      const act = mk("div", "ck-rowact");
-      act.append(
-        actionBtn("{edit} Editar", "btn-edit", () => olEdit(r)),
-        actionBtn("{trash} Excluir", "btn-remove", () => olDelete(r))
-      );
-      cell("Ações", act, "ck-actcell");
+  for (let day = 1; day <= range.days; day++) {
+    const date = olMonth + "-" + String(day).padStart(2, "0");
+    for (const machine of OL_MACHINES) {
+      const saved = window.operattoOwnerPreferredRecord(list.filter(r => r.date === date && r.machine === machine), "updatedAt");
+      const key = date + "#" + machine;
+      if (!olTableDrafts[key]) olTableDrafts[key] = saved ? { smoke: saved.smoke, residue: saved.residue, change: saved.change, responsible: saved.responsible } : { smoke: null, residue: null, change: null, responsible: "" };
+      const draft = olTableDrafts[key], tr = document.createElement("tr");
+      function cell(label, node, cls) { const td = document.createElement("td"); td.dataset.label = label; if (cls) td.className = cls; if (node instanceof Node) td.appendChild(node); else td.textContent = node; tr.appendChild(td); }
+      cell("Data", String(day).padStart(2, "0"), "ck-num"); cell("Maquinário", "Fritadeira " + machine, "ck-prod");
+      const smoke = choice(draft.smoke, "Fumaça - Fritadeira " + machine + " - dia " + day);
+      const residue = choice(draft.residue, "Resíduos - Fritadeira " + machine + " - dia " + day);
+      const change = choice(draft.change, "Troca de óleo - Fritadeira " + machine + " - dia " + day);
+      const responsible = document.createElement("input"); responsible.type = "text"; responsible.maxLength = 80; responsible.placeholder = "Nome"; responsible.value = draft.responsible || ""; responsible.setAttribute("aria-label", "Responsável - Fritadeira " + machine + " - dia " + day);
+      const update = () => { olTableDrafts[key] = { smoke: smoke.value === "" ? null : smoke.value === "true", residue: residue.value === "" ? null : residue.value === "true", change: change.value === "" ? null : change.value === "true", responsible: responsible.value }; };
+      [smoke, residue, change].forEach(el => el.addEventListener("change", update)); responsible.addEventListener("input", update);
+      cell("Presença de fumaça", smoke); cell("Presença de resíduos", residue); cell("Troca de óleo", change); cell("Responsável", responsible);
+      const save = mk("button", "btn-edit", saved ? "Atualizar" : "Salvar"); save.type = "button"; save.disabled = isPlatformOwner;
+      save.addEventListener("click", async () => {
+        update(); const d = olTableDrafts[key];
+        if (d.smoke === null || d.residue === null || d.change === null || !String(d.responsible || "").trim()) { olStatus("Preencha fumaça, resíduos, troca de óleo e responsável para salvar esta linha.", "warning"); return; }
+        await olLoadDate(date); olDraft[machine] = { smoke: d.smoke, residue: d.residue, change: d.change, responsible: d.responsible };
+        await olSave(machine);
+      });
+      cell("Ação", save, "ck-actcell"); tbody.appendChild(tr);
     }
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);
-  wrap.appendChild(table);
-  box.replaceChildren(wrap);
+  }
+  table.appendChild(tbody); wrap.appendChild(table); box.replaceChildren(wrap);
 }
 
 function olEdit(r) {
@@ -7774,27 +7772,23 @@ function olBuildPdf(month, rows, unit) {
   doc.setFontSize(11);
   doc.text("UNIDADE: " + (unit || "SUDOESTE").toUpperCase(), w / 2, 45, { align: "center" });
 
-  // Uma linha por dia reúne os dados das duas fritadeiras para caber em uma página horizontal.
+  // Uma linha para cada fritadeira, em cada dia, conforme a planilha de referência.
   const byKey = {};
-  rows.forEach(r => {
-    const key = r.date + "#" + r.machine;
-    byKey[key] = window.operattoOwnerPreferredRecord([byKey[key], r].filter(Boolean), "updatedAt");
-  });
+  rows.forEach(r => { byKey[r.date + "#" + r.machine] = window.operattoOwnerPreferredRecord([byKey[r.date + "#" + r.machine], r].filter(Boolean), "updatedAt"); });
   const body = [];
   for (let d = 1; d <= range.days; d++) {
     const date = month + "-" + String(d).padStart(2, "0");
-    const r1 = byKey[date + "#1"], r2 = byKey[date + "#2"];
-    body.push([
-      String(d).padStart(2, "0"),
-      r1 ? olYN(r1.smoke) : "", r1 ? olYN(r1.residue) : "", r1 ? olYN(r1.change) : "", r1 ? r1.responsible : "",
-      r2 ? olYN(r2.smoke) : "", r2 ? olYN(r2.residue) : "", r2 ? olYN(r2.change) : "", r2 ? r2.responsible : ""
-    ]);
+    OL_MACHINES.forEach((machine, index) => {
+      const r = byKey[date + "#" + machine];
+      const dayCell = { content: String(d).padStart(2, "0"), rowSpan: 2, styles: { valign: "middle", fontStyle: "bold" } };
+      body.push([...(index === 0 ? [dayCell] : []), "Fritadeira " + (machine === 1 ? "I" : "II"), r ? olYN(r.smoke) : "", r ? olYN(r.residue) : "", r ? olYN(r.change) : "", r ? r.responsible : ""]);
+    });
   }
 
   // Ajusta a altura das linhas para o mês inteiro caber em uma folha A4
   const startY = 62;
   const bottom = h - 28;
-  const headH = 72;
+  const headH = 40;
   const rowH = Math.min(15, Math.floor(((bottom - startY - headH) / body.length) * 10) / 10 - 0.2);
   const fs = Math.min(8.5, rowH * 0.62);
   const padV = Math.max(0.6, (rowH - fs * 1.15) / 2);
@@ -7805,29 +7799,22 @@ function olBuildPdf(month, rows, unit) {
     margin: { left: margin, right: margin, top: startY, bottom: 28 },
     tableWidth: tw,
     head: [
-      [{ content: "CONTROLE DE QUALIDADE DO ÓLEO PARA FRITURA DE IMERSÃO", colSpan: 9, styles: { halign: "center", fontStyle: "bold", fontSize: 8, minCellHeight: 14 } }],
-      [{ content: "MÊS: " + MESES_PT[Number(month.slice(5, 7)) - 1].toUpperCase(), colSpan: 9, styles: { halign: "left", fontStyle: "bold", fontSize: 7.5, minCellHeight: 12 } }],
-      [{ content: "DATA", rowSpan: 2 }, { content: "FRITADEIRA I", colSpan: 4 }, { content: "FRITADEIRA II", colSpan: 4 }],
-      ["DIA", "FUMAÇA", "RESÍDUOS", "TROCA DE ÓLEO", "RESPONSÁVEL", "FUMAÇA", "RESÍDUOS", "TROCA DE ÓLEO", "RESPONSÁVEL"]
+      [{ content: "CONTROLE DE QUALIDADE DO ÓLEO PARA FRITURA DE IMERSÃO", colSpan: 6, styles: { halign: "center", fontStyle: "bold", fontSize: 8, minCellHeight: 14 } }],
+      [{ content: "MÊS: " + MESES_PT[Number(month.slice(5, 7)) - 1].toUpperCase(), colSpan: 6, styles: { halign: "left", fontStyle: "bold", fontSize: 7.5, minCellHeight: 12 } }],
+      ["DATA", "MAQUINÁRIO", "PRESENÇA DE FUMAÇA", "PRESENÇA DE RESÍDUOS", "TROCA DE ÓLEO", "RESPONSÁVEL"]
     ],
     body: body,
     styles: { font: "times", fontSize: fs, cellPadding: { top: padV, bottom: padV, left: 3, right: 3 }, minCellHeight: rowH, lineColor: [55, 55, 55], lineWidth: 0.45, textColor: [25, 25, 25], valign: "middle", overflow: "linebreak", halign: "center" },
     headStyles: { fillColor: [255, 255, 255], textColor: [25, 25, 25], fontStyle: "bold", fontSize: 7, halign: "center", valign: "middle", cellPadding: 2, lineColor: [55, 55, 55], lineWidth: 0.45 },
     columnStyles: {
-      0: { cellWidth: 38 },
-      1: { cellWidth: 55 }, 2: { cellWidth: 55 }, 3: { cellWidth: 66 }, 4: { cellWidth: 125 },
-      5: { cellWidth: 55 }, 6: { cellWidth: 55 }, 7: { cellWidth: 66 }, 8: { cellWidth: 125 }
+      0: { cellWidth: 36 }, 1: { cellWidth: 88 }, 2: { cellWidth: 110 }, 3: { cellWidth: 110 }, 4: { cellWidth: 94 }, 5: { cellWidth: 180 }
     },
     didParseCell: function (data) {
       if (data.section === "head") {
         data.cell.styles.fillColor = [255, 255, 255];
-        if (data.row.index === 3) {
-          data.cell.styles.minCellHeight = 26;
-          data.cell.styles.overflow = "linebreak";
-          data.cell.styles.fontSize = 6.7;
-        }
+        if (data.row.index === 2) { data.cell.styles.minCellHeight = 26; data.cell.styles.overflow = "linebreak"; data.cell.styles.fontSize = 6.7; }
       }
-      if (data.section === "body" && (data.column.index === 4 || data.column.index === 8)) data.cell.styles.halign = "left";
+      if (data.section === "body" && data.column.index === 5) data.cell.styles.halign = "left";
     }
   });
   return doc;
