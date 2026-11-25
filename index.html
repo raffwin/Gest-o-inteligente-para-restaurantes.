@@ -91,6 +91,17 @@
     .card h3 { color: var(--muted); font-size: 12px; margin: 0 0 2px; font-weight: 500; }
     .number { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .count-chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 4px 0 16px; }
+    .count-chart-card { min-width: 0; background: linear-gradient(145deg, #242a31, #1d2025); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+    .count-chart-card h3 { margin: 0; font: 700 15px "Manrope", sans-serif; }
+    .count-chart-subtitle { color: var(--muted); font-size: 11px; margin: 4px 0 12px; }
+    .count-chart-kpis { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .count-chart-kpi { background: #171b20; border: 1px solid var(--border); border-radius: 7px; padding: 7px 10px; font-size: 11px; color: var(--muted); }
+    .count-chart-kpi strong { color: var(--text); font-size: 14px; margin-right: 4px; }
+    .count-chart-svg { width: 100%; height: auto; display: block; overflow: visible; }
+    .count-chart-legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 10px; margin-top: 4px; }
+    .count-chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .count-chart-dot { width: 8px; height: 8px; border-radius: 3px; display: inline-block; }
     .section h2 { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
     .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 15px; margin-bottom: 30px; }
     .card-label { font-size: 12px; color: var(--muted); }
@@ -505,6 +516,7 @@
     @media (max-width: 900px) {
       .sidebar { width: 210px; }
       .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .count-chart-grid { grid-template-columns: 1fr; }
       .two-col { grid-template-columns: 1fr; }
       main { padding: 25px; }
     }
@@ -6011,6 +6023,99 @@
     sharePdf(doc, "operatto_registros_usuarios_" + localStamp() + ".pdf");
   }
 
+  function quoteChartNumber(value) {
+    if (value === null || value === undefined || String(value).trim() === "") return null;
+    const number = Number(String(value).trim().replace(",", "."));
+    return Number.isFinite(number) && number >= 0 ? number : null;
+  }
+
+  function renderCountTrendChart(parent, title, subtitle, rows, series, kpis) {
+    const card = parent; card.className = "count-chart-card"; card.replaceChildren();
+    const heading = document.createElement("h3"); heading.textContent = title;
+    const sub = document.createElement("div"); sub.className = "count-chart-subtitle"; sub.textContent = subtitle;
+    card.append(heading, sub);
+    const metrics = document.createElement("div"); metrics.className = "count-chart-kpis";
+    kpis.forEach(metric => { const chip = document.createElement("span"); chip.className = "count-chart-kpi"; const strong = document.createElement("strong"); strong.textContent = metric.value; chip.append(strong, document.createTextNode(metric.label)); metrics.appendChild(chip); });
+    card.appendChild(metrics);
+    if (!rows.length) { card.appendChild(mk("div", "hint", "Ainda não há contagens salvas para montar este gráfico.")); return; }
+    const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
+    const width = 560, height = 196, left = 34, right = 12, top = 12, bottom = 32, plotH = height - top - bottom;
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", title + " — últimos " + rows.length + " registros"); svg.classList.add("count-chart-svg");
+    const maxValue = Math.max(1, ...rows.flatMap(row => series.map(s => Number(row[s.key]) || 0)));
+    [0, 0.5, 1].forEach(fraction => { const y = top + plotH * (1 - fraction), line = document.createElementNS(ns, "line"); line.setAttribute("x1", left); line.setAttribute("x2", width - right); line.setAttribute("y1", y); line.setAttribute("y2", y); line.setAttribute("stroke", "#343a42"); line.setAttribute("stroke-width", "1"); svg.appendChild(line); });
+    const groupW = (width - left - right) / rows.length, barGap = 3, barW = Math.min(20, (groupW - 14) / series.length);
+    rows.forEach((row, index) => {
+      const center = left + groupW * (index + 0.5);
+      series.forEach((item, seriesIndex) => {
+        const value = Number(row[item.key]) || 0, barH = value ? Math.max(2, plotH * value / maxValue) : 0;
+        const rect = document.createElementNS(ns, "rect"); rect.setAttribute("x", center + (seriesIndex - (series.length - 1) / 2) * (barW + barGap) - barW / 2); rect.setAttribute("y", top + plotH - barH); rect.setAttribute("width", barW); rect.setAttribute("height", barH); rect.setAttribute("rx", "4"); rect.setAttribute("fill", item.color);
+        const tip = document.createElementNS(ns, "title"); tip.textContent = row.label + " · " + item.label + ": " + value; rect.appendChild(tip); svg.appendChild(rect);
+        if (value) { const text = document.createElementNS(ns, "text"); text.setAttribute("x", Number(rect.getAttribute("x")) + barW / 2); text.setAttribute("y", top + plotH - barH - 4); text.setAttribute("text-anchor", "middle"); text.setAttribute("fill", "#d9dee4"); text.setAttribute("font-size", "9"); text.textContent = value.toLocaleString("pt-BR", { maximumFractionDigits: 1 }); svg.appendChild(text); }
+      });
+      const label = document.createElementNS(ns, "text"); label.setAttribute("x", center); label.setAttribute("y", height - 9); label.setAttribute("text-anchor", "middle"); label.setAttribute("fill", "#9298a2"); label.setAttribute("font-size", "9"); label.textContent = row.label; svg.appendChild(label);
+    });
+    card.appendChild(svg);
+    const legend = document.createElement("div"); legend.className = "count-chart-legend";
+    series.forEach(item => { const entry = document.createElement("span"), dot = document.createElement("i"); dot.className = "count-chart-dot"; dot.style.background = item.color; entry.append(dot, document.createTextNode(item.label)); legend.appendChild(entry); });
+    card.appendChild(legend);
+  }
+
+  async function renderDashCountCharts(parent) {
+    const grid = document.createElement("div"); grid.className = "count-chart-grid";
+    const quoteCard = document.createElement("section"); quoteCard.className = "count-chart-card"; quoteCard.innerHTML = '<h3>Cotação</h3><div class="count-chart-subtitle">Carregando contagens...</div>';
+    const sauceCard = document.createElement("section"); sauceCard.className = "count-chart-card"; sauceCard.innerHTML = '<h3>Molhos</h3><div class="count-chart-subtitle">Carregando contagens...</div>';
+    grid.append(quoteCard, sauceCard); parent.appendChild(grid);
+    try {
+      const ownerView = isPlatformOwner && platformOwnerData && !isGerencialPersonalMode;
+      const [quoteResult, sauceResult] = await Promise.all(ownerView ? [
+        Promise.resolve({ data: platformOwnerData.stock_quote_sessions || [], error: null }),
+        Promise.resolve({ data: platformOwnerData.sauce_count_sessions || [], error: null })
+      ] : [
+        supabaseClient.from("stock_quote_sessions").select("count_date,category,items,updated_at").eq("user_id", currentUserId).order("count_date", { ascending: false }).limit(500),
+        supabaseClient.from("sauce_count_sessions").select("count_date,items,updated_at").eq("user_id", currentUserId).order("count_date", { ascending: false }).limit(100)
+      ]);
+      if (quoteResult.error) throw quoteResult.error;
+      if (sauceResult.error) throw sauceResult.error;
+      if (!grid.isConnected) return;
+      const quoteDays = new Map();
+      (quoteResult.data || []).filter(row => row && row.count_date).forEach(session => {
+        const day = quoteDays.get(session.count_date) || { date: session.count_date, checked: 0, toOrder: 0 };
+        (Array.isArray(session.items) ? session.items : []).forEach(item => {
+          if (item && item.stock !== null && item.stock !== undefined && String(item.stock).trim() !== "") day.checked++;
+          const order = quoteChartNumber(item && item.order);
+          if (order !== null && order > 0) day.toOrder++;
+        });
+        quoteDays.set(session.count_date, day);
+      });
+      const quoteRows = [...quoteDays.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-7).map(row => ({ ...row, label: row.date.slice(5).replace("-", "/") }));
+      const quoteLatest = quoteRows[quoteRows.length - 1];
+      quoteCard.replaceChildren();
+      renderCountTrendChart(quoteCard, "Cotação", "Produtos conferidos e produtos com pedido · últimos registros", quoteRows,
+        [{ key: "checked", label: "Conferidos", color: "#63b3a2" }, { key: "toOrder", label: "Com pedido", color: "#e5a657" }],
+        [{ value: quoteLatest ? quoteLatest.checked : "—", label: "conferidos na última data" }, { value: quoteLatest ? quoteLatest.toOrder : "—", label: "itens a pedir" }]);
+
+      const sauceDays = new Map();
+      (sauceResult.data || []).filter(row => row && row.count_date).forEach(session => {
+        const day = sauceDays.get(session.count_date) || { date: session.count_date, sales: 0, order: 0, counted: 0 };
+        (Array.isArray(session.items) ? session.items : []).forEach(item => {
+          const count = quoteChartNumber(item && item.count_quantity), sales = quoteChartNumber(item && item.sales_quantity), order = quoteChartNumber(item && item.order_quantity);
+          if (count !== null) day.counted++;
+          day.sales += sales || 0; day.order += order || 0;
+        });
+        sauceDays.set(session.count_date, day);
+      });
+      const sauceRows = [...sauceDays.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-7).map(row => ({ ...row, label: row.date.slice(5).replace("-", "/") }));
+      const sauceLatest = sauceRows[sauceRows.length - 1];
+      sauceCard.replaceChildren();
+      renderCountTrendChart(sauceCard, "Molhos", "Vendas e pedidos somados por contagem · últimos registros", sauceRows,
+        [{ key: "sales", label: "Vendas", color: "#8c83df" }, { key: "order", label: "Pedido", color: "#e5a657" }],
+        [{ value: sauceLatest ? sauceLatest.sales.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) : "—", label: "vendas na última data" }, { value: sauceLatest ? sauceLatest.order.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) : "—", label: "unidades pedidas" }]);
+    } catch (error) {
+      if (!grid.isConnected) return;
+      [quoteCard, sauceCard].forEach(card => { const subtitle = card.querySelector(".count-chart-subtitle"); if (subtitle) subtitle.textContent = "Não foi possível carregar os dados: " + friendlyError(error); });
+    }
+  }
+
   function renderDashSummary(box) {
     const groups = stockGroupNames();
     const totals = { products: 0, low: 0, order: 0, expiring: 0, value: 0, orderCost: 0 };
@@ -6049,6 +6154,7 @@
     );
     stockSec.appendChild(cards);
     box.appendChild(stockSec);
+    renderDashCountCharts(box);
 
     // Temperatura de hoje
     const tempSec = dashSection("{thermo} Temperatura de hoje");
