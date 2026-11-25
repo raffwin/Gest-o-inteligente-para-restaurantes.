@@ -6023,6 +6023,8 @@
     sharePdf(doc, "operatto_registros_usuarios_" + localStamp() + ".pdf");
   }
 
+  let dashboardQuoteChartRows = [];
+  let dashboardSauceRankingRows = [];
   function quoteChartNumber(value) {
     if (value === null || value === undefined || String(value).trim() === "") return null;
     const number = Number(String(value).trim().replace(",", "."));
@@ -6060,6 +6062,68 @@
     card.appendChild(legend);
   }
 
+  function renderSauceRankings(parent, rankingRows) {
+    const section = document.createElement("div"); section.style.cssText = "border-top:1px solid var(--border);margin-top:14px;padding-top:13px";
+    const title = document.createElement("h4"); title.textContent = "Mais e menos vendidos"; title.style.cssText = "font:700 12px Manrope,sans-serif;margin:0 0 4px";
+    const caption = document.createElement("div"); caption.className = "count-chart-subtitle"; caption.textContent = "Vendas acumuladas nos últimos registros de contagem";
+    section.append(title, caption);
+    if (!rankingRows.length) { section.appendChild(mk("div", "hint", "Sem dados de vendas preenchidos para calcular o ranking.")); parent.appendChild(section); return; }
+    const ranked = rankingRows.filter(row => row.salesEntries > 0).sort((a, b) => b.sales - a.sales || a.name.localeCompare(b.name, "pt-BR"));
+    if (!ranked.length) { section.appendChild(mk("div", "hint", "Nenhuma venda foi informada nas contagens salvas.")); parent.appendChild(section); return; }
+    const top = ranked.slice(0, 5), bottom = ranked.slice(-5).reverse(), entries = [], seen = new Set();
+    top.forEach(row => { if (!seen.has(row.name)) { entries.push({ ...row, rankType: "top" }); seen.add(row.name); } });
+    bottom.forEach(row => { if (!seen.has(row.name)) { entries.push({ ...row, rankType: "bottom" }); seen.add(row.name); } });
+    const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg"), width = 560, rowH = 26, height = entries.length * rowH + 12;
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Ranking de molhos mais e menos vendidos"); svg.classList.add("count-chart-svg");
+    const max = Math.max(1, ...entries.map(row => row.sales));
+    entries.forEach((row, index) => {
+      const y = 9 + index * rowH, name = document.createElementNS(ns, "text"); name.setAttribute("x", "2"); name.setAttribute("y", String(y + 12)); name.setAttribute("fill", "#c8cdd4"); name.setAttribute("font-size", "9"); name.textContent = row.name.length > 25 ? row.name.slice(0, 24) + "…" : row.name; svg.appendChild(name);
+      const bar = document.createElementNS(ns, "rect"), barW = Math.max(2, (row.sales / max) * 285); bar.setAttribute("x", "204"); bar.setAttribute("y", String(y)); bar.setAttribute("width", String(barW)); bar.setAttribute("height", "16"); bar.setAttribute("rx", "5"); bar.setAttribute("fill", row.rankType === "top" ? "#63b3a2" : "#e5a657");
+      const tip = document.createElementNS(ns, "title"); tip.textContent = row.name + ": " + row.sales.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " vendido(s)"; bar.appendChild(tip); svg.appendChild(bar);
+      const value = document.createElementNS(ns, "text"); value.setAttribute("x", String(214 + barW)); value.setAttribute("y", String(y + 12)); value.setAttribute("fill", "#f0f1f3"); value.setAttribute("font-size", "9"); value.textContent = row.sales.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + (row.rankType === "top" ? " · mais" : " · menos"); svg.appendChild(value);
+    });
+    section.appendChild(svg);
+    const button = document.createElement("button"); button.type = "button"; button.className = "btn-edit"; button.style.marginTop = "8px"; button.textContent = "Gerar PDF do Dashboard"; button.addEventListener("click", generateDashCountsPdf); section.appendChild(button);
+    parent.appendChild(section);
+  }
+
+  function generateDashCountsPdf() {
+    const JsPDF = window.jspdf && window.jspdf.jsPDF;
+    if (!JsPDF) { alert("Biblioteca de PDF indisponível. Conecte-se à internet e tente novamente."); return; }
+    const doc = new JsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+    if (typeof doc.autoTable !== "function") { alert("Biblioteca de tabelas do PDF indisponível. Recarregue o aplicativo e tente novamente."); return; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.text("DASHBOARD · COTAÇÃO E VENDAS DE MOLHOS", 30, 30);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.text("Gerado em " + new Date().toLocaleString("pt-BR"), 30, 45);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Cotação · produtos conferidos e com pedido", 30, 66);
+    const quoteMax = Math.max(1, ...dashboardQuoteChartRows.flatMap(row => [row.checked, row.toOrder]));
+    dashboardQuoteChartRows.forEach((row, index) => {
+      const y = 82 + index * 22;
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(65, 70, 78); doc.text(row.date, 30, y + 9);
+      doc.setFillColor(99, 179, 162); doc.roundedRect(100, y, Math.max(2, 360 * row.checked / quoteMax), 7, 3, 3, "F");
+      doc.setFillColor(229, 166, 87); doc.roundedRect(100, y + 10, Math.max(2, 360 * row.toOrder / quoteMax), 7, 3, 3, "F");
+      doc.setTextColor(45, 50, 55); doc.text(String(row.checked), 470, y + 7); doc.text(String(row.toOrder), 470, y + 17);
+    });
+    doc.setFontSize(8); doc.setTextColor(65, 70, 78); doc.text("Verde: produtos conferidos  ·  Laranja: produtos com pedido", 100, 250);
+    doc.autoTable({ startY: 262, head: [["Data", "Produtos conferidos", "Produtos com pedido"]], body: dashboardQuoteChartRows.map(row => [row.date, String(row.checked), String(row.toOrder)]), headStyles: { fillColor: [75, 123, 139] }, styles: { fontSize: 9 } });
+    doc.addPage();
+    doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.setTextColor(35, 40, 45); doc.text("Molhos · ranking de vendas", 30, 30);
+    const sortedSauces = dashboardSauceRankingRows.filter(row => row.salesEntries > 0).sort((a, b) => b.sales - a.sales || a.name.localeCompare(b.name, "pt-BR"));
+    const sauceChartRows = [], sauceSeen = new Set();
+    sortedSauces.slice(0, 5).forEach(row => { if (!sauceSeen.has(row.name)) { sauceChartRows.push({ ...row, tone: "top" }); sauceSeen.add(row.name); } });
+    sortedSauces.slice(-5).reverse().forEach(row => { if (!sauceSeen.has(row.name)) { sauceChartRows.push({ ...row, tone: "bottom" }); sauceSeen.add(row.name); } });
+    const sauceMax = Math.max(1, ...sauceChartRows.map(row => row.sales));
+    sauceChartRows.forEach((row, index) => {
+      const y = 48 + index * 19;
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(55, 60, 66); doc.text(row.name.slice(0, 38), 30, y + 8);
+      doc.setFillColor(...(row.tone === "top" ? [99, 179, 162] : [229, 166, 87])); doc.roundedRect(250, y, Math.max(2, 360 * row.sales / sauceMax), 11, 3, 3, "F");
+      doc.setTextColor(45, 50, 55); doc.text(row.sales.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + (row.tone === "top" ? " · mais vendido" : " · menos vendido"), 620, y + 8);
+    });
+    let y = 48 + sauceChartRows.length * 19 + 18;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Ranking completo", 30, y);
+    doc.autoTable({ startY: y + 8, head: [["Posição", "Molho", "Vendas acumuladas", "Registros com venda"]], body: sortedSauces.map((row, index) => [String(index + 1), row.name, row.sales.toLocaleString("pt-BR", { maximumFractionDigits: 2 }), String(row.salesEntries)]), headStyles: { fillColor: [75, 123, 139] }, styles: { fontSize: 8 } });
+    doc.save("operatto_dashboard_cotacao_molhos.pdf");
+  }
+
   async function renderDashCountCharts(parent) {
     const grid = document.createElement("div"); grid.className = "count-chart-grid";
     const quoteCard = document.createElement("section"); quoteCard.className = "count-chart-card"; quoteCard.innerHTML = '<h3>Cotação</h3><div class="count-chart-subtitle">Carregando contagens...</div>';
@@ -6088,6 +6152,7 @@
         quoteDays.set(session.count_date, day);
       });
       const quoteRows = [...quoteDays.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-7).map(row => ({ ...row, label: row.date.slice(5).replace("-", "/") }));
+      dashboardQuoteChartRows = quoteRows;
       const quoteLatest = quoteRows[quoteRows.length - 1];
       quoteCard.replaceChildren();
       renderCountTrendChart(quoteCard, "Cotação", "Produtos conferidos e produtos com pedido · últimos registros", quoteRows,
@@ -6095,21 +6160,29 @@
         [{ value: quoteLatest ? quoteLatest.checked : "—", label: "conferidos na última data" }, { value: quoteLatest ? quoteLatest.toOrder : "—", label: "itens a pedir" }]);
 
       const sauceDays = new Map();
+      const sauceRankings = new Map();
       (sauceResult.data || []).filter(row => row && row.count_date).forEach(session => {
         const day = sauceDays.get(session.count_date) || { date: session.count_date, sales: 0, order: 0, counted: 0 };
         (Array.isArray(session.items) ? session.items : []).forEach(item => {
           const count = quoteChartNumber(item && item.count_quantity), sales = quoteChartNumber(item && item.sales_quantity), order = quoteChartNumber(item && item.order_quantity);
           if (count !== null) day.counted++;
           day.sales += sales || 0; day.order += order || 0;
+          const productName = String(item && item.product_name || "").trim();
+          if (productName && sales !== null) {
+            const product = sauceRankings.get(productName) || { name: productName, sales: 0, salesEntries: 0 };
+            product.sales += sales; product.salesEntries++; sauceRankings.set(productName, product);
+          }
         });
         sauceDays.set(session.count_date, day);
       });
       const sauceRows = [...sauceDays.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-7).map(row => ({ ...row, label: row.date.slice(5).replace("-", "/") }));
+      dashboardSauceRankingRows = [...sauceRankings.values()];
       const sauceLatest = sauceRows[sauceRows.length - 1];
       sauceCard.replaceChildren();
       renderCountTrendChart(sauceCard, "Molhos", "Vendas e pedidos somados por contagem · últimos registros", sauceRows,
         [{ key: "sales", label: "Vendas", color: "#8c83df" }, { key: "order", label: "Pedido", color: "#e5a657" }],
         [{ value: sauceLatest ? sauceLatest.sales.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) : "—", label: "vendas na última data" }, { value: sauceLatest ? sauceLatest.order.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) : "—", label: "unidades pedidas" }]);
+      renderSauceRankings(sauceCard, dashboardSauceRankingRows);
     } catch (error) {
       if (!grid.isConnected) return;
       [quoteCard, sauceCard].forEach(card => { const subtitle = card.querySelector(".count-chart-subtitle"); if (subtitle) subtitle.textContent = "Não foi possível carregar os dados: " + friendlyError(error); });
