@@ -4703,9 +4703,11 @@
     const dateInput = fields.querySelector("#sheetDate"), responsible = fields.querySelector("#sheetResponsible"); dateInput.value = today;
     let loadRequest = 0;
     function localKey(date) { return "operatto_sheet_checklist_v1_" + (currentEmail || "local") + "_" + name + "_" + date; }
+    function migrationKey(uid) { return "operatto_sheet_checklist_migrated_v1_" + uid + "_" + name; }
     function readLocal(date) { try { return JSON.parse(localStorage.getItem(localKey(date)) || "null"); } catch (_) { return null; } }
     function cacheLocal(date, payload) { try { localStorage.setItem(localKey(date), JSON.stringify(payload)); } catch (_) {} }
     async function migrateLocalRecords(uid) {
+      try { if (localStorage.getItem(migrationKey(uid)) === "1") return; } catch (_) {}
       const prefix = "operatto_sheet_checklist_v1_" + (currentEmail || "local") + "_" + name + "_";
       const localRows = [];
       try {
@@ -4719,7 +4721,7 @@
           localRows.push({ date, record });
         }
       } catch (_) { return; }
-      if (!localRows.length) return;
+      if (!localRows.length) { try { localStorage.setItem(migrationKey(uid), "1"); } catch (_) {} return; }
       const { data, error } = await supabaseClient.from("spreadsheet_checklists").select("checklist_date,updated_at")
         .eq("user_id", uid).eq("checklist_key", name);
       if (error) throw error;
@@ -4738,6 +4740,7 @@
           { onConflict: "user_id,checklist_key,checklist_date" });
         if (result.error) throw result.error;
       }
+      try { localStorage.setItem(migrationKey(uid), "1"); } catch (_) {}
     }
     function applyRecord(record) {
       responsible.value = record?.responsible || "";
@@ -4796,7 +4799,9 @@
     async function loadFromSupabase() {
       const date = dateInput.value, request = ++loadRequest;
       if (!currentUserId) { applyRecord(null); status.textContent = "Entre na sua conta para carregar e salvar no Supabase."; status.className = "sim warning"; return; }
-      status.textContent = "Carregando do Supabase…"; status.className = "sim";
+      const localAtStart = readLocal(date);
+      if (localAtStart) applyRecord(localAtStart);
+      status.textContent = localAtStart ? "Rascunho local aberto; conferindo a nuvem…" : "Carregando do Supabase…"; status.className = "sim";
       try {
         const uid = currentUserId;
         await migrateLocalRecords(uid);
@@ -4816,10 +4821,23 @@
         if (request !== loadRequest || dateInput.value !== date) return;
         if (error) throw error;
         if (data) {
-          applyRecord(data); cacheLocal(date, data);
-          const sourceUser = isPlatformOwner && data.user_id && data.user_id !== currentUserId
-            ? (data.email || "outro usuário da equipe") : "sua conta";
-          status.textContent = "Checklist carregado de " + sourceUser + "."; status.className = "sim positive";
+          const local = readLocal(date);
+          const localTime = Date.parse(local && (local.updated_at || local.updatedAt) || "") || 0;
+          const remoteTime = Date.parse(data.updated_at || "") || 0;
+          if (local && localTime > remoteTime && (!data.user_id || data.user_id === currentUserId)) {
+            applyRecord(local);
+            const { error: syncError } = await supabaseClient.from("spreadsheet_checklists").upsert({
+              user_id: currentUserId, checklist_key: name, checklist_date: date,
+              responsible: local.responsible || "", responses: Array.isArray(local.responses) ? local.responses : [], updated_at: local.updated_at || local.updatedAt
+            }, { onConflict: "user_id,checklist_key,checklist_date" });
+            if (syncError) throw syncError;
+            status.textContent = "Rascunho mais recente recuperado e sincronizado com a nuvem."; status.className = "sim positive";
+          } else {
+            applyRecord(data); cacheLocal(date, data);
+            const sourceUser = isPlatformOwner && data.user_id && data.user_id !== currentUserId
+              ? (data.email || "outro usuário da equipe") : "sua conta";
+            status.textContent = "Checklist carregado de " + sourceUser + "."; status.className = "sim positive";
+          }
         } else {
           const local = readLocal(date); applyRecord(local);
           if (local) {
@@ -4907,7 +4925,8 @@
     });
     actions.append(save, pdf); root.append(fields, tableWrap, actions, status, ownerHistory);
     await loadFromSupabase();
-    await loadOwnerChecklistHistory();
+    // O formulário abre sem esperar o histórico global da equipe.
+    loadOwnerChecklistHistory();
   }
 
   async function renderHigienizacaoChecklist() {
@@ -8492,6 +8511,15 @@ let sauceSession = null;
 let sauceRecords = [];
 let sauceBusy = false;
 let sauceDirty = false;
+function sauceDraftKey(date) { return "operatto_sauce_draft_v1_" + (currentUserId || "local") + "_" + date; }
+function sauceSaveDraft(date) {
+  if (!date) return;
+  try { localStorage.setItem(sauceDraftKey(date), JSON.stringify({ values: sauceValues, updated_at: new Date().toISOString() })); } catch (_) {}
+}
+function sauceReadDraft(date) {
+  try { return JSON.parse(localStorage.getItem(sauceDraftKey(date)) || "null"); } catch (_) { return null; }
+}
+function sauceClearDraft(date) { try { localStorage.removeItem(sauceDraftKey(date)); } catch (_) {} }
 
 function sauceEl(id) { return document.getElementById(id); }
 function sauceSetStatus(text, cls) {
@@ -8560,6 +8588,7 @@ function sauceRenderItems() {
       if (!sauceValues[product.row]) sauceValues[product.row] = { count: "", order: "", sales: "" };
       sauceValues[product.row].count = countInput.value;
       sauceDirty = true;
+      sauceSaveDraft(sauceEl("sauceDate").value);
       sauceSetStatus("Há alterações sem salvar.", "warning");
     };
     countInput.addEventListener("input", updateCount);
@@ -8589,6 +8618,7 @@ function sauceRenderItems() {
       if (!sauceValues[product.row]) sauceValues[product.row] = { count: "", order: "", sales: "" };
       sauceValues[product.row].order = orderInput.value;
       sauceDirty = true;
+      sauceSaveDraft(sauceEl("sauceDate").value);
       sauceSetStatus("Há alterações sem salvar.", "warning");
     });
     orderCell.appendChild(orderInput);
@@ -8602,6 +8632,7 @@ function sauceRenderItems() {
       if (!sauceValues[product.row]) sauceValues[product.row] = { count: "", order: "", sales: "" };
       sauceValues[product.row].sales = salesInput.value;
       sauceDirty = true;
+      sauceSaveDraft(sauceEl("sauceDate").value);
       sauceSetStatus("Há alterações sem salvar.", "warning");
     });
     salesCell.appendChild(salesInput);
@@ -8664,29 +8695,41 @@ async function sauceLoadHistory(dateToOpen) {
   try {
     const result = isPlatformOwner && platformOwnerData && !isGerencialPersonalMode
       ? { data: platformOwnerData.sauce_count_sessions.slice().sort((a, b) => (b.count_date + b.created_at).localeCompare(a.count_date + a.created_at)).slice(0, 500), error: null }
-      : await supabaseClient.from("sauce_count_sessions").select("*").eq("user_id", currentUserId).order("count_date", { ascending: false }).order("created_at", { ascending: false }).limit(100);
+      : await supabaseClient.from("sauce_count_sessions").select("*").eq("user_id", currentUserId).order("count_date", { ascending: false }).order("created_at", { ascending: false }).limit(40);
     const { data, error } = result;
     if (error) throw error;
     sauceRecords = data || [];
+    if (dateToOpen && !sauceRecords.some(record => record.count_date === dateToOpen) && !(isPlatformOwner && platformOwnerData && !isGerencialPersonalMode)) {
+      const selectedResult = await supabaseClient.from("sauce_count_sessions").select("*").eq("user_id", currentUserId).eq("count_date", dateToOpen).order("created_at", { ascending: false }).limit(1);
+      if (selectedResult.error) throw selectedResult.error;
+      if (selectedResult.data && selectedResult.data[0]) sauceRecords.push(selectedResult.data[0]);
+    }
     sauceRenderHistory();
     if (dateToOpen) {
       const latest = sauceRecords.find(record => record.count_date === dateToOpen);
+      const draft = sauceReadDraft(dateToOpen);
+      const draftTime = Date.parse(draft && draft.updated_at || "") || 0;
+      const remoteTime = Date.parse(latest && (latest.updated_at || latest.created_at) || "") || 0;
+      const restoreDraft = !!(draft && draftTime > remoteTime);
       sauceSession = latest || null;
-      sauceValues = sauceDefaultValues(latest && latest.items);
-      sauceDirty = false;
+      sauceValues = restoreDraft && draft.values && typeof draft.values === "object" ? draft.values : sauceDefaultValues(latest && latest.items);
+      sauceDirty = restoreDraft;
       sauceRenderItems();
-      if (latest) sauceSetStatus("Contagem salva por " + (latest.employee || "funcionário") + " em " + sauceDateTime(latest.created_at) + ".", "hint");
+      if (restoreDraft) sauceSetStatus("Rascunho recuperado neste aparelho. Clique em Salvar contagem para sincronizar.", "warning");
+      else if (latest) sauceSetStatus("Contagem salva por " + (latest.employee || "funcionário") + " em " + sauceDateTime(latest.created_at) + ".", "hint");
       else sauceSetStatus("Nenhuma contagem salva nesta data. Preencha os campos.", "hint");
     }
   } catch (error) {
     sauceRecords = [];
     sauceRenderHistory();
+    const draft = dateToOpen && sauceReadDraft(dateToOpen);
+    if (draft && draft.values && typeof draft.values === "object") { sauceValues = draft.values; sauceDirty = true; }
     sauceRenderItems();
     const msg = String((error && error.message) || error || "");
     if (/sauce_count_sessions|does not exist|schema cache/i.test(msg)) {
-      sauceSetStatus("A tabela da contagem ainda não existe. Execute supabase_setup_molhos.sql no SQL Editor do Supabase e recarregue.", "warning");
+      sauceSetStatus("A tabela da contagem ainda não existe. " + (draft ? "Seu rascunho está recuperado neste aparelho. " : "") + "Execute supabase_setup_molhos.sql no SQL Editor do Supabase e recarregue.", "warning");
     } else {
-      sauceSetStatus("Não foi possível carregar o histórico: " + friendlyError(error), "negative");
+      sauceSetStatus((draft ? "Rascunho recuperado neste aparelho; a nuvem está indisponível. " : "Não foi possível carregar o histórico: ") + friendlyError(error), draft ? "warning" : "negative");
     }
   }
 }
@@ -8722,10 +8765,11 @@ async function sauceSave() {
   const items = sauceCollectItems();
   if (!items) return;
   const payload = { user_id: currentUserId, employee: currentUser, count_date: date, items: items };
+  sauceSaveDraft(date);
   const button = sauceEl("sauceSaveBtn");
   sauceBusy = true;
   button.disabled = true;
-  sauceSetStatus("Salvando no Supabase...", "hint");
+      sauceSetStatus("Sincronizando com a nuvem. O rascunho já está protegido neste aparelho...", "hint");
   try {
     let result;
     if (sauceSession && sauceSession.user_id === currentUserId) {
@@ -8738,13 +8782,16 @@ async function sauceSave() {
     const saved = result.data;
     sauceSession = saved;
     sauceDirty = false;
-    await sauceLoadHistory(date);
-    sauceSession = saved;
+    sauceClearDraft(date);
+    sauceRecords = [saved, ...sauceRecords.filter(record => record.id !== saved.id)]
+      .sort((a, b) => String(b.count_date || "").localeCompare(String(a.count_date || "")) || String(b.created_at || "").localeCompare(String(a.created_at || "")))
+      .slice(0, 40);
+    sauceRenderHistory();
     sauceValues = sauceDefaultValues(saved.items);
     sauceRenderItems();
-    sauceSetStatus("Contagem salva no Supabase por " + currentUser + " às " + new Date().toLocaleTimeString("pt-BR") + ".", "positive");
+    sauceSetStatus("Contagem salva na nuvem e confirmada por " + currentUser + " às " + new Date().toLocaleTimeString("pt-BR") + ".", "positive");
   } catch (error) {
-    sauceSetStatus("Não foi possível salvar: " + friendlyError(error) + ". Confira a migration e as políticas RLS.", "negative");
+    sauceSetStatus("A nuvem não confirmou o salvamento. Seu rascunho foi mantido neste aparelho. " + friendlyError(error), "negative");
   } finally {
     sauceBusy = false;
     button.disabled = false;
@@ -8849,6 +8896,11 @@ const SHEET_SUPPLIERS = {
 
 let sheetStockValues = {};
 let sheetStockDirty = false;
+function sheetStockDraftKey(date) { return "operatto_quote_draft_v1_" + (currentUserId || "local") + "_" + date; }
+function sheetStockSaveDraft(date) {
+  if (!date) return;
+  try { localStorage.setItem(sheetStockDraftKey(date), JSON.stringify({ values: sheetStockValues, updated_at: new Date().toISOString() })); } catch (_) {}
+}
 function sheetStockStatus(text, cls) {
   const el = document.getElementById("sheetStockStatus");
   el.textContent = text || "";
@@ -8858,6 +8910,7 @@ async function sheetStockOpen() {
   const date = document.getElementById("sheetStockDate");
   date.max = localStamp(); if (!date.value || date.value > date.max) date.value = date.max;
   sheetStockValues = {}; sheetStockDirty = false;
+  let localDraftRestored = false;
   const box = document.getElementById("sheetStockTable"); box.hidden = false; box.replaceChildren(mk("div", "loading", "Carregando cotação salva..."));
   sheetStockStatus("Carregando contagens...", "hint");
   try {
@@ -8884,7 +8937,22 @@ async function sheetStockOpen() {
         if (found) sheetStockValues[category][String(index)] = found;
       });
     });
-  } catch (error) { sheetStockStatus("Falha ao carregar: " + friendlyError(error), "negative"); return; }
+    let localDraft = null;
+    try { localDraft = JSON.parse(localStorage.getItem(sheetStockDraftKey(date.value)) || "null"); } catch (_) {}
+    if (localDraft && localDraft.values) {
+      Object.keys(localDraft.values).forEach(category => {
+        if (SHEET_STOCK[category] && localDraft.values[category]) sheetStockValues[category] = localDraft.values[category];
+      });
+      sheetStockDirty = true;
+      localDraftRestored = true;
+    }
+  } catch (error) {
+    let localDraft = null;
+    try { localDraft = JSON.parse(localStorage.getItem(sheetStockDraftKey(date.value)) || "null"); } catch (_) {}
+    if (!localDraft || !localDraft.values) { sheetStockStatus("Falha ao carregar da nuvem: " + friendlyError(error), "negative"); return; }
+    sheetStockValues = localDraft.values; sheetStockDirty = true;
+    localDraftRestored = true;
+  }
   box.replaceChildren();
   const title = document.createElement("h3"); title.className = "section-heading"; title.textContent = "Cotação geral"; box.appendChild(title);
   Object.keys(SHEET_STOCK).forEach(category => {
@@ -8912,7 +8980,7 @@ async function sheetStockOpen() {
         input.addEventListener("input", () => {
           if (!sheetStockValues[category][valueKey]) sheetStockValues[category][valueKey] = { product, source_index: sourceIndex, stock: null, order: null };
           sheetStockValues[category][valueKey][key] = input.value.trim() === "" ? null : input.value.trim();
-          sheetStockDirty = true; sheetStockStatus("Há alterações sem salvar.", "warning");
+          sheetStockDirty = true; sheetStockSaveDraft(document.getElementById("sheetStockDate").value); sheetStockStatus("Há alterações sem salvar.", "warning");
         });
         cell.appendChild(input); tr.appendChild(cell);
       });
@@ -8920,7 +8988,7 @@ async function sheetStockOpen() {
     });
     table.appendChild(body); wrap.appendChild(table); section.appendChild(wrap); box.appendChild(section);
   });
-  sheetStockStatus("");
+  sheetStockStatus(localDraftRestored ? "Rascunho recuperado neste aparelho. Salve para sincronizar com a nuvem." : "", localDraftRestored ? "warning" : "");
 }
 function sheetStockParseCount(value, product, field) {
   if (value === null || value === undefined || String(value).trim() === "") return null;
@@ -8936,19 +9004,21 @@ async function sheetStockSave() {
   const date = document.getElementById("sheetStockDate").value;
   const btn = document.getElementById("sheetStockSave"); btn.disabled = true; sheetStockStatus("Salvando...", "hint");
   try {
-    for (const category of Object.keys(SHEET_STOCK)) {
+    const payloads = Object.keys(SHEET_STOCK).map(category => {
       const countFields = ["stock", "order"].concat((SHEET_SUPPLIERS[category] || []).map((_, i) => "supplier_" + i));
       const items = SHEET_STOCK[category].map((product, source_index) => {
         const item = { ...((sheetStockValues[category] || {})[String(source_index)] || {}), product, source_index };
         countFields.forEach(field => { item[field] = sheetStockParseCount(item[field], product, field); });
         return item;
       });
-      const payload = { user_id: currentUserId, count_date: date, category, employee: currentUser || "", items, updated_at: new Date().toISOString() };
-      const { error } = await supabaseClient.from("stock_quote_sessions").upsert(payload, { onConflict: "user_id,count_date,category" });
-      if (error) throw error;
-    }
-    sheetStockDirty = false; sheetStockStatus("Contagem salva na nuvem.", "positive");
-  } catch (error) { sheetStockStatus("Não foi possível salvar: " + friendlyError(error), "negative"); }
+      return { user_id: currentUserId, count_date: date, category, employee: currentUser || "", items, updated_at: new Date().toISOString() };
+    });
+    const { error } = await supabaseClient.from("stock_quote_sessions").upsert(payloads, { onConflict: "user_id,count_date,category" });
+    if (error) throw error;
+    sheetStockDirty = false;
+    try { localStorage.removeItem(sheetStockDraftKey(date)); } catch (_) {}
+    sheetStockStatus("Contagem salva na nuvem.", "positive");
+  } catch (error) { sheetStockSaveDraft(date); sheetStockStatus("A nuvem não confirmou o salvamento. O rascunho foi mantido neste aparelho. " + friendlyError(error), "negative"); }
   btn.disabled = false;
 }
 function quotePdfDrawTables(doc, groups, date, responsible) {
