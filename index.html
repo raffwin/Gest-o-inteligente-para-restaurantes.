@@ -237,6 +237,10 @@
     #homeView .modules, #stockHome .modules { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .module { text-align: left; min-height: 140px; padding: 22px; border-radius: 7px; display: flex; flex-direction: column; align-items: flex-start; gap: 0; transition: background .2s, border-color .2s, transform .2s; }
     .module:hover { background: var(--hover); border-color: var(--accent); transform: translateY(-2px); }
+  .module:disabled { cursor: not-allowed; opacity: .66; }
+  .module:disabled:hover { background: var(--surface); border-color: var(--border); transform: none; }
+  .module .gerencial-lock { display: inline-block; margin-top: 10px; color: var(--warn); font-size: 11px; font-weight: 700; }
+  .gerencial-permission-note { padding: 11px 14px; margin: 0 0 16px; border: 1px solid var(--border); border-radius: 6px; color: var(--warn); background: var(--surface); font-size: 12px; }
     .module strong { font-size: 16px; font-weight: 700; margin: 0 0 7px; color: var(--text); font-family: "Manrope", "DM Sans", sans-serif; }
     .module span { font-size: 12px; color: var(--muted); line-height: 1.5; }
     .module-icon, .op-category-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); margin-bottom: 16px; font-size: 20px; }
@@ -697,6 +701,8 @@
     <a href="#" data-nav="overview"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="10" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg>Visão geral</a>
     <a href="#" data-nav="stock"><svg viewBox="0 0 24 24"><path d="m3 7 9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/></svg>Estoque</a>
     <a href="#" data-nav="checklist"><svg viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11"/><path d="m3 5 1.5 1.5L7 4M3 12l1.5 1.5L7 11M3 19l1.5 1.5L7 18"/></svg>Checklists</a>
+    <a href="#" data-nav="gerencial"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Gerencial</a>
+
     <a href="#" data-nav="dashboard"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Dashboard</a>
     <a href="#" data-nav="owner" id="ownerNavLink" hidden><svg viewBox="0 0 24 24"><path d="M3 20h18M5 20V8l7-5 7 5v12M9 20v-6h6v6M8 10h.01M16 10h.01"/></svg>Central do Proprietário</a>
     <a href="#" data-nav="home"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Menu e conta</a>
@@ -1008,56 +1014,59 @@
   <p>Qual checklist você vai fazer? Escolha uma lacuna para abrir.</p>
 
   <div class="modules" id="checklistGroups">
-    <button type="button" class="module" data-check="temperatura">
-      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14V5a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z"/><circle cx="12" cy="17" r="1.2"/></svg></div>
-      <strong>Temperatura</strong>
-      <span id="checkDescTemp">Controle mensal de temperatura dos equipamentos</span>
-      <span class="badge" id="checkBadgeTemp" style="margin-left:0;align-self:flex-start" hidden></span>
-    </button>
-    <button type="button" class="module" data-check="limpeza">
-      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14l3-8h11l3 8-3 5H7z"/><path d="M7 6l2-3h6l3 3"/><path d="M8 14h8"/></svg></div>
-      <strong>Limpeza</strong>
-      <span>Cozinha, salão e copa</span>
-    </button>
-    <button type="button" class="module" data-check="recebimento"><div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7 12 3l9 4v10l-9 4-9-4V7Z"/><path d="m3 7 9 4 9-4M12 11v10"/></svg></div><strong>Recebimento de Matéria-Prima</strong><span>Conferência simples de produtos, embalagens e transporte</span></button>
-    <button type="button" class="module" data-check="manutencao"><div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6.5a5 5 0 0 0-6.5 6.5L3 17.5 6.5 21 11 16.5a5 5 0 0 0 6.5-6.5l-3 3-3-3 2.5-3.5Z"/><path d="m16 4 4 4"/></svg></div><strong>Manutenção Preventiva e Corretiva</strong><span>Registre serviços, equipamentos e responsáveis</span></button>
-    <button type="button" class="module" data-check="higiene">
-      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v5c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></div>
-      <strong>Condições de Higiene</strong>
-      <span>Avaliação mensal da higiene e conduta pessoal</span>
-    </button>
-    <button type="button" class="module" data-check="higienizacao">
-      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/><path d="m17 15 2 2 3-4"/></svg></div>
-      <strong>Higienização Semanal e Mensal</strong>
-      <span>Controle por área, semana, responsável e verificação</span>
-    </button>
-    <button type="button" class="module" data-check="cozimento">
-      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/></svg></div>
-      <strong>Cozimento e Reaquecimento</strong>
-      <span>Registro diário de temperatura</span>
-    </button>
-    <button type="button" class="module" data-check="oleo">
-      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4.5 6 7.6 6 11a6 6 0 0 1-12 0c0-3.4 3-6.5 6-11z"/><path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"/></svg></div>
-      <strong>Controle de Qualidade do Óleo</strong>
-      <span>Fritadeira 1 e Fritadeira 2</span>
-    </button>
-    <button type="button" class="module" data-check="gordura">
-      <div class="module-icon"><svg viewBox="0 0 24 24"><path d="M4 8h16l-2 12H6L4 8Z"/><path d="M3 5h18M8 5V3h8v2M8 12h8"/></svg></div>
-      <strong>Limpeza da Caixa de Gordura</strong>
-      <span>Registro semanal das Caixas 1 e 2</span>
-    </button>
-    <button type="button" class="module" data-check="gerencial">
-      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></svg></div>
-      <strong>Gerencial</strong>
-      <span>Em configuração</span>
-    </button>
-    <button type="button" class="module" data-check="producao"><div class="module-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M4 19h16M6 19V9h12v10M8 9V5h8v4M9 13h6M9 16h6"/></svg></div><strong>Produção da Cozinha</strong><span>Estoque, insumos e preparação</span></button>
+
     <button type="button" class="module" data-check="salao"><div class="module-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M4 4v7M7 4v7M4 8h3M5.5 11v9M13 4v16M13 4c4 2 4 7 0 9"/></svg></div><strong>Salão</strong><span>Materiais, organização e limpeza</span></button>
     <button type="button" class="module" data-check="copa"><div class="module-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16l-2 15H6L4 5ZM8 5V3h8v2M8 10h8"/></svg></div><strong>Copa</strong><span>Estoque, reposição e limpeza</span></button>
     <button type="button" class="module" data-check="fechamento"><div class="module-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M4 20V5l8-2 8 2v15M9 20v-6h6v6M8 8h1M15 8h1M8 11h1M15 11h1"/></svg></div><strong>Abertura e Fechamento</strong><span>Conferência gerencial por área</span></button>
   </div>
   </div>
 
+<div class="view" id="gerencialHome" hidden>
+  <button type="button" class="back-btn" id="gerencialBackBtn"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg> Voltar ao menu</button>
+  <h2>Gerencial</h2>
+  <p>Checklists e controles gerenciais do estabelecimento.</p>
+  <p id="gerencialPermissionNote" class="gerencial-permission-note" hidden>Acesso para preenchimento restrito a Rafael e Antonio. Os nomes dos módulos permanecem visíveis para os demais usuários.</p>
+  <div class="modules" id="gerencialGroups">
+<button type="button" class="module" data-check="temperatura">
+      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14V5a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z"/><circle cx="12" cy="17" r="1.2"/></svg></div>
+      <strong>Temperatura</strong>
+      <span id="checkDescTemp">Controle mensal de temperatura dos equipamentos</span>
+      <span class="badge" id="checkBadgeTemp" style="margin-left:0;align-self:flex-start" hidden></span>
+    </button>
+<button type="button" class="module" data-check="limpeza">
+      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14l3-8h11l3 8-3 5H7z"/><path d="M7 6l2-3h6l3 3"/><path d="M8 14h8"/></svg></div>
+      <strong>Limpeza</strong>
+      <span>Cozinha, salão e copa</span>
+    </button>
+<button type="button" class="module" data-check="recebimento"><div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7 12 3l9 4v10l-9 4-9-4V7Z"/><path d="m3 7 9 4 9-4M12 11v10"/></svg></div><strong>Recebimento de Matéria-Prima</strong><span>Conferência simples de produtos, embalagens e transporte</span></button>
+<button type="button" class="module" data-check="manutencao"><div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6.5a5 5 0 0 0-6.5 6.5L3 17.5 6.5 21 11 16.5a5 5 0 0 0 6.5-6.5l-3 3-3-3 2.5-3.5Z"/><path d="m16 4 4 4"/></svg></div><strong>Manutenção Preventiva e Corretiva</strong><span>Registre serviços, equipamentos e responsáveis</span></button>
+<button type="button" class="module" data-check="higiene">
+      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v5c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></div>
+      <strong>Condições de Higiene</strong>
+      <span>Avaliação mensal da higiene e conduta pessoal</span>
+    </button>
+<button type="button" class="module" data-check="higienizacao">
+      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/><path d="m17 15 2 2 3-4"/></svg></div>
+      <strong>Higienização Semanal e Mensal</strong>
+      <span>Controle por área, semana, responsável e verificação</span>
+    </button>
+<button type="button" class="module" data-check="cozimento">
+      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.2 1.4.9 2.2 1.7 2.7C10.4 8.6 11 5.5 12 3z"/></svg></div>
+      <strong>Cozimento e Reaquecimento</strong>
+      <span>Registro diário de temperatura</span>
+    </button>
+<button type="button" class="module" data-check="oleo">
+      <div class="module-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4.5 6 7.6 6 11a6 6 0 0 1-12 0c0-3.4 3-6.5 6-11z"/><path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"/></svg></div>
+      <strong>Controle de Qualidade do Óleo</strong>
+      <span>Fritadeira 1 e Fritadeira 2</span>
+    </button>
+<button type="button" class="module" data-check="gordura">
+      <div class="module-icon"><svg viewBox="0 0 24 24"><path d="M4 8h16l-2 12H6L4 8Z"/><path d="M3 5h18M8 5V3h8v2M8 12h8"/></svg></div>
+      <strong>Limpeza da Caixa de Gordura</strong>
+      <span>Registro semanal das Caixas 1 e 2</span>
+    </button>
+  </div>
+</div>
   <!-- Checklist: lacuna aberta -->
   <div class="view" id="checklistOpenView" hidden>
   <button type="button" class="back-btn" id="checklistBackBtn"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg> Voltar ao Checklist</button>
@@ -1545,6 +1554,23 @@
   let balanceIndex = null;
   let catalog = [];
   let settings = { targetFactor: DEFAULT_TARGET_FACTOR };
+  const GERENCIAL_ALLOWED_EMAILS = new Set(["rafaelromulo322@gmail.com", "antoniomarinho3112@gmail.com"]);
+  const GERENCIAL_CHECKLISTS = new Set(["temperatura", "limpeza", "recebimento", "manutencao", "higiene", "higienizacao", "cozimento", "oleo", "gordura"]);
+  let activeChecklistArea = "checklist";
+  let isGerencialPersonalMode = false;
+  function canAccessGerencial() { return GERENCIAL_ALLOWED_EMAILS.has(String(currentEmail || "").trim().toLowerCase()); }
+  function updateGerencialAccess() {
+    const allowed = canAccessGerencial();
+    const note = document.getElementById("gerencialPermissionNote");
+    if (note) note.hidden = allowed;
+    document.querySelectorAll("#gerencialGroups .module").forEach(button => {
+      button.disabled = !allowed;
+      button.setAttribute("aria-disabled", allowed ? "false" : "true");
+      let badge = button.querySelector(".gerencial-lock");
+      if (!badge) { badge = document.createElement("span"); badge.className = "gerencial-lock"; badge.textContent = "Acesso restrito a Rafael e Antonio"; button.appendChild(badge); }
+      badge.hidden = allowed;
+    });
+  }
   let currentUser = null;      // nome exibido
   let currentUserId = null;    // id no Supabase
   let currentEmail = "";
@@ -1766,9 +1792,10 @@
         .rpc("platform_owner_operational_rows", { p_table: table })
         .range(from, from + PAGE_SIZE - 1);
       if (error) throw error;
-      const page = (data || []).map(row => row.row_data).filter(Boolean);
+      const rawPage = data || [];
+      const page = rawPage.map(row => row.row_data).filter(row => Boolean(row) && !row.shared_copy_source_user_id);
       all.push(...page);
-      if (page.length < PAGE_SIZE) break;
+      if (rawPage.length < PAGE_SIZE) break;
       from += PAGE_SIZE;
     }
     return all;
@@ -1950,7 +1977,11 @@
 
   // Troca a tela do app depois do login: "home" (menu), "stock" (estoque) ou "checklist"
   function showScreen(name) {
-    if (name === "owner" && !isPlatformOwner) name = "home";
+    let navName = name;
+    if (name === "gerencial") { activeChecklistArea = "gerencial"; name = "checklist"; isGerencialPersonalMode = false; }
+    else if (name === "checklist") { activeChecklistArea = "checklist"; isGerencialPersonalMode = false; }
+    if (name !== "checklist") isGerencialPersonalMode = false;
+    if (name === "owner" && !isPlatformOwner) { name = "home"; navName = "home"; }
     if (name === "stock") resetStockScreen();
     if (name === "checklist") resetChecklistScreen();
     ["home", "stock", "checklist", "dashboard", "overview", "owner"].forEach(n => {
@@ -1970,12 +2001,12 @@
     if (name === "dashboard") renderDashboard();
     if (name === "overview") renderOverview();
     if (name === "owner") loadOwnerCenter();
-    setNav(name);
+    setNav(navName);
     window.scrollTo(0, 0);
   }
 
   // Barra lateral: tela ativa, caminho no topo e menu no celular
-  const SCREEN_TITLES = { home: "Início", overview: "Visão geral", stock: "Estoque", checklist: "Checklists", dashboard: "Dashboard", owner: "Central do Proprietário" };
+  const SCREEN_TITLES = { home: "Início", overview: "Visão geral", stock: "Estoque", checklist: "Checklists", gerencial: "Gerencial", dashboard: "Dashboard", owner: "Central do Proprietário" };
   function closeSidebar() {
     document.getElementById("sidebar").classList.remove("open");
     document.getElementById("scrim").classList.remove("open");
@@ -2448,6 +2479,7 @@
     currentUser = null;
     currentUserId = null;
     currentEmail = "";
+    updateGerencialAccess();
     isSpreadsheetOwner = false;
     isPlatformOwner = false;
     platformOwnerData = null;
@@ -2497,6 +2529,7 @@
   async function enterApp(user) {
     currentUserId = user.id;
     currentEmail = user.email || "";
+    updateGerencialAccess();
     const meta = user.user_metadata || {};
     currentUser = (meta.name && String(meta.name).trim()) || (currentEmail.split("@")[0] || "Usuário");
 
@@ -3836,7 +3869,7 @@
       const input = document.createElement("input");
       input.type = "number";
       input.step = "0.1";
-      input.disabled = isPlatformOwner;
+      input.disabled = isPlatformOwner && !isGerencialPersonalMode;
       input.value = saved ? saved.temperature : "";
       input.placeholder = "Ex.: " + fmtNum1((eq.min + eq.max) / 2);
       input.setAttribute("aria-label", "Temperatura de " + eq.name);
@@ -3845,7 +3878,7 @@
 
       const noteInput = document.createElement("input");
       noteInput.type = "text";
-      noteInput.disabled = isPlatformOwner;
+      noteInput.disabled = isPlatformOwner && !isGerencialPersonalMode;
       noteInput.maxLength = 120;
       noteInput.placeholder = "Observação / ação corretiva (opcional)";
       noteInput.value = saved ? saved.note : "";
@@ -3887,7 +3920,7 @@
       removeBtn.addEventListener("click", () => removeEquipment(eq, removeBtn));
 
       item.append(info);
-      if (!isPlatformOwner) item.appendChild(removeBtn);
+      if (!isPlatformOwner || isGerencialPersonalMode) item.appendChild(removeBtn);
       list.appendChild(item);
       tempInputs.push({ eq: eq, input: input, noteInput: noteInput });
     });
@@ -3895,7 +3928,7 @@
 
   async function saveTemp() {
     if (!currentUser) return;
-    if (isPlatformOwner) return;
+    if (isPlatformOwner && !isGerencialPersonalMode) return;
     if (!dataReady || !tempReady) {
       alert("As tabelas de temperatura ainda não estão disponíveis. Veja o aviso na tela.");
       return;
@@ -4646,7 +4679,7 @@
     const save = document.createElement("button"); save.type = "button"; save.textContent = "Salvar checklist no Supabase";
     const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn-edit"; pdf.textContent = "Gerar PDF";
     const status = document.createElement("div"); status.className = "sim"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
-    const ownerHistory = document.createElement("section"); ownerHistory.className = "section"; ownerHistory.hidden = !(isSpreadsheetOwner || isPlatformOwner); ownerHistory.style.marginTop = "22px";
+    const ownerHistory = document.createElement("section"); ownerHistory.className = "section"; ownerHistory.hidden = isGerencialPersonalMode || !(isSpreadsheetOwner || isPlatformOwner); ownerHistory.style.marginTop = "22px";
     const ownerHeading = document.createElement("h3"); ownerHeading.textContent = "Respostas de todos os usuários";
     const ownerHistoryStatus = document.createElement("div"); ownerHistoryStatus.className = "hint"; ownerHistoryStatus.textContent = "Carregando registros…";
     const ownerHistoryWrap = document.createElement("div"); ownerHistoryWrap.className = "table-wrap";
@@ -4715,12 +4748,12 @@
       ownerRecordDetail.append(heading, list);
     }
     async function loadOwnerChecklistHistory() {
-      if (!isSpreadsheetOwner && !isPlatformOwner) return;
+      if (!isSpreadsheetOwner && (!isPlatformOwner || isGerencialPersonalMode)) return;
       ownerHistory.hidden = false;
       ownerHistoryStatus.textContent = "Carregando respostas da equipe…";
       try {
         let data;
-        if (isPlatformOwner && platformOwnerData) {
+        if (isPlatformOwner && platformOwnerData && !isGerencialPersonalMode) {
           data = platformOwnerData.spreadsheet_checklists.filter(record => record.checklist_key === name);
         } else {
           const result = await supabaseClient.rpc("spreadsheet_checklists_owner_history", { p_checklist_key: name });
@@ -4757,7 +4790,7 @@
         await migrateLocalRecords(uid);
         if (request !== loadRequest || currentUserId !== uid) return;
         let data, error;
-        if (isPlatformOwner && platformOwnerData) {
+        if (isPlatformOwner && platformOwnerData && !isGerencialPersonalMode) {
           const matching = platformOwnerData.spreadsheet_checklists.filter(record =>
             record.checklist_key === name && record.checklist_date === date);
           const selected = window.operattoOwnerPreferredRecord(matching, "updated_at");
@@ -4808,9 +4841,9 @@
       doc.text("Data: " + new Date(date + "T00:00:00").toLocaleDateString("pt-BR"), 40, 64);
       let reportHead = ["Item", "Resposta"];
       let reportBody = config.items.map((item, i) => [item, rows[i].value || "Não preenchido"]);
-      if (isSpreadsheetOwner || isPlatformOwner) {
+      if (isSpreadsheetOwner || (isPlatformOwner && !isGerencialPersonalMode)) {
         let data;
-        if (isPlatformOwner && platformOwnerData) data = platformOwnerData.spreadsheet_checklists.filter(record => record.checklist_key === name);
+        if (isPlatformOwner && platformOwnerData && !isGerencialPersonalMode) data = platformOwnerData.spreadsheet_checklists.filter(record => record.checklist_key === name);
         else {
           const result = await supabaseClient.rpc("spreadsheet_checklists_owner_history", { p_checklist_key: name });
           if (result.error) { alert("Não foi possível carregar as respostas da equipe: " + friendlyError(result.error)); return; }
@@ -5281,11 +5314,36 @@
   }
 
   function resetChecklistScreen() {
-    document.getElementById("checklistHome").hidden = false;
+    isGerencialPersonalMode = false;
+    const gerencial = activeChecklistArea === "gerencial";
+    document.getElementById("checklistHome").hidden = gerencial;
+    document.getElementById("gerencialHome").hidden = !gerencial;
     document.getElementById("checklistOpenView").hidden = true;
   }
 
-  function openChecklist(name) {
+  async function loadGerencialOwnTemperatureData() {
+    try {
+      const [equipmentResult, readingResult] = await Promise.all([
+        supabaseClient.from("equipment").select("*").eq("user_id", currentUserId).order("created_at"),
+        supabaseClient.from("temperature_readings").select("*").eq("user_id", currentUserId).order("reading_date")
+      ]);
+      if (equipmentResult.error) throw equipmentResult.error;
+      if (readingResult.error) throw readingResult.error;
+      equipments = (equipmentResult.data || []).map(dbToEquipment);
+      readings = (readingResult.data || []).map(dbToReading);
+      tempReady = true;
+      tempError = "";
+    } catch (error) {
+      equipments = [];
+      readings = [];
+      tempReady = false;
+      tempError = friendlyError(error);
+      setTempStatus("Não foi possível carregar os dados da conta: " + tempError, "negative");
+    }
+  }  async function openChecklist(name) {
+    if (GERENCIAL_CHECKLISTS.has(name) && !canAccessGerencial()) return;
+    isGerencialPersonalMode = GERENCIAL_CHECKLISTS.has(name) && canAccessGerencial();
+    if (name === "temperatura" && isGerencialPersonalMode && isPlatformOwner) await loadGerencialOwnTemperatureData();
     rich(document.getElementById("checklistOpenTitle"), CHECKLIST_TITLES[name] || "Checklist");
     if (name === "cozimento" && typeof ckOpen === "function") ckOpen();
     if (name === "oleo" && typeof olOpen === "function") olOpen();
@@ -5305,6 +5363,7 @@
       }
     });
     document.getElementById("checklistHome").hidden = true;
+    document.getElementById("gerencialHome").hidden = true;
     const view = document.getElementById("checklistOpenView");
     view.hidden = false;
     view.classList.remove("enter");
@@ -5327,7 +5386,9 @@
     badge.hidden = true;
   }
 
-  document.querySelectorAll("#checklistGroups .module").forEach(btn => {
+  document.getElementById("gerencialBackBtn").addEventListener("click", () => showScreen("home"));
+  updateGerencialAccess();
+  document.querySelectorAll("#checklistGroups .module, #gerencialGroups .module").forEach(btn => {
     btn.addEventListener("click", () => openChecklist(btn.dataset.check));
   });
   document.getElementById("checklistBackBtn").addEventListener("click", closeChecklist);
@@ -5360,7 +5421,8 @@
     ["cleaning_monthly_responsibles", "Responsáveis da limpeza"], ["spreadsheet_checklists", "Checklists de planilha"],
     ["cooking_records", "Cozimento e reaquecimento"], ["cooking_days", "Fechamento de cozimento"],
     ["oil_checks", "Qualidade do óleo"], ["grease_trap_cleanings", "Caixas de gordura"],
-    ["sauce_count_sessions", "Contagens de molhos"], ["stock_quote_sessions", "Cotações"]
+    ["sauce_count_sessions", "Contagens de molhos"], ["stock_quote_sessions", "Cotações"],
+    ["preventive_maintenance_logs", "Manutenção preventiva"], ["raw_material_receipts", "Recebimento de matéria-prima"]
   ];
 
   function mk(tag, cls, text) {
@@ -5787,14 +5849,14 @@
     if (table === "equipment") return [row.name, row.type, filled(row.min_temp) || filled(row.max_temp) ? "faixa " + (row.min_temp ?? "—") + " a " + (row.max_temp ?? "—") + " °C" : ""].filter(Boolean).join(" · ") || "Equipamento";
     if (table === "cleaning_monthly_responsibles") return [row.month_ref, row.chef, row.manager].filter(Boolean).join(" · ") || "Responsáveis mensais";
     if (table === "settings") return "Fator da meta: " + (row.target_factor ?? row.targetFactor ?? "não informado");
-    return Object.entries(row).filter(([key, value]) => !["id", "user_id", "created_by", "created_at", "updated_at", "saved_at", "items", "responses", "checks"].includes(key) && filled(value) && typeof value !== "object")
+    return Object.entries(row).filter(([key, value]) => !["id", "user_id", "created_by", "created_at", "updated_at", "saved_at", "shared_copy_source_user_id", "items", "responses", "checks"].includes(key) && filled(value) && typeof value !== "object")
       .slice(0, 4).map(([key, value]) => key.replace(/_/g, " ") + ": " + String(value)).join(" · ") || "Registro salvo";
   }
   function dashRecordDetails(item) {
     const row = item.row;
     const label = key => key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
     const scalar = (key, value) => {
-      if (["id", "user_id", "created_by", "created_at", "updated_at", "saved_at"].includes(key)) return "";
+      if (["id", "user_id", "created_by", "created_at", "updated_at", "saved_at", "shared_copy_source_user_id"].includes(key)) return "";
       if (value === null || value === undefined || value === "") return "";
       if (typeof value === "boolean") value = value ? "Sim" : "Não";
       if (typeof value === "object") return "";
@@ -6526,7 +6588,7 @@
     cloudLoadingUid = uid;
     cloudLoading = (async () => {
       try {
-        const [checkRes, respRes] = isPlatformOwner && platformOwnerData
+        const [checkRes, respRes] = isPlatformOwner && platformOwnerData && !isGerencialPersonalMode
           ? [
               { data: platformOwnerData.cleaning_checklists, error: null },
               { data: platformOwnerData.cleaning_monthly_responsibles, error: null }
@@ -6555,7 +6617,7 @@
             dataSalvamento: row.completed ? (row.saved_at || null) : null,
             atualizadoEm: row.saved_at || null,
             user_id: row.user_id || null,
-            user_email: isPlatformOwner && platformOwnerData
+            user_email: isPlatformOwner && platformOwnerData && !isGerencialPersonalMode
               ? ((platformOwnerData.users || []).find(user => user.user_id === row.user_id) || {}).email || ""
               : ""
           };
@@ -7026,8 +7088,8 @@ function ckRender() {
 
   // Tabela
   const box = ckEl("ckTableBox");
-  box.replaceChildren(cookTable(cookRecords, !isPlatformOwner));
-  if (isPlatformOwner) ckEl("ckFoot").hidden = true;
+  box.replaceChildren(cookTable(cookRecords, !isPlatformOwner || isGerencialPersonalMode));
+  if (isPlatformOwner && !isGerencialPersonalMode) ckEl("ckFoot").hidden = true;
 }
 
 async function cookLoadDate(date) {
@@ -7036,7 +7098,7 @@ async function cookLoadDate(date) {
   ckEl("ckTableBox").replaceChildren(mk("div", "ck-empty", "Carregando..."));
   try {
     let rec, day;
-    if (isPlatformOwner && platformOwnerData) {
+    if (isPlatformOwner && platformOwnerData && !isGerencialPersonalMode) {
       rec = { data: platformOwnerData.cooking_records.filter(r => r.log_date === date), error: null };
       const dayRows = platformOwnerData.cooking_days.filter(r => r.log_date === date);
       day = { data: dayRows.find(r => r.finalized_at) || dayRows[0] || null, error: null };
@@ -7302,7 +7364,7 @@ async function cookMonthlyPdf() {
     const [year, monthNum] = month.split("-").map(Number);
     const from = month + "-01", to = month + "-" + String(new Date(year, monthNum, 0).getDate()).padStart(2, "0");
     let records;
-    if (isPlatformOwner && platformOwnerData) {
+    if (isPlatformOwner && platformOwnerData && !isGerencialPersonalMode) {
       records = platformOwnerData.cooking_records.filter(r => r.log_date >= from && r.log_date <= to).map(dbToCook);
     } else {
       const recordsResult = await supabaseClient.from("cooking_records").select("*").gte("log_date", from).lte("log_date", to).order("log_date").order("record_time").order("created_at");
@@ -7338,7 +7400,7 @@ async function cookLoadMonth(month) {
   const to = month + "-" + String(last).padStart(2, "0");
   try {
     let rec, days;
-    if (isPlatformOwner && platformOwnerData) {
+    if (isPlatformOwner && platformOwnerData && !isGerencialPersonalMode) {
       rec = { data: platformOwnerData.cooking_records.filter(r => r.log_date >= from && r.log_date <= to), error: null };
       days = { data: platformOwnerData.cooking_days.filter(r => r.log_date >= from && r.log_date <= to), error: null };
     } else {
@@ -7560,7 +7622,7 @@ async function olLoadDate(date) {
   olDate = date;
   olEl("olDate").value = date;
   try {
-    const result = isPlatformOwner && platformOwnerData
+    const result = isPlatformOwner && platformOwnerData && !isGerencialPersonalMode
       ? { data: platformOwnerData.oil_checks.filter(r => r.log_date === date), error: null }
       : await supabaseClient.from("oil_checks").select("*").eq("user_id", currentUserId).eq("log_date", date).order("machine");
     const { data, error } = result;
@@ -7588,7 +7650,7 @@ async function olLoadMonth(month) {
   olEl("olHistory").replaceChildren(mk("div", "ck-empty", "Carregando..."));
   const range = olMonthRange(month);
   try {
-    const result = isPlatformOwner && platformOwnerData
+    const result = isPlatformOwner && platformOwnerData && !isGerencialPersonalMode
       ? { data: platformOwnerData.oil_checks.filter(r => r.log_date >= range.from && r.log_date <= range.to), error: null }
       : await supabaseClient.from("oil_checks").select("*").eq("user_id", currentUserId).gte("log_date", range.from).lte("log_date", range.to).order("log_date").order("machine");
     const { data, error } = result;
@@ -7769,7 +7831,7 @@ function olRenderHistory() {
     const tr=document.createElement("tr");
     const cell=(label,value,cls)=>{const td=document.createElement("td");td.dataset.label=label;if(cls)td.className=cls;if(value instanceof Node)td.appendChild(value);else td.textContent=value;tr.appendChild(td)};
     cell("Data",fmtDate(r.date),"ck-num");cell("Maquinário","Fritadeira "+(r.machine===1?"I":"II"),"ck-prod");cell("Presença de fumaça",olYN(r.smoke));cell("Presença de resíduos",olYN(r.residue));cell("Troca de óleo",olYN(r.change));cell("Responsável",r.responsible||"—");
-    const actions=mk("div","ck-rowact");actions.append(actionBtn("Abrir dia","btn-edit",()=>olEdit(r)));if(!isPlatformOwner)actions.append(actionBtn("Excluir","btn-remove",()=>olDelete(r)));cell("Ações",actions,"ck-actcell");tbody.appendChild(tr);
+    const actions=mk("div","ck-rowact");actions.append(actionBtn("Abrir dia","btn-edit",()=>olEdit(r)));if(!isPlatformOwner || isGerencialPersonalMode)actions.append(actionBtn("Excluir","btn-remove",()=>olDelete(r)));cell("Ações",actions,"ck-actcell");tbody.appendChild(tr);
   });
   table.appendChild(tbody);wrap.appendChild(table);box.replaceChildren(wrap);
 }
@@ -7992,7 +8054,7 @@ function d30Panel() {
 }
 
 async function d30Fetch(table, range, order) {
-  if (isPlatformOwner && platformOwnerData && platformOwnerData[table]) {
+  if (isPlatformOwner && platformOwnerData && !isGerencialPersonalMode && platformOwnerData[table]) {
     const rows = platformOwnerData[table].filter(row => row.log_date >= range.from && row.log_date <= range.to);
     return rows.sort((a, b) => {
       for (const key of order) {
@@ -8421,7 +8483,7 @@ async function sauceLoadHistory(dateToOpen) {
   const box = sauceEl("sauceHistory");
   if (box) box.replaceChildren(mk("div", "hint", "Carregando histórico..."));
   try {
-    const result = isPlatformOwner && platformOwnerData
+    const result = isPlatformOwner && platformOwnerData && !isGerencialPersonalMode
       ? { data: platformOwnerData.sauce_count_sessions.slice().sort((a, b) => (b.count_date + b.created_at).localeCompare(a.count_date + a.created_at)).slice(0, 500), error: null }
       : await supabaseClient.from("sauce_count_sessions").select("*").eq("user_id", currentUserId).order("count_date", { ascending: false }).order("created_at", { ascending: false }).limit(100);
     const { data, error } = result;
@@ -8621,7 +8683,7 @@ async function sheetStockOpen() {
   sheetStockStatus("Carregando contagens...", "hint");
   try {
     const categories = Object.keys(SHEET_STOCK);
-    const results = isPlatformOwner && platformOwnerData
+    const results = isPlatformOwner && platformOwnerData && !isGerencialPersonalMode
       ? categories.map(category => {
           const candidates = platformOwnerData.stock_quote_sessions.filter(row => row.count_date === date.value && row.category === category)
             .sort((a, b) => String(b.updated_at || b.created_at || "").localeCompare(String(a.updated_at || a.created_at || "")));
@@ -8814,7 +8876,7 @@ function greaseLoadFormFromRow() {
 async function greaseLoadDate(date) {
   greaseDate = date; greaseTrap = Number(greaseEl("greaseTrap").value || 1);
   try {
-    const result = isPlatformOwner && platformOwnerData
+    const result = isPlatformOwner && platformOwnerData && !isGerencialPersonalMode
       ? { data: platformOwnerData.grease_trap_cleanings.filter(r => r.cleaning_date === date), error: null }
       : await supabaseClient.from("grease_trap_cleanings").select("*").eq("cleaning_date", date).order("grease_trap");
     const { data, error } = result;
@@ -8827,7 +8889,7 @@ async function greaseLoadMonth(month) {
   const last = new Date(Number(p[0]), Number(p[1]), 0).getDate();
   try {
     const from = month + "-01", to = month + "-" + String(last).padStart(2, "0");
-    const result = isPlatformOwner && platformOwnerData
+    const result = isPlatformOwner && platformOwnerData && !isGerencialPersonalMode
       ? { data: platformOwnerData.grease_trap_cleanings.filter(r => r.cleaning_date >= from && r.cleaning_date <= to), error: null }
       : await supabaseClient.from("grease_trap_cleanings").select("*").gte("cleaning_date", from).lte("cleaning_date", to).order("cleaning_date").order("grease_trap");
     const { data, error } = result;
@@ -9005,7 +9067,7 @@ async function tempMonthLoad(month) {
   const p = month.split("-"), last = new Date(Number(p[0]), Number(p[1]), 0).getDate();
   try {
     const from = month + "-01", to = month + "-" + String(last).padStart(2, "0");
-    const result = isPlatformOwner && platformOwnerData
+    const result = isPlatformOwner && platformOwnerData && !isGerencialPersonalMode
       ? { data: platformOwnerData.equipment_temperature_monthly.filter(r => r.reading_date >= from && r.reading_date <= to), error: null }
       : await supabaseClient.from("equipment_temperature_monthly").select("*").gte("reading_date", from).lte("reading_date", to).order("reading_date");
     const { data, error } = result;
@@ -9113,7 +9175,7 @@ async function quoteLoad(date, req) {
   status.textContent = "Carregando contagens salvas...";
   area.replaceChildren();
   try {
-    const stockRes = isPlatformOwner && platformOwnerData
+    const stockRes = isPlatformOwner && platformOwnerData && !isGerencialPersonalMode
       ? { data: platformOwnerData.stock_quote_sessions.filter(row => row.count_date === date), error: null }
       : await supabaseClient.from("stock_quote_sessions").select("*").eq("user_id", currentUserId).eq("count_date", date);
     if (stockRes.error) throw stockRes.error;
