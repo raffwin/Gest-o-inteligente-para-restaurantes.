@@ -8842,7 +8842,7 @@ function sauceGeneratePdf(record) {
     }),
     styles: { font: "helvetica", fontSize: 8.5, cellPadding: 5, lineColor: [190, 195, 202], lineWidth: 0.5, textColor: [35, 39, 45], valign: "middle" },
     headStyles: { fillColor: [150, 150, 150], textColor: [25, 28, 32], fontStyle: "bold", fontSize: 8 },
-    columnStyles: { 0: { cellWidth: "auto", fontStyle: "bold" }, 1: { cellWidth: 78, halign: "center" }, 2: { cellWidth: 78, halign: "center" }, 3: { cellWidth: 78, halign: "center" } }
+    columnStyles: { 0: { cellWidth: 210, fontStyle: "bold" }, 1: { cellWidth: 78, halign: "center" }, 2: { cellWidth: 78, halign: "center" }, 3: { cellWidth: 78, halign: "center" } }
   });
   const fileDate = String(date || localStamp()).replace(/[^0-9-]/g, "");
   // Salva o PDF pelo fluxo de download do navegador, para ficar nos arquivos do dispositivo.
@@ -9047,11 +9047,11 @@ function quotePdfDrawTables(doc, groups, date, responsible) {
     doc.text(String(group.category).toUpperCase(), xs[col], ys[col] + 7);
     const head = [["PRODUTOS", "ESTOQUE", "PEDIR"].concat(suppliers)];
     const body = items.map(item => [item.product, quoteDisplay(item.stock), quoteDisplay(item.order), ...suppliers.map((_, i) => quoteDisplay(item["supplier_" + i]))]);
-    const columnStyles = { 1: { cellWidth: 34, halign: "center" }, 2: { cellWidth: 34, halign: "center" } };
+    const columnStyles = { 0: { cellWidth: 120 }, 1: { cellWidth: 34, halign: "center" }, 2: { cellWidth: 34, halign: "center" } };
     suppliers.forEach((_, i) => { columnStyles[i + 3] = { cellWidth: 26, halign: "center" }; });
     const pagesBefore = doc.internal.getNumberOfPages();
     doc.autoTable({
-      startY: ys[col] + 10, theme: "grid", tableWidth: colW,
+      startY: ys[col] + 10, theme: "grid", tableWidth: "auto",
       margin: { left: xs[col], right: pageW - xs[col] - colW, top: startY, bottom: 18 },
       head, body,
       styles: { font: "helvetica", fontSize: 5.5, cellPadding: { top: 1, bottom: 1, left: 1.8, right: 1.8 }, lineColor: [125, 125, 125], lineWidth: 0.25, textColor: [25, 25, 25], valign: "middle", overflow: "linebreak" },
